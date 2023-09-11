@@ -17,7 +17,7 @@ void init_controller_STM32F042(void){
 
 	RCC->CR |= RCC_CR_HSEON;  			//включаем генератор HSE
 	while(!(RCC->CR & RCC_CR_HSERDY)){};//ожидание готовности HSE
-    RCC->CR |= RCC_CR_CSSON; 	//следить за кварцем
+        RCC->CR |= RCC_CR_CSSON; 	//следить за кварцем
 
 	RCC->CFGR2 |= RCC_CFGR2_PREDIV_DIV1;  // Prediv предделитель для PLL
 	//завести HSE на PLL и 8 Мгц x6 = 48 Мгц
