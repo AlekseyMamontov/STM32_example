@@ -85,13 +85,13 @@ void init_controller_STM32F042(void){
 	GPIOA->BRR = 0x00FF; // bit0-7 size 8bit Rele
 	GPIOB->BRR = 0x0003;// bit 0-1 Led_Status_Pin/Led_Error_Pin
 	//пины 0-7 порта  А7A6A5A4A3A2A1A0  на выход
-    GPIOA->MODER |=0x5555; //0b010101010101010101: General purpose output mode
-    //GPIOA->OTYPER &=0b1111111100000000;//0 - push-pull, reset default
-    GPIOA->OSPEEDR |= 0x5555;//0b0101010101010101  speed medium
-    // пины Led_Status_Pin bit 0| Led_Error_Pin bit 1
-    GPIOB->MODER |= 0x05;//0b0101 01 -General purpose output mode
-    GPIOB->OTYPER |=0x03; // 0b11 1 - open drain
-    GPIOB->OSPEEDR |= 0x05; //0101  speed medium
+    	GPIOA->MODER |=0x5555; //0b010101010101010101: General purpose output mode
+    	//GPIOA->OTYPER &=0b1111111100000000;//0 - push-pull, reset default
+    	GPIOA->OSPEEDR |= 0x5555;//0b0101010101010101  speed medium
+    	// пины Led_Status_Pin bit 0| Led_Error_Pin bit 1
+   	GPIOB->MODER |= 0x05;//0b0101 01 -General purpose output mode
+    	GPIOB->OTYPER |=0x03; // 0b11 1 - open drain
+    	GPIOB->OSPEEDR |= 0x05; //0101  speed medium
 
     //id_can pull_down  b3-9
 	GPIOB->PUPDR |= 0xAAA80;//0b10101010101010000000;
@@ -117,7 +117,7 @@ void init_controller_STM32F042(void){
 
 	// включить порт А
 	// SET_BIT(RCC->AHBENR, RCC_AHBENR_GPIOAEN);
-    uint32_t speed;
+    	uint32_t speed;
 
 	//   выставить порты на альтернативные функции 0x10
 	GPIOA->MODER |= (GPIO_MODER_MODER11_1 | GPIO_MODER_MODER12_1);
