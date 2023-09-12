@@ -46,33 +46,232 @@
 #define  rxPDO3 0x400
 #define  rxPDO4 0x500
 
+// command NMT
 #define id_NMT_control 0
 #define NMT_stop 2
 #define NMT_start 1
 #define NMT_pre_operational 128
 #define NMT_reset 129
-/* USER CODE END PD */
 
-/* Private variables ---------------------------------------------------------*/
-CAN_HandleTypeDef hcan;
+// status Block Rele
+
+#define NMT_status_Stopped 0x04
+#define NMT_status_Operational 0x05
+#define NMT_status_Pre_Operational 0x7F
+
+#define send_msg 0x01
+#define n_Sync_Object 1
+/* USER CODE END PD */
 
 /* USER CODE BEGIN PV */
 
-// Block_Rele
-uint8_t  gpio_rele;
+void init_controller_STM32F042(void);
+uint8_t CAN_transmit (CAN_TxMailBox_TypeDef *tx);
 
-// CAN_init
-//CAN_FilterTypeDef filterInit;
-//CAN_RxHeaderTypeDef rxHeader,rxHeader1;
-//CAN_TxHeaderTypeDef txHeader;
-//uint32_t pTxMailbox;
-uint8_t mask_gpio = 0xFF;
+
+CAN_FIFOMailBox_TypeDef rx_mailbox;
+CAN_TxMailBox_TypeDef 	tx_mailbox;
+
+uint8_t  gpio_rele = 0, mask_gpio = 0xFF;
 uint32_t id  = 0;
-uint16_t id_16bit=0;
+
 // CanOpen
 uint32_t can_id,can_speed,id_rxPDO1,id_txPDO1,id_rxSDO,heartbroken;
-uint8_t status_NMT = NMT_start;
-uint8_t test_irq = 0;
+uint8_t  NMT_command = 0,NMT_status = NMT_status_Operational;
+
+uint32_t *sync_data,*Sync_obj[n_Sync_Object]={NULL};
+
+
+
+
+
+int main(void){
+
+	uint8_t command,sub_index,toggle_bit = 0, cycle = 0,cycle2=0,tg=0;
+	uint16_t index;
+
+	uint32_t id_message = 0, dlc_message =0,rtr_bit, block_data0_3, block_data4_7;
+
+	init_controller_STM32F042();// Init RCC 48Mhz, GPIOx, bxCAN
+	SystemCoreClockUpdate();
+	HAL_InitTick(TICK_INT_PRIORITY);
+
+	GPIOB->BSRR = led_status; //
+
+   //Bootup Protocol
+
+   tx_mailbox.TIR = ((0x700 + can_id)<<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
+   tx_mailbox.TDTR = 1;// n на_отправку
+   tx_mailbox.TDLR = 0;// d0-d3
+   tx_mailbox.TDHR = 0;// d4-d7
+   CAN_transmit(&tx_mailbox);
+
+   GPIOB->BSRR = led_status; // Block on
+
+  while (1){
+
+	  if(CAN->RF1R&0b0011){
+
+		  rx_mailbox.RIR = CAN->sFIFOMailBox[1].RIR;
+		  rx_mailbox.RDTR = CAN->sFIFOMailBox[1].RDTR;
+		  rx_mailbox.RDLR = CAN->sFIFOMailBox[1].RDLR;
+		  rx_mailbox.RDHR = CAN->sFIFOMailBox[1].RDHR;
+		  SET_BIT(CAN->RF1R, CAN_RF1R_RFOM1);
+
+		  	// Ext  1 / Std 0
+			id_message = rx_mailbox.RIR&0b0100?rx_mailbox.RIR >> 3: rx_mailbox.RIR >> 21;
+			dlc_message = (rx_mailbox.RDTR &0b01111)?8 : rx_mailbox.RDTR &0b01111;// получение из регистра длины кадра
+
+
+			switch(id_message){
+
+				case 0x80:  // SYNC
+
+					for(uint8_t i=0;i > n_Sync_Object; i++){
+						if(Sync_obj[i] != NULL ) continue;
+						*Sync_obj[i]?*Sync_obj[i]-- : 0;
+					};
+
+				break;
+
+				case 0x100: // TIME
+				break;
+
+
+
+				default:
+
+					if(id_rxSDO == id_message){  //SDO
+
+
+
+
+
+
+
+						break;}
+
+					/* Node Guarding (0x700 + id) + rtr
+					 * answer (0x700 + id) + dlc=1 + (toggle bit | NMT_status) one bayt
+					 * struct byte
+ 	 	 	 	 	 bit_7    80 toggle_bit   change bit new message
+ 	 	 	 	 	 bit_0_6  7Fh nmt_state
+ 	 	  	  	  	  	  	  04h Stopped
+		  	  	  	  	  	  05h Operational
+		  	  	  	  	  	  7Fh Pre-Operational*/
+
+				  if(heartbroken == id_message){
+
+						if(!(rx_mailbox.RIR&0x02)) break; //=data? exit
+
+					     tx_mailbox.TIR = ((0x700 + can_id)<< 21)| send_msg; // addr,std0,data0,TXRQ - отправка сообщения
+					     tx_mailbox.TDTR = 0x01;// n на_отправку
+					     tx_mailbox.TDLR = toggle_bit | NMT_status;
+					     tx_mailbox.TDHR = 0;// d4-d7
+					     CAN_transmit(&tx_mailbox);
+					     toggle_bit = toggle_bit?0:80;
+					}
+
+			   break;
+	   };
+   };
+
+	  // test
+
+
+		  HAL_Delay(1);
+
+		  if(!cycle2){
+			  tg=tg?0:1;
+			  if (tg){GPIOB->BSRR = 0x02;} else{GPIOB->BRR = 0x02;};
+			  cycle2=500;
+		  };
+		  cycle2--;
+
+		  if(!cycle){
+
+			     tx_mailbox.TIR = ((0x80 + can_id)<<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
+			     tx_mailbox.TDTR = 2;// n на_отправку
+			     tx_mailbox.TDLR = can_id ;// d0-d3
+			     tx_mailbox.TDHR = 0;// d4-d7
+			     CAN_transmit(&tx_mailbox);
+
+		     cycle = 10000;}
+
+		  cycle --;
+  };
+};
+
+
+/*------------------Function_Block_Rele-------------------------------------------------*/
+
+uint8_t Processing_SDO_Object(CAN_FIFOMailBox_TypeDef* rx){
+
+
+};
+
+
+void CEC_CAN_IRQHandler(void){
+
+	uint32_t id,dlc,gpio = 0;
+	uint8_t data0;
+
+		if((CAN->RF0R & 0b0011) == 0) return;
+		// индефикатор = тип сообщения ? extd : std
+		id = CAN->sFIFOMailBox[0].RIR&0b0100?CAN->sFIFOMailBox[0].RIR >> 3:CAN->sFIFOMailBox[0].RIR >> 21;
+		dlc = CAN->sFIFOMailBox[0].RDTR &0b01111;// получение из регистра длины кадра
+		if((CAN->sFIFOMailBox[0].RIR & 0b010) == 0 && dlc != 0){// тип сообщения 0 - data / 1- rtr
+
+			//dlc = dlc>8? 8:dlc;
+			data0 = CAN->sFIFOMailBox[0].RDLR&0xff;
+
+			switch (id){
+
+				 case 0:
+				  if(dlc < 2) break;
+				  if(data0 == 0 || data0== can_id ){
+					  NMT_command  = (CAN->sFIFOMailBox[0].RDLR&0xff00) >>8;
+					  switch(NMT_command){
+				  	  	  case NMT_start : NMT_status = NMT_status_Operational;break;
+				  	  	  case NMT_pre_operational: NMT_status = NMT_status_Pre_Operational;break;
+				  	  	  case NMT_stop: NMT_status = NMT_status_Stopped;break;
+				  	  	  default:break;}
+				  };
+				 break;
+
+				default:
+				 if(id != id_rxPDO1) break;
+				 if(NMT_status != NMT_status_Operational) break;
+				 if(dlc>1) mask_gpio = (CAN->sFIFOMailBox[0].RDLR&0xFF00)>>8;
+				 gpio |= ((~data0)&mask_gpio);
+				 gpio = gpio<<16;
+				 gpio |= (data0&mask_gpio);
+				 Block_rele->BSRR = gpio;
+			     break;
+			};
+		};
+		SET_BIT(CAN->RF0R, CAN_RF0R_RFOM0);//CAN->RF0R |= 0b0100000;  сообщение прочитано.
+
+
+};
+
+uint8_t CAN_transmit (CAN_TxMailBox_TypeDef *tx){
+
+	uint8_t n=0;
+
+	if ((CAN->TSR & CAN_TSR_TME0) == CAN_TSR_TME0){
+	}else if((CAN->TSR & CAN_TSR_TME1) == CAN_TSR_TME1){ n=1;
+	}else if((CAN->TSR & CAN_TSR_TME2) == CAN_TSR_TME2){ n=2;
+	}else return 1; //busy
+
+	CAN->sTxMailBox[n].TDTR = tx->TDTR;
+	CAN->sTxMailBox[n].TDLR = tx->TDLR;
+	CAN->sTxMailBox[n].TDHR = tx->TDHR;
+	CAN->sTxMailBox[n].TIR = tx->TIR ;
+
+	return 0;
+}
+
 
 void init_controller_STM32F042(void){
 
@@ -93,13 +292,13 @@ void init_controller_STM32F042(void){
 
 	RCC->CR |= RCC_CR_HSEON;  			//включаем генератор HSE
 	while(!(RCC->CR & RCC_CR_HSERDY)){};//ожидание готовности HSE
-    RCC->CR |= RCC_CR_CSSON; 	//следить за кварцем
+    RCC->CR |= RCC_CR_CSSON; 			//следить за кварцем
 
 	RCC->CFGR2 |= RCC_CFGR2_PREDIV_DIV1;  // Prediv предделитель для PLL
 	//завести HSE на PLL и 8 Мгц x6 = 48 Мгц
 	RCC->CFGR |=(RCC_CFGR_PLLSRC_HSE_PREDIV | RCC_CFGR_PLLMUL6);
 
-	RCC->CR |= RCC_CR_PLLON;  //включаем PLL
+	RCC->CR |= RCC_CR_PLLON;  			//включаем PLL
 	while(!(RCC->CR & RCC_CR_PLLRDY));  // ожидание готовности PLL
 	RCC->CFGR |= RCC_CFGR_SW_PLL;  		// переводим тактирование от PLL
 
@@ -107,7 +306,7 @@ void init_controller_STM32F042(void){
 	//MODIFY_REG(RCC->CFGR,RCC_CFGR_PPRE,RCC_CFGR_PPRE_DIV1);//APB1 Prescaler /1,
 
 	RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN; // включить блок syscfg
-	RCC->APB1ENR |= RCC_APB1ENR_PWREN;// управление питанием
+	RCC->APB1ENR |= RCC_APB1ENR_PWREN;	  // управление питанием
 
 
 
@@ -237,7 +436,7 @@ void init_controller_STM32F042(void){
 		case 0x05: speed = 0x001c0017;break; //125kb
 		case 0x06: speed = 0x001c001d;break; //100kb
 		case 0x07: speed = 0x001c003b;break; //50kb
-		default: speed = 0x001c0005;break;
+		default: speed = 0x001c0005;break;//000 -default 500kb
 
 	};
 
@@ -336,190 +535,8 @@ void init_controller_STM32F042(void){
 
 }
 
-void CEC_CAN_IRQHandler(void){
 
-	uint32_t id,dlc,gpio = 0;
-	uint8_t data0;
 
-		test_irq = 1;
-
-		if((CAN->RF0R & 0b0011) == 0) return;
-		// индефикатор = тип сообщения ? extd : std
-		id = CAN->sFIFOMailBox[0].RIR&0b0100?CAN->sFIFOMailBox[0].RIR >> 3:CAN->sFIFOMailBox[0].RIR >> 21;
-		dlc = CAN->sFIFOMailBox[0].RDTR &0b01111;// получение из регистра длины кадра
-		if((CAN->sFIFOMailBox[0].RIR & 0b010) == 0 && dlc != 0){// тип сообщения 0 - data / 1- rtr
-
-			//dlc = dlc>8? 8:dlc;
-			data0 = CAN->sFIFOMailBox[0].RDLR&0xff;
-
-			switch (id){
-
-				 case 0:
-				  if(dlc < 2) break;
-				  if(data0 == 0 || data0== can_id )
-				  status_NMT = (CAN->sFIFOMailBox[0].RDLR&0xff00)>>8;;
-				 break;
-
-				default:
-				 if(id != id_rxPDO1) break;
-				 if(status_NMT != NMT_start) break;
-				 if(dlc>1) mask_gpio = (CAN->sFIFOMailBox[0].RDLR&0xFF00)>>8;
-				 gpio |= ((~data0)&mask_gpio);
-				 gpio = gpio<<16;
-				 gpio |= (data0&mask_gpio);
-				 Block_rele->BSRR = gpio;
-			     break;
-			};
-		};
-		SET_BIT(CAN->RF0R, CAN_RF0R_RFOM0);//CAN->RF0R |= 0b0100000;  сообщение прочитано.
-
-};
-CAN_TxMailBox_TypeDef tx_mailbox;
-
-uint8_t CAN_transmit (CAN_TxMailBox_TypeDef *tx){
-
-	uint8_t n=0;
-
-	if ((CAN->TSR & CAN_TSR_TME0) == CAN_TSR_TME0){
-	}else if((CAN->TSR & CAN_TSR_TME1) == CAN_TSR_TME1){ n=1;
-	}else if((CAN->TSR & CAN_TSR_TME2) == CAN_TSR_TME2){ n=2;
-	}else return 1; //busy
-
-	CAN->sTxMailBox[n].TDTR = tx->TDTR;
-	CAN->sTxMailBox[n].TDLR = tx->TDLR;
-	CAN->sTxMailBox[n].TDHR = tx->TDHR;
-	CAN->sTxMailBox[n].TIR = tx->TIR ;
-	}
-
-
-
-
-
-
-
-
-
-/* USER CODE END PV */
-
-/* Private function prototypes -----------------------------------------------*/
-
-
-/**
-  * @brief  The application entry point.
-  * @retval int
-  */
-int main(void)
-{
-
-  //HAL_Init();
-
-  /* USER CODE BEGIN Init */
-	init_controller_STM32F042();
-	SystemCoreClockUpdate();
-	HAL_InitTick(TICK_INT_PRIORITY);
-	//HAL_NVIC_SetPriority(RCC_CRS_IRQn, 0, 0);
-    ///HAL_NVIC_EnableIRQ(RCC_CRS_IRQn);
-
-  id_16bit=can_id;
-
-
-   //Bootup Protocol
-
-   tx_mailbox.TIR = ((0x700 + can_id)<<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
-   tx_mailbox.TDTR = 2;// n на_отправку
-   tx_mailbox.TDLR = can_speed;// d0-d3
-   tx_mailbox.TDHR = 0;// d4-d7
-   CAN_transmit(&tx_mailbox);
-
-
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
- uint8_t command,sub_index,cycle = 0;
- uint16_t index;
-
- uint32_t id_message = 0, dlc_message =0,block_data0_3,block_data4_7;
-
-
-  while (1){
-
-	  if(CAN->RF1R&0b0011){
-
-		  	// Ext  1 / Std 0
-			id_message = CAN->sFIFOMailBox[1].RIR&0b0100?CAN->sFIFOMailBox[1].RIR >> 3:CAN->sFIFOMailBox[1].RIR >> 21;
-			dlc_message = CAN->sFIFOMailBox[1].RDTR &0b01111;// получение из регистра длины кадра
-			if((CAN->sFIFOMailBox[1].RIR & 0b010) == 0 && dlc_message != 0){// тип сообщения 0 - data / 1- rtr
-
-				dlc_message  = dlc_message >8? 8:dlc_message;
-				block_data0_3 = CAN->sFIFOMailBox[1].RDLR;
-				block_data4_7 = CAN->sFIFOMailBox[1].RDHR;
-				SET_BIT(CAN->RF1R, CAN_RF1R_RFOM1);//CAN->RF0R |= 0b0100000;  сообщение прочитано.
-
-		switch(id_message){
-
-			case 0x80:  // SYNC
-				break;
-
-			case 0x100: // TIME
-				break;
-
-			default:
-
-			if(id_rxSDO == id_message){  //SDO
-
-
-
-
-
-
-
-			break;}
-			if(heartbroken == id_message){}
-			break;
-
-	   }
-     };
-   };
-
-
-
-
-		  HAL_Delay(500);
-		  GPIOB->BSRR |=0x01 ;
-		  GPIOB->BSRR |=~0x02 ;
-
-		  HAL_Delay(500);
-		  GPIOB->BSRR |=~0x01 ;
-		  GPIOB->BSRR |= 0x02 ;
-
-
-		  if(!cycle){
-			  	 can_speed = ((GPIOA->IDR)&0x700);
-			     tx_mailbox.TIR = ((0x700 + can_id)<<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
-			     tx_mailbox.TDTR = 2;// n на_отправку
-			     tx_mailbox.TDLR = can_speed | can_id;// d0-d3
-			     tx_mailbox.TDHR = 0;// d4-d7
-			     CAN_transmit(&tx_mailbox);
-
-		     cycle = 10;}
-		  cycle --;
-		  };
-
-
-
-   /* USER CODE BEGIN 3 */ /* USER CODE END 3 */
-}
-
-/**
-  * @brief System Clock Configuration
-  * @retval None
-  */
-
-
-/* USER CODE BEGIN 4 */
-
-/* USER CODE END 4 */
 
 /**
   * @brief  This function is executed in case of error occurrence.
