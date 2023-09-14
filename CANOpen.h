@@ -59,23 +59,7 @@ const uint32_t error_msg[]={
 0x80000023,
 };
 
-
-#define  txSDO  0x580
-#define  rxSDO  0x600
-
-#define  txPDO1 0x180
-#define  txPDO2 0x280
-#define  txPDO3 0x380
-#define  txPDO4 0x480
-
-#define  rxPDO1 0x200
-#define  rxPDO2 0x300
-#define  rxPDO3 0x400
-#define  rxPDO4 0x500
-
-
-
-// deftype
+/* deftype */
 
 #define boolean         0x01
 #define INT8            0x02
@@ -159,6 +143,177 @@ const uint32_t subindex_FF[]={
 #define IDENTITY_DEFSTRUCT 12
 0x00230006,
 };
+#define  txSDO  0x580
+#define  rxSDO  0x600
+
+#define  txPDO1 0x180
+#define  txPDO2 0x280
+#define  txPDO3 0x380
+#define  txPDO4 0x480
+
+#define  rxPDO1 0x200
+#define  rxPDO2 0x300
+#define  rxPDO3 0x400
+#define  rxPDO4 0x500
+
+// command NMT
+#define id_NMT_control 0
+#define NMT_stop 2
+#define NMT_start 1
+#define NMT_pre_operational 128
+#define NMT_reset 129
+
+// status Block Rele
+
+#define NMT_status_Stopped 0x04
+#define NMT_status_Operational 0x05
+#define NMT_status_Pre_Operational 0x7F
+
+/*Attribute*/
+
+#define _CONST	0
+#define RO      0b0001
+#define WO      0b0010
+#define RW      0b0011
+#define NO_MAP  0b0100
+
+
+/* structure */
+
+#define SDO_request  0
+#define MAP_info     1
+
+/*Initiate SDO Protocol
+
+------ expedited transfer (быстрая загрузка/выгрузка)---
+
+Download  to client --> server
+request
+--------
+[byte 0] (command;
+bit 7..5
+0x01 - Initiate_download_request  (запрос на загрузку на сервер)
+bit4   0
+bit3.2 n- no_used_byte ( 4 - n);
+bit1   e - 0 normal transfer / 1 - expedited (быстрая)
+bit0   s - 0 - off n_byte / 1 - on n_byte   (n не указан или указан)
+multiplexor
+[byte 1-2] index
+[byte 3]   sub-index
+[byte 4-7] data
+
+response
+---------
+bit 7..5  0x03 - Initiate_download_response (ответ от сервера клиенту, что все ок)
+bit 4..0  0
+multiplexor
+[byte 1-2] index
+[byte 3]   sub-index
+
+Error
+---------
+0x04 - Error (ошибка)
+
+Upload to client <-- server
+
+request
+--------
+
+bit 7..5  0x02 - initiate upload request (запрос инициации выгрузки c сервера)
+bit 4..0  0
+multiplexor
+[byte 1-2] index
+[byte 3]   sub-index
+
+response
+--------
+[byte 0] (command;
+bit 7..5 0x02 - Initiate_download_request  (запрос на загрузку на сервер)
+bit4   0
+bit3.2 n- no_used_byte ( 4 - n);
+bit1   e - 0 normal transfer / 1 - expedited (быстрая)
+bit0   s - 0 - off n_byte 	 / 1 - on n_byte   (n не указан или указан)
+multiplexor
+[byte 1-2] index
+[byte 3]   sub-index
+[byte 4-7] data
+
+
+
+*/
+
+#define Initiate_download_request  0x20
+#define Initiate_download_response 0x60
+#define Initiate_upload_response   0x40
+#define initiate_upload_request    0x40
+#define Error_answer			   0x80
+
+
+#define n_no_byte_used  		   0x0C
+#define flag_Expedited_SDO 			0x02
+#define flag_N_byte    				0x01
+
+
+struct Data_Object{
+
+    uint8_t     request_type;
+    uint8_t     attribute;
+    uint8_t     nbit;
+    uint8_t     sub_index;
+    uint8_t     sub_index_ff;
+    void*       data_object;
+    void*       rw_object;
+
+};
+
+struct OD_Object{
+
+    uint16_t index;
+    void*     data;
+    void (*data_func)(struct Data_Object*);
+
+};
+
+struct one_type_array{
+
+    uint8_t sub_index;
+    void*   array;
+
+};
+
+struct record_arr_object{
+
+    uint8_t  sub_index;
+    uint8_t* nbit;    //arr[subindex] = {0x08,0x20....0x10};
+    void**   array; //arr[subindex];*uint8,*uint?_t .....
+
+};
+
+struct string_object{
+
+    uint8_t*    text;
+    uint8_t*    text_buffer;
+    uint8_t     n_byte;;
+    uint8_t     cond_sdo;
+
+};
+
+
+
+struct map_info{
+
+	uint8_t  nbit;
+	uint8_t  sub_index;
+	uint16_t index;
+
+};
+
+union  map_data{
+
+    uint32_t        data32;
+    struct map_info info;
+
+};
 
 struct PDO_Object{
 
@@ -209,8 +364,5 @@ struct SDO_Object{
     uint32_t*	cob_id_server;
 
 };
-
-
-
 
 #endif /* INC_CANOPEN_H_ */

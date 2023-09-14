@@ -18,7 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
+#include "CANOpen.h"
 
 /* USER CODE BEGIN PD */
 #define Rele_1 0x01
@@ -33,31 +33,7 @@
 #define led_error  0x01
 #define led_status 0x02
 
-#define  txSDO  0x580
-#define  rxSDO  0x600
 
-#define  txPDO1 0x180
-#define  txPDO2 0x280
-#define  txPDO3 0x380
-#define  txPDO4 0x480
-
-#define  rxPDO1 0x200
-#define  rxPDO2 0x300
-#define  rxPDO3 0x400
-#define  rxPDO4 0x500
-
-// command NMT
-#define id_NMT_control 0
-#define NMT_stop 2
-#define NMT_start 1
-#define NMT_pre_operational 128
-#define NMT_reset 129
-
-// status Block Rele
-
-#define NMT_status_Stopped 0x04
-#define NMT_status_Operational 0x05
-#define NMT_status_Pre_Operational 0x7F
 
 #define send_msg 0x01
 #define n_Sync_Object 1
@@ -67,7 +43,7 @@
 
 void init_controller_STM32F042(void);
 uint8_t CAN_transmit (CAN_TxMailBox_TypeDef *tx);
-
+void Processing_SDO_Object(CAN_FIFOMailBox_TypeDef*);
 
 CAN_FIFOMailBox_TypeDef rx_mailbox;
 CAN_TxMailBox_TypeDef 	tx_mailbox;
@@ -143,13 +119,19 @@ int main(void){
 
 					if(id_rxSDO == id_message){  //SDO
 
+						command = rx_mailbox.RIR&0xEC;
+						if(command == 0x40 || 0x20){ Processing_SDO_Object(&rx_mailbox);
+						}else{
+							rx_mailbox.RDLR = (rx_mailbox.RDLR&0xFFFFFF00)|Error_answer;
+							rx_mailbox.RDHR = error_msg[ERROR_SDO_SERVER];}
 
+						tx_mailbox.TIR = ((txSDO + can_id)<< 21)| send_msg;
+						tx_mailbox.TDTR = rx_mailbox.RDTR;
+					    tx_mailbox.TDLR = rx_mailbox.RDLR;
+						tx_mailbox.TDHR = rx_mailbox.RDHR;
+						CAN_transmit (&tx_mailbox);
 
-
-
-
-
-						break;}
+					break;}
 
 					/* Node Guarding (0x700 + id) + rtr
 					 * answer (0x700 + id) + dlc=1 + (toggle bit | NMT_status) one bayt
@@ -205,7 +187,7 @@ int main(void){
 
 /*------------------Function_Block_Rele-------------------------------------------------*/
 
-uint8_t Processing_SDO_Object(CAN_FIFOMailBox_TypeDef* rx){
+void Processing_SDO_Object(CAN_FIFOMailBox_TypeDef* rx){
 
 
 };
@@ -509,7 +491,7 @@ void init_controller_STM32F042(void){
 
 	CAN->sFilterRegister[0].FR1 = id_rxPDO1<< 5;
 	CAN->sFilterRegister[0].FR2 = 0;
-	CAN->sFilterRegister[1].FR1 = (id_rxSDO<<16 | heartbroken)<< 5;
+	CAN->sFilterRegister[1].FR1 = (id_rxSDO<<16 | heartbroken)<< 5 | 0x02;//0x02 test rtr bit for heartbroken
 	CAN->sFilterRegister[1].FR2 = (0x80 << 16 | 0x100 << 16)<< 5;
 
 	CAN->FMR &=~ CAN_FMR_FINIT; /* Leave filter init */
