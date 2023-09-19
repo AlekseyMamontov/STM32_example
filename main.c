@@ -86,7 +86,7 @@ int main(void){
 
   while (1){
 
-	  if(CAN->RF1R&0b0011){
+	  if(CAN->RF1R&0b0011){ // new message? yes
 
 		  rx_mailbox.RIR = CAN->sFIFOMailBox[1].RIR;
 		  rx_mailbox.RDTR = CAN->sFIFOMailBox[1].RDTR;
@@ -119,8 +119,12 @@ int main(void){
 
 					if(id_rxSDO == id_message){  //SDO
 
-						command = rx_mailbox.RIR&0xEC;
-						if(command == 0x40 || 0x20){ Processing_SDO_Object(&rx_mailbox);
+						command = rx_mailbox.RDLR&0b11100011; //byte_0 (command(7-5bit)+flag_e+Flag_s)
+						if(command ==  (Initiate_download_request|flag_Expedited_SDO|flag_Size_byte)
+									|| Initiate_upload_request ){
+
+									Processing_SDO_Object(&rx_mailbox);
+
 						}else{
 							rx_mailbox.RDLR = (rx_mailbox.RDLR&0xFFFFFF00)|Error_answer;
 							rx_mailbox.RDHR = error_msg[ERROR_SDO_SERVER];}
@@ -188,6 +192,10 @@ int main(void){
 /*------------------Function_Block_Rele-------------------------------------------------*/
 
 void Processing_SDO_Object(CAN_FIFOMailBox_TypeDef* rx){
+
+
+
+
 
 
 };

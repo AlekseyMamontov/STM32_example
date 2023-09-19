@@ -228,7 +228,7 @@ multiplexor
 response
 --------
 [byte 0] (command;
-bit 7..5 0x02 - Initiate_download_request  (запрос на загрузку на сервер)
+bit 7..5 0x02 - Initiate_upload_request  (запрос на загрузку на сервер)
 bit4   0
 bit3.2 n- no_used_byte ( 4 - n);
 bit1   e - 0 normal transfer / 1 - expedited (быстрая)
@@ -245,13 +245,13 @@ multiplexor
 #define Initiate_download_request  0x20
 #define Initiate_download_response 0x60
 #define Initiate_upload_response   0x40
-#define initiate_upload_request    0x40
+#define Initiate_upload_request    0x40
 #define Error_answer			   0x80
 
 
 #define n_no_byte_used  		   0x0C
 #define flag_Expedited_SDO 			0x02
-#define flag_N_byte    				0x01
+#define flag_Size_byte    				0x01
 
 
 struct Data_Object{
