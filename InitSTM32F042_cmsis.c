@@ -98,6 +98,101 @@ void init_controller_STM32F042(void){
 	//speed pull_down  pin A10,A9,A8
 	GPIOA->PUPDR |= 0x2A0000;//0b1010100000000000000000;
 
+
+/***************************** EXTIxx  *********************************
+ *
+ * SYSCFG_EXTICR1 exti0-3
+ * SYSCFG_EXTICR2 exti4-7
+ * SYSCFG_EXTICR3 exti8-11
+ * SYSCFG_EXTICR4 ext12-15
+  Bits 31:16 Reserved, must be kept at reset value.
+  Bits 15:0 EXTIx[3:0]: EXTI x configuration bits (x = 0 to 3)
+	These bits are written by software to select the source input for the EXTIx external interrupt.
+		x000: PA[x] pin
+		x001: PB[x] pin
+		x010: PC[x] pin
+		x011: PD[x] pin
+		x100: PE[x] pin
+		x101: PF[x] pin
+			other configurations: reserved
+
+   SYSCFG_ITLINE5
+   	   Bit 1 EXTI1: EXTI line 1 interrupt request pending
+   	   Bit 0 EXTI0: EXTI line 0 interrupt request pending
+   SYSCFG_ITLINE6
+   	   Bit 1 EXTI3: EXTI line 3 interrupt request pending
+   	   Bit 0 EXTI2: EXTI line 2 interrupt request pending
+   SYSCFG_ITLINE7
+		Bit 11 EXTI15: EXTI line 15 interrupt request pending
+   	   	Bit 10 EXTI14: EXTI line 14 interrupt request pending
+		Bit 9 EXTI13: EXTI line 13 interrupt request pending
+		Bit 8 EXTI12: EXTI line 12 interrupt request pending
+		Bit 7 EXTI11: EXTI line 11 interrupt request pending
+		Bit 6 EXTI10: EXTI line 10 interrupt request pending
+		Bit 5 EXTI9: EXTI line 9 interrupt request pending
+		Bit 4 EXTI8: EXTI line 8 interrupt request pending
+		Bit 3 EXTI7: EXTI line 7 interrupt request pending
+		Bit 2 EXTI6: EXTI line 6 interrupt request pending
+		Bit 1 EXTI5: EXTI line 5 interrupt request pending
+		Bit 0 EXTI4: EXTI line 4 interrupt request pending
+
+	Interrupt mask register (EXTI_IMR)
+
+	    bit 0 -15 exti0-15
+		Address offset: 0x00
+		Reset value: 0x0FF4 0000 (STM32F03x devices)
+		0x7FF4 0000 (STM32F04x devices)
+		0x0F94 0000 (STM32F05x devices)
+		0x7F84 0000 (STM32F07x and STM32F09x devices)
+
+		Bits 31:0 IMx: Interrupt Mask on line x (x = 31 to 0)
+		0: Interrupt request from Line x is masked
+		1: Interrupt request from Line x is not masked
+
+		Event mask register (EXTI_EMR)
+			Address offset: 0x04
+			Reset value: 0x0000 0000
+
+		Bits 31:0 EMx: Event mask on line x (x = 31 to 0)
+			0: Event request from Line x is masked
+			1: Event request from Line x is not masked
+
+		Rising trigger selection register (EXTI_RTSR)  _|
+		Falling trigger selection register (EXTI_FTSR) |_
+
+			Address offset: 0x08
+			Reset value: 0x0000 0000
+			Bits 17:0 RTx: Rising trigger event configuration bit of line x (x = 17 to 0)
+				0: Rising trigger disabled (for Event and Interrupt) for input line
+				1: Rising trigger enabled (for Event and Interrupt) for input line.
+
+		Software interrupt event register (EXTI_SWIER)
+			Address offset: 0x10
+			Reset value: 0x0000 0000
+			Bits 17:0 SWIx: Software interrupt on line x (x = 17 to 0)
+							If the interrupt is enabled on this line in the EXTI_IMR, writing a ‘1’ to this bit when it is at ‘0’
+							sets the corresponding pending bit in EXTI_PR resulting in an interrupt request generation.
+							This bit is cleared by clearing the corresponding bit of EXTI_PR (by writing a ‘1’ to the bit).
+		Pending register (EXTI_PR)
+			Address offset: 0x14
+			Reset value: undefined
+			PIFx: Pending bit on line x (x = 17 to 0)
+				0: no trigger request occurred
+				1: selected trigger request occurred
+				This bit is set when the selected edge event arrives on the external interrupt line. This bit is
+				cleared by writing a 1 to the bit.
+
+ */
+/******************************  TIM14 **************************/
+	    RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
+	    TIM14->PSC =  48000000/1000 - 1;
+	    TIM14->DIER |= TIM_DIER_UIE; 	  // enable perepolnenia TIM14
+	    TIM14->CR1 |= TIM_CR1_CEN;		  // ON TIM14
+	    TIM14->ARR = 1; //1 ms
+
+	    NVIC_EnableIRQ(TIM14_IRQn);
+
+/******************************  bxCAN **************************/
 /*
    	CAN GPIO Configuration
    	   	   PA11     ------> CAN_RX
@@ -115,8 +210,8 @@ void init_controller_STM32F042(void){
 	 CAN master status register (CAN_MSR)  Reset value: 0x0000 0C02
 */
 
-	// включить порт А
-	// SET_BIT(RCC->AHBENR, RCC_AHBENR_GPIOAEN);
+
+	
     	uint32_t speed;
 
 	//   выставить порты на альтернативные функции 0x10
@@ -259,59 +354,4 @@ void init_controller_STM32F042(void){
 	NVIC_EnableIRQ(CEC_CAN_IRQn);
 
 }
-
-void CEC_CAN_IRQHandler(void){
-
-	uint32_t id,dlc,gpio = 0;
-	uint8_t data0;
-
-		test_irq = 1;
-
-		if((CAN->RF0R & 0b0011) == 0) return;
-		// индефикатор = тип сообщения ? extd : std
-		id = CAN->sFIFOMailBox[0].RIR&0b0100?CAN->sFIFOMailBox[0].RIR >> 3:CAN->sFIFOMailBox[0].RIR >> 21;
-		dlc = CAN->sFIFOMailBox[0].RDTR &0b01111;// получение из регистра длины кадра
-		if((CAN->sFIFOMailBox[0].RIR & 0b010) == 0 && dlc != 0){// тип сообщения 0 - data / 1- rtr
-
-			//dlc = dlc>8? 8:dlc;
-			data0 = CAN->sFIFOMailBox[0].RDLR&0xff;
-
-			switch (id){
-
-				 case 0:
-				  if(dlc < 2) break;
-				  if(data0 == 0 || data0== can_id )
-				  status_NMT = (CAN->sFIFOMailBox[0].RDLR&0xff00)>>8;;
-				 break;
-
-				default:
-				 if(id != id_rxPDO1) break;
-				 if(status_NMT != NMT_start) break;
-				 if(dlc>1) mask_gpio = (CAN->sFIFOMailBox[0].RDLR&0xFF00)>>8;
-				 gpio |= ((~data0)&mask_gpio);
-				 gpio = gpio<<16;
-				 gpio |= (data0&mask_gpio);
-				 Block_rele->BSRR = gpio;
-			     break;
-			};
-		};
-		SET_BIT(CAN->RF0R, CAN_RF0R_RFOM0);//CAN->RF0R |= 0b0100000;  сообщение прочитано.
-
-};
-CAN_TxMailBox_TypeDef tx_mailbox;
-
-uint8_t CAN_transmit (CAN_TxMailBox_TypeDef *tx){
-
-	uint8_t n=0;
-
-	if ((CAN->TSR & CAN_TSR_TME0) == CAN_TSR_TME0){
-	}else if((CAN->TSR & CAN_TSR_TME1) == CAN_TSR_TME1){ n=1;
-	}else if((CAN->TSR & CAN_TSR_TME2) == CAN_TSR_TME2){ n=2;
-	}else return 1; //busy
-
-	CAN->sTxMailBox[n].TDTR = tx->TDTR;
-	CAN->sTxMailBox[n].TDLR = tx->TDLR;
-	CAN->sTxMailBox[n].TDHR = tx->TDHR;
-	CAN->sTxMailBox[n].TIR = tx->TIR ;
-	}
 
