@@ -98,8 +98,8 @@ void tft_command(uint8_t command){
 void tft_data16 (uint16_t data){
 
 	uint16_t data_clr = ~data;
-	uint16_t data_MSB =  (data_clr&0xFF00) |((data&0xFF00)>>8);
-	uint16_t data_LSB =  ((data_clr&0xFF)<<8) | (data&0xFF);
+	uint16_t data_MSB =  ((data_clr&0xFF00)<<8) |((data&0xFF00)>>8);
+	uint16_t data_LSB =  ((data_clr&0xFF)<<16) | (data&0xFF);
 
 	GPIOA->BSRR = data_MSB;
 	GPIOB->BRR =  tft_WR;
@@ -121,8 +121,8 @@ void tft_data_block (uint16_t * block, uint16_t size){
 
 		data = *(block + i);
 		data_clr = ~data;
-		data_MSB =  (data_clr&0xFF00) | ((data&0xFF00)>>8);
-		data_LSB =  ((data_clr&0xFF)<<8) | (data&0xFF);
+		data_MSB =  ((data_clr&0xFF00)<<8)| ((data&0xFF00)>>8);
+		data_LSB =  ((data_clr&0xFF)<<16) | (data&0xFF);
 
 		GPIOA->BSRR = data_MSB;
 		GPIOB->BRR =  tft_WR;
