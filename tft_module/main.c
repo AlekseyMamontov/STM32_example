@@ -80,6 +80,83 @@ int main(void)
   /* USER CODE END 3 */
 }
 
+
+/**************** TFT module ***************/
+
+void tft_command(uint8_t command){
+
+	uint16_t data8 = ~command;
+	data8 <<= 16;
+	data8 |= command;
+	GPIOA->BSRR = data8;
+	GPIOB->BRR = tft_RS|tft_WR;
+	HAL_Delay(1);
+	GPIOB->BSRR = tft_RS|tft_WR;
+	HAL_Delay(1);
+};
+
+void tft_data16 (uint16_t data){
+
+	uint16_t data_clr = ~data;
+	uint16_t data_MSB =  (data_clr&0xFF00) |((data&0xFF00)>>8);
+	uint16_t data_LSB =  ((data_clr&0xFF)<<8) | (data&0xFF);
+
+	GPIOA->BSRR = data_MSB;
+	GPIOB->BRR =  tft_WR;
+	HAL_Delay(1);
+	GPIOB->BSRR = tft_WR;
+	HAL_Delay(1);
+	GPIOA->BSRR = data_LSB;
+	GPIOB->BRR =  tft_WR;
+	HAL_Delay(1);
+	GPIOB->BSRR = tft_WR;
+	HAL_Delay(1);
+};
+
+void tft_data_block (uint16_t * block, uint16_t size){
+
+	uint16_t data, data_clr, data_MSB, data_LSB;
+
+	for(uint16_t i=0; i< size; i++){
+
+		data = *(block + i);
+		data_clr = ~data;
+		data_MSB =  (data_clr&0xFF00) | ((data&0xFF00)>>8);
+		data_LSB =  ((data_clr&0xFF)<<8) | (data&0xFF);
+
+		GPIOA->BSRR = data_MSB;
+		GPIOB->BRR =  tft_WR;
+		HAL_Delay(1);
+		GPIOB->BSRR = tft_WR;
+		HAL_Delay(1);
+		GPIOA->BSRR = data_LSB;
+		GPIOB->BRR =  tft_WR;
+		HAL_Delay(1);
+		GPIOB->BSRR = tft_WR;
+		HAL_Delay(1);
+
+	};
+
+};
+
+void tft_fast_clear(uint16_t color){
+
+
+
+
+
+
+
+
+
+
+
+
+};
+
+
+/*------------------ TIMERS -------------------*/
+
 void TIM14_IRQHandler(){
 
 	uint32_t const_bit = 0x01,
@@ -266,14 +343,15 @@ void init_controller_STM32F072(void){
     GPIOA->MODER |=0x145555;  //0b0101000101010101010101: General purpose output mode
     GPIOA->OSPEEDR |= 0x3FFFF;//0b1111111111111111111111: high speed
     //GPIOA->OTYPER &=0b1111111100000000;//0 - push-pull, reset default
-    GPIOA->BSRR = 0x00FF0300; // 0b0000000011111111 | 0000001100000000
+    GPIOA->BRR = tft_data; // clear
+    GPIOA->BSRR = pl_165 | sck_165; // set 1 pl and sck
 
     // Keys b0 - down, b1 - ok, b2 - up   - input
     // b7 - RST, b6 - CS, b5 - RS, b4 - WR. b3 - RD  - output
     					       // RSTCSRSWRRDb2b1b0
     GPIOB->MODER |= 0x5540;    //0b0101010101000000 : 01 -General purpose output mode
     GPIOB->OSPEEDR |= 0xFFD5;  //0b1111111111010101 : 7-3 high 2-0 medium speed
-    GPIOB->BSRR = 0xF8; //0b11111000
+    GPIOB->BSRR = tft_RD|tft_WR|tft_RS|tft_CS|tft_RST;
 
 
 
@@ -392,17 +470,18 @@ void init_controller_STM32F072(void){
 
 
 
-	//   выставить порты на альтернативные функции 0x10
 
-	GPIOA->MODER |= (GPIO_MODER_MODER11_1 | GPIO_MODER_MODER12_1);
+	//   выставить пины B9-B8 на альтернативные функции 0x10
+
+	GPIOB->MODER |= (GPIO_MODER_MODER8_1  | GPIO_MODER_MODER9_1 );
 
 	// скорость порта на максимум
 
-	GPIOA->OSPEEDR |= GPIO_OSPEEDR_OSPEEDR11|GPIO_OSPEEDR_OSPEEDR12;
+	GPIOB->OSPEEDR |= GPIO_OSPEEDR_OSPEEDR8|GPIO_OSPEEDR_OSPEEDR9;
 
-	//  пины 11,12 включить модуль bxCAN
+	//  пины PB8,PB9 включить модуль bxCAN
 
-	GPIOA->AFR[1] |= ((0x04 << GPIO_AFRH_AFSEL11_Pos) | (0x04 << GPIO_AFRH_AFSEL12_Pos));
+	GPIOB->AFR[1] |= ((0x04 << GPIO_AFRH_AFSEL8_Pos) | (0x04 << GPIO_AFRH_AFSEL9_Pos));
 
 	// включить модуль Can
 
@@ -427,8 +506,7 @@ void init_controller_STM32F072(void){
 
 	// Получение данных
 	uint32_t speed;
-	can_id = ((GPIOB->IDR)&0b0000001111111000)>>3;// b3-b9
-	can_speed = ((GPIOA->IDR)&0x700)>>8;
+	Read_addr_CAN();
 	//can_speed =0;
 	switch(can_speed){ // 48 Мгц.
 
