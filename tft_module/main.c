@@ -2,6 +2,7 @@
 #include "main.h"
 /* USER CODE BEGIN Includes */
 #include "CANOpen.h"
+//#include "tft_panel_8bit.h"
 #define n_Sync_Object 1
 
 // 74hc165
@@ -17,8 +18,18 @@
 #define tft_CS   0b01000000
 #define tft_RST  0b10000000
 #define tft_data 0b11111111 //a0-a7
-
-
+#define tft_pause HAL_Delay(1)
+struct tft_window {
+	uint16_t image_x0;
+	uint16_t image_y0;
+	uint16_t image_x1;
+	uint16_t image_y1;
+	uint16_t cursor_x;
+	uint16_t cursor_y;
+	uint16_t color_font;
+	uint16_t color_background;
+	uint8_t *font;
+};
 
 
 
@@ -85,32 +96,35 @@ int main(void)
 
 void tft_command(uint8_t command){
 
-	uint16_t data8 = ~command;
-	data8 <<= 16;
-	data8 |= command;
-	GPIOA->BSRR = data8;
+	GPIOA->BSRR = command;
+	GPIOA->BRR = ~command;
 	GPIOB->BRR = tft_RS|tft_WR;
-	HAL_Delay(1);
+	tft_pause;
 	GPIOB->BSRR = tft_RS|tft_WR;
-	HAL_Delay(1);
+	tft_pause;
 };
 
 void tft_data16 (uint16_t data){
-
+ /*
 	uint16_t data_clr = ~data;
 	uint16_t data_MSB =  ((data_clr&0xFF00)<<8) |((data&0xFF00)>>8);
 	uint16_t data_LSB =  ((data_clr&0xFF)<<16) | (data&0xFF);
+*/
+   uint8_t data_MSB = data >> 8;
+   uint8_t data_LSB = data&0xFF;
 
 	GPIOA->BSRR = data_MSB;
+    GPIOA->BRR = ~data_MSB;
 	GPIOB->BRR =  tft_WR;
-	HAL_Delay(1);
+	tft_pause;
 	GPIOB->BSRR = tft_WR;
-	HAL_Delay(1);
+	tft_pause;
 	GPIOA->BSRR = data_LSB;
+	GPIOA->BRR = ~data_LSB;
 	GPIOB->BRR =  tft_WR;
-	HAL_Delay(1);
+	tft_pause;
 	GPIOB->BSRR = tft_WR;
-	HAL_Delay(1);
+	tft_pause;
 };
 
 void tft_data_block (uint16_t * block, uint16_t size){
@@ -126,18 +140,70 @@ void tft_data_block (uint16_t * block, uint16_t size){
 
 		GPIOA->BSRR = data_MSB;
 		GPIOB->BRR =  tft_WR;
-		HAL_Delay(1);
+		tft_pause;
 		GPIOB->BSRR = tft_WR;
-		HAL_Delay(1);
+		tft_pause;
 		GPIOA->BSRR = data_LSB;
 		GPIOB->BRR =  tft_WR;
-		HAL_Delay(1);
+		tft_pause;
 		GPIOB->BSRR = tft_WR;
-		HAL_Delay(1);
+		tft_pause;
 
 	};
 
 };
+
+void tft_fast_fill_window(uint16_t color, uint16_t size){
+
+	uint16_t data_clr = ~color;
+	uint16_t data_MSB =  ((data_clr&0xFF00)<<8)| ((color&0xFF00)>>8);
+	uint16_t data_LSB =  ((data_clr&0x00FF)<<16) | (color&0xFF);
+
+	for(uint16_t i=0; i< size; i++){
+
+			GPIOA->BSRR = data_MSB;
+			GPIOB->BRR =  tft_WR;
+			tft_pause;
+			GPIOB->BSRR = tft_WR;
+			tft_pause;
+			GPIOA->BSRR = data_LSB;
+			GPIOB->BRR =  tft_WR;
+			tft_pause;
+			GPIOB->BSRR = tft_WR;
+			tft_pause;
+	};
+};
+
+/*
+struct TFT_windows {
+	uint16_t image_x0;
+	uint16_t image_y0;
+	uint16_t image_x1;
+	uint16_t image_y1;
+	uint16_t cursor_x;
+	uint16_t cursor_y;
+	uint16_t color_font;
+	uint16_t color_background;
+	uint8_t *font;
+};
+ */
+
+void tft_set_window(struct tft_window* win){
+
+	tft_command(0x2A);
+	tft_data16(win->image_x0);
+	tft_data16(win->image_x1);
+	tft_command(0x2B);
+	tft_data16(win->image_y0);
+	tft_data16(win->image_y1);
+	tft_command(0x2C);
+
+}
+
+
+
+
+
 
 void tft_fast_clear(uint16_t color){
 
