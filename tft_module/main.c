@@ -2,7 +2,8 @@
 #include "main.h"
 /* USER CODE BEGIN Includes */
 #include "CANOpen.h"
-//#include "tft_panel_8bit.h"
+#include "tft_panel_8bit.h"
+#include "fonts.h"
 #define n_Sync_Object 1
 
 // 74hc165
@@ -19,6 +20,7 @@
 #define tft_RST  0b10000000
 #define tft_data 0b11111111 //a0-a7
 #define tft_pause HAL_Delay(1)
+
 struct tft_window {
 	uint16_t image_x0;
 	uint16_t image_y0;
@@ -31,6 +33,19 @@ struct tft_window {
 	uint8_t *font;
 };
 
+struct tft_window fwin={
+
+	.image_x0 = 0,
+	.image_y0 = 0,
+	.image_x1 = 0x13F,
+	.image_y1 = 0x1DF,
+	.cursor_x = 0,
+	.cursor_y = 0,
+	.color_font = color_GREEN,
+	.color_background = color_BLACK,
+	.font = NULL,
+
+};
 
 
 
@@ -38,6 +53,10 @@ struct tft_window {
 
 /* USER CODE BEGIN PFP */
 void init_controller_STM32F072(void);
+void init_tft_display(uint8_t* buf);
+void tft_fast_clear(struct tft_window* win);
+
+
 
 // Keys b0 - down b1 - OK  b2 - up
 uint32_t gpio_time_pin[3]={0};
@@ -78,6 +97,13 @@ int main(void)
 	init_controller_STM32F072();// Init RCC 48Mhz, GPIOx, bxCAN
 	//SystemCoreClockUpdate();
 	//HAL_InitTick(TICK_INT_PRIORITY);
+	init_tft_display(init_ili9486);
+	tft_fast_clear(&fwin);
+
+
+
+
+
   /* USER CODE END Init */
 
 
@@ -103,7 +129,15 @@ void tft_command(uint8_t command){
 	GPIOB->BSRR = tft_RS|tft_WR;
 	tft_pause;
 };
+void tft_data8 (uint8_t data){
 
+	GPIOA->BSRR = data;
+    GPIOA->BRR = ~data;
+	GPIOB->BRR =  tft_WR;
+	tft_pause;
+	GPIOB->BSRR = tft_WR;
+	tft_pause;
+};
 void tft_data16 (uint16_t data){
  /*
 	uint16_t data_clr = ~data;
@@ -126,12 +160,26 @@ void tft_data16 (uint16_t data){
 	GPIOB->BSRR = tft_WR;
 	tft_pause;
 };
+uint8_t* tft_data8_block (uint8_t* block, uint32_t size){
 
-void tft_data_block (uint16_t * block, uint16_t size){
+	uint8_t data;
+	for(uint32_t i=0; i< size; i++){
+
+		data = *block++;
+		GPIOA->BSRR = data;
+		GPIOA->BRR = ~data;
+		GPIOB->BRR =  tft_WR;
+		tft_pause;
+		GPIOB->BSRR = tft_WR;
+		tft_pause;
+	};
+return block;
+};
+void tft_data16_block (uint16_t* block, uint32_t size){
 
 	uint16_t data, data_clr, data_MSB, data_LSB;
 
-	for(uint16_t i=0; i< size; i++){
+	for(uint32_t i=0; i< size; i++){
 
 		data = *(block + i);
 		data_clr = ~data;
@@ -153,13 +201,13 @@ void tft_data_block (uint16_t * block, uint16_t size){
 
 };
 
-void tft_fast_fill_window(uint16_t color, uint16_t size){
+void tft_fast_fill_window(uint16_t color, uint32_t size){
 
 	uint16_t data_clr = ~color;
 	uint16_t data_MSB =  ((data_clr&0xFF00)<<8)| ((color&0xFF00)>>8);
 	uint16_t data_LSB =  ((data_clr&0x00FF)<<16) | (color&0xFF);
 
-	for(uint16_t i=0; i< size; i++){
+	for(uint32_t i=0; i< size; i++){
 
 			GPIOA->BSRR = data_MSB;
 			GPIOB->BRR =  tft_WR;
@@ -200,24 +248,34 @@ void tft_set_window(struct tft_window* win){
 
 }
 
+void tft_fast_clear(struct tft_window* win){
 
+	uint16_t nX = win->image_x1 > win->image_x0? win->image_x1 - win->image_x0 :
+												 win->image_x0 - win->image_x1 ;
+	uint16_t nY = win->image_y1 > win->image_y0? win->image_y1 - win->image_y0 :
+												 win->image_y0 - win->image_y1 ;
+	uint32_t size = nX * nY;
+	tft_set_window(win);
+	tft_fast_fill_window(win->color_background,size);
 
+};
 
+void init_tft_display(uint8_t* buf){
 
+	uint8_t data = 0;
+	GPIOA->BSRR = tft_RD|tft_WR|tft_RS|tft_RST;
+	GPIOA->BRR  = tft_CS;
 
-void tft_fast_clear(uint16_t color){
+	while(*buf != STOP_INIT){
 
+		data = *buf++;
+		if(data == PAUSE_INIT){HAL_Delay(*buf++);continue;}
+		tft_command(data);
+		data = *buf++;
+		if(data == 0) continue;
+		buf = tft_data8_block(buf,data);
 
-
-
-
-
-
-
-
-
-
-
+	};
 };
 
 
