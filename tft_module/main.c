@@ -7,38 +7,16 @@
 #define n_Sync_Object 1
 
 // 74hc165
-#define pl_165   0b01000000000
-#define sck_165  0b10000000000
-#define data_165 0b00100000000
+
 
 // tft_panel
-
-#define tft_RD   0b00001000
-#define tft_WR   0b00010000
-#define tft_RS   0b00100000
-#define tft_CS   0b01000000
-#define tft_RST  0b10000000
-#define tft_data 0b11111111 //a0-a7
-#define tft_pause //HAL_Delay(1)
-
-struct tft_window {
-	uint16_t image_x0;
-	uint16_t image_y0;
-	uint16_t image_x1;
-	uint16_t image_y1;
-	uint16_t cursor_x;
-	uint16_t cursor_y;
-	uint16_t color_font;
-	uint16_t color_background;
-	uint8_t *font;
-};
 
 struct tft_window fwin={
 
 	.image_x0 = 0,
 	.image_y0 = 0,
-	.image_x1 = 0x1DF,
-	.image_y1 = 0x13F,
+	.image_x1 = 0x13F,
+	.image_y1 = 0x1dF,
 	.cursor_x = 0,
 	.cursor_y = 0,
 	.color_font = color_GREEN,
@@ -53,19 +31,20 @@ struct tft_window fwin={
 
 /* USER CODE BEGIN PFP */
 void init_controller_STM32F072(void);
-void init_tft_display(uint8_t* buf);
-void tft_fast_clear(struct tft_window* win);
 uint8_t CAN_transmit (CAN_TxMailBox_TypeDef *tx);
 void Processing_SDO_Object(CAN_FIFOMailBox_TypeDef*);
 
 
 // Keys b0 - down b1 - OK  b2 - up
+uint16_t tft_keys[3] = {0};
+uint16_t keys_status = 0;
+uint8_t  buffer_keys[8];
 uint32_t gpio_time_pin[3]={0};
-uint32_t gpio_time_ms[3]={10,10,10};
+uint32_t gpio_time_ms[3]={5,5,5};
 uint32_t gpio_input = 0;
 
 // CanOpen
-uint32_t can_id,can_speed,id_rxPDO1,id_txPDO1,id_rxSDO,id_txSDO,heartbroken;
+uint32_t can_id,can_id_test = 0,can_speed,id_rxPDO1,id_txPDO1,id_rxSDO,id_txSDO,heartbroken;
 uint8_t  NMT_command = 0,NMT_status = NMT_status_Operational;
 
 uint32_t *sync_data, *Sync_obj[n_Sync_Object]={NULL};
@@ -98,14 +77,13 @@ int main(void)
 	init_controller_STM32F072();// Init RCC 48Mhz, GPIOx, bxCAN
 	SystemCoreClockUpdate();
 	HAL_InitTick(TICK_INT_PRIORITY);
-
 	//init_tft_display(init_ili9486);init_r61581
 	init_tft_display(init_r61581);
 	tft_fast_clear(&fwin);
 
 	 tx_mailbox.TIR = ((0x700 + can_id)<<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
 	 tx_mailbox.TDTR = 1;// n на_отправку
-	 tx_mailbox.TDLR = 0;// d0-d3
+	 tx_mailbox.TDLR = can_id;// d0-d3
 	 tx_mailbox.TDHR = 0;// d4-d7
 
 	 CAN_transmit(&tx_mailbox);
@@ -116,18 +94,43 @@ int main(void)
 
 
   /* USER CODE BEGIN WHILE */
+  uint32_t test,*buf;
   while (1)
   {
 
-	  HAL_Delay(1500);
-	   fwin.color_background +=100;
-	  tft_fast_clear(&fwin);
-	  tx_mailbox.TIR = ((0x700 + can_id)<<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
-	 	 tx_mailbox.TDTR = 1;// n на_отправку
+	  HAL_Delay(1);
+
+	  if(test >= 1500){
+
+	     tft_fast_clear(&fwin);
+	     tx_mailbox.TIR = ((0x700 + can_id)<<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
+	 	 tx_mailbox.TDTR = 2;// n на_отправку
 	 	 tx_mailbox.TDLR = fwin.color_background;// d0-d3
 	 	 tx_mailbox.TDHR = 0;// d4-d7
 
 	 	 CAN_transmit(&tx_mailbox);
+	 	 test = 0;
+	 	 fwin.color_background +=100;
+	  }else{test++;}
+
+
+
+
+
+	  if(send_txPDO1){
+
+	 	send_txPDO1 = 0;
+	 	keys_status = 0;
+	 	tx_mailbox.TIR = (id_txPDO1 <<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
+	 	tx_mailbox.TDTR = 1;// n на_отправку
+	 	tx_mailbox.TDLR = keys_status;// d0-d3
+	 	tx_mailbox.TDHR = 0;// d4-d7
+
+	 	if(CAN_transmit(&tx_mailbox))send_txPDO1 = 1;
+
+	  };
+
+
 
     /* USER CODE END WHILE */
 
@@ -137,189 +140,30 @@ int main(void)
 }
 
 
-/**************** TFT module ***************/
-
-void tft_command(uint8_t command){
-
-	GPIOA->BSRR = command;
-	GPIOA->BRR = ~command;
-	GPIOB->BRR = tft_RS|tft_WR;
-	tft_pause;
-	GPIOB->BSRR = tft_RS|tft_WR;
-	tft_pause;
-};
-void tft_data8 (uint8_t data){
-
-	GPIOA->BSRR = data;
-    GPIOA->BRR = ~data;
-	GPIOB->BRR =  tft_WR;
-	tft_pause;
-	GPIOB->BSRR = tft_WR;
-	tft_pause;
-};
-void tft_data16 (uint16_t data){
- /*
-	uint16_t data_clr = ~data;
-	uint16_t data_MSB =  ((data_clr&0xFF00)<<8) |((data&0xFF00)>>8);
-	uint16_t data_LSB =  ((data_clr&0xFF)<<16) | (data&0xFF);
-*/
-   uint8_t data_MSB = data >> 8;
-   uint8_t data_LSB = data&0xFF;
-
-	GPIOA->BSRR = data_MSB;
-    GPIOA->BRR = ~data_MSB;
-	GPIOB->BRR =  tft_WR;
-	tft_pause;
-	GPIOB->BSRR = tft_WR;
-	tft_pause;
-	GPIOA->BSRR = data_LSB;
-	GPIOA->BRR = ~data_LSB;
-	GPIOB->BRR =  tft_WR;
-	tft_pause;
-	GPIOB->BSRR = tft_WR;
-	tft_pause;
-};
-uint8_t* tft_data8_block (uint8_t* block, uint32_t size){
-
-	uint8_t data;
-	for(uint32_t i=0; i< size; i++){
-
-		data = *block++;
-		GPIOA->BSRR = data;
-		GPIOA->BRR = ~data;
-		GPIOB->BRR =  tft_WR;
-		tft_pause;
-		GPIOB->BSRR = tft_WR;
-		tft_pause;
-	};
-return block;
-};
-void tft_data16_block (uint16_t* block, uint32_t size){
-
-	uint16_t data, data_clr, data_MSB, data_LSB;
-
-	for(uint32_t i=0; i< size; i++){
-
-		data = *(block + i);
-		data_clr = ~data;
-		data_MSB =  ((data_clr&0xFF00)<<8)| ((data&0xFF00)>>8);
-		data_LSB =  ((data_clr&0xFF)<<16) | (data&0xFF);
-
-		GPIOA->BSRR = data_MSB;
-		GPIOB->BRR =  tft_WR;
-		tft_pause;
-		GPIOB->BSRR = tft_WR;
-		tft_pause;
-		GPIOA->BSRR = data_LSB;
-		GPIOB->BRR =  tft_WR;
-		tft_pause;
-		GPIOB->BSRR = tft_WR;
-		tft_pause;
-
-	};
-
-};
-
-void tft_fast_fill_window(uint16_t color, uint32_t size){
-
-	uint16_t data_clr = ~color;
-	uint16_t data_MSB =  ((data_clr&0xFF00)<<8)| ((color&0xFF00)>>8);
-	uint16_t data_LSB =  ((data_clr&0x00FF)<<16) | (color&0xFF);
-
-	for(uint32_t i=0; i< size; i++){
-
-			GPIOA->BSRR = data_MSB;
-			GPIOB->BRR =  tft_WR;
-			tft_pause;
-			GPIOB->BSRR = tft_WR;
-			tft_pause;
-			GPIOA->BSRR = data_LSB;
-			GPIOB->BRR =  tft_WR;
-			tft_pause;
-			GPIOB->BSRR = tft_WR;
-			tft_pause;
-	};
-};
-
-/*
-struct TFT_windows {
-	uint16_t image_x0;
-	uint16_t image_y0;
-	uint16_t image_x1;
-	uint16_t image_y1;
-	uint16_t cursor_x;
-	uint16_t cursor_y;
-	uint16_t color_font;
-	uint16_t color_background;
-	uint8_t *font;
-};
- */
-
-void tft_set_window(struct tft_window* win){
-
-	tft_command(0x2A);
-	tft_data16(win->image_x0);
-	tft_data16(win->image_x1);
-	tft_command(0x2B);
-	tft_data16(win->image_y0);
-	tft_data16(win->image_y1);
-	tft_command(0x2C);
-
-}
-
-void tft_fast_clear(struct tft_window* win){
-
-	uint16_t nX = win->image_x1 > win->image_x0? win->image_x1 - win->image_x0 :
-												 win->image_x0 - win->image_x1 ;
-	uint16_t nY = win->image_y1 > win->image_y0? win->image_y1 - win->image_y0 :
-												 win->image_y0 - win->image_y1 ;
-	uint32_t size = nX * nY;
-	tft_set_window(win);
-	tft_fast_fill_window(win->color_background,size);
-
-};
-
-void init_tft_display(uint8_t* buf){
-
-	uint8_t data = 0;
-	GPIOB->BSRR = tft_RD|tft_WR|tft_RS|tft_RST;
-	GPIOB->BRR  = tft_CS;
-
-	while(*buf != STOP_INIT){
-
-		data = *buf++;
-		if(data == PAUSE_INIT){HAL_Delay(*buf++);continue;}
-		tft_command(data);
-		data = *buf++;
-		if(data == 0) continue;
-		buf = tft_data8_block(buf,data);
-
-	};
-};
 
 
 /*------------------ TIMERS -------------------*/
 
 void TIM14_IRQHandler(){
 
-	uint32_t const_bit = 0x01,
-			 send_PDO = 0,
-			 gpio_input_now = GPIOB->IDR&0x07; // key (b0..2)
+	uint16_t  gpio = GPIOB->IDR&(tft_key_up|tft_key_down|tft_key_ok); //  key (b0..2)
+	uint8_t keys_status = 0;
+	tft_keys[pin_key_down] <<= 1;
+    tft_keys[pin_key_down] |=(gpio&tft_key_down)>>pin_key_down;
+    if(tft_keys[pin_key_down] == 0x00ff) keys_status |= 0x01;
 
-	for(uint32_t i=0; i < 3;i++){
+    tft_keys[pin_key_ok] <<= 1;
+    tft_keys[pin_key_ok] |=(gpio&tft_key_ok)>>pin_key_ok;
+    if(tft_keys[pin_key_ok] == 0x00ff) keys_status |= 0x02;
 
-		if((gpio_input_now&const_bit) == (gpio_input&const_bit)){
-			if(gpio_time_pin[i])gpio_time_pin[i]=0;
-	   }else{
-		    gpio_time_pin[i]++;
-		    if(gpio_time_pin[i] == gpio_time_ms[i]){
-		    	gpio_input &= (~const_bit);
-		    	gpio_input |= (gpio_input_now&const_bit);
-		    	send_PDO = 1;}
-		}
-		const_bit <<= 1;
-	};
-	//send_txPDO1 += send_PDO;
+    tft_keys[pin_key_up] <<= 1;
+    tft_keys[pin_key_up] |=(gpio&tft_key_up)>>pin_key_up;
+    if(tft_keys[pin_key_up] == 0x00ff) keys_status |= 0x04;;
+
+    if(keys_status ){
+
+
+    };
 	TIM14->SR &= ~TIM_SR_UIF;
 };
 
@@ -359,30 +203,31 @@ void CEC_CAN_IRQHandler(void){
 	exit:	SET_BIT(CAN->RF0R, CAN_RF0R_RFOM0);//CAN->RF0R |= 0b0100000;  сообщение прочитано.
 };
 
-void Read_addr_CAN(void){
+
+#define data_165 0x01 << 8
+#define pl_165   0x01 << 9
+#define sck_165  0x01 << 10
+
+uint32_t Read_addr_CAN(void){
 
 	   uint8_t addr = 0;
 	   uint8_t bit_addr =0;
 
 	   GPIOA->BSRR = pl_165 | sck_165;
 	   GPIOA->BRR = pl_165;//low
-	    HAL_Delay(5);
 	   GPIOA->BSRR = pl_165; //high
 
 	      // cycle 8 bit
+	      for(uint8_t b=0; b<8 ; b++){
 
-	      for(uint8_t b=0;b<8;b++){
-
-	    	  bit_addr = GPIOA->IDR&data_165?1:0;
+	    	  bit_addr = (GPIOA->IDR&data_165)?1:0;
 	          bit_addr <<= b;
 	          addr |=bit_addr;
 	          GPIOA->BRR = sck_165;
-	          HAL_Delay(5);
 	          GPIOA->BSRR = sck_165;
-	      };
 
-	      can_id = addr&0x7F;
-	      can_speed = addr&0x80?1:0;
+	      };
+	   return addr;
 };
 
 void init_controller_STM32F072(void){
@@ -581,17 +426,34 @@ void init_controller_STM32F072(void){
 				This bit is set when the selected edge event arrives on the external interrupt line. This bit is
 				cleared by writing a 1 to the bit.
 
- */
+
+
+
+    SYSCFG->EXTICR[0] = 0b0000000100010001;// EXT0..3 port B
+    EXTI->IMR |= 0b111;
+    EXTI->EMR |= 0b111;
+    EXTI->RTSR |=0b111;
+    EXTI->FTSR |= 0b111;
+
+     */
+
+
+
+
+
+
+
+
+
 /******************************  TIM14 **************************/
-/*
+
     	RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
 	    TIM14->PSC =  48000000/1000 - 1;
 	    TIM14->DIER |= TIM_DIER_UIE; 	  // enable perepolnenia TIM14
 	    TIM14->CR1 |= TIM_CR1_CEN;		  // ON TIM14
-	    TIM14->ARR = 1; //1 ms
+	    TIM14->ARR = 2; //2 ms
 
 	    NVIC_EnableIRQ(TIM14_IRQn);
-*/
 
 
 /***************************** CAN module ********************************
@@ -648,11 +510,12 @@ void init_controller_STM32F072(void){
 	CLEAR_BIT(CAN->MCR, CAN_MCR_TXFP);// Set the transmit FIFO priority
 	*/
 
-	// Получение данных
+	// get can_id
 	uint32_t speed;
-	//Read_addr_CAN();
-	can_speed =0;
-	can_id =  0x07;
+	can_id = Read_addr_CAN();
+	can_speed = can_id&0x80?1:0;
+	can_id &= 0x7F;
+
 	switch(can_speed){ // 48 Мгц.
 
 		case 0x01: speed = 0x001c0002;break; //1000kb
