@@ -19,7 +19,7 @@
 #define tft_CS   0b01000000
 #define tft_RST  0b10000000
 #define tft_data 0b11111111 //a0-a7
-#define tft_pause HAL_Delay(1)
+#define tft_pause //HAL_Delay(1)
 
 struct tft_window {
 	uint16_t image_x0;
@@ -37,8 +37,8 @@ struct tft_window fwin={
 
 	.image_x0 = 0,
 	.image_y0 = 0,
-	.image_x1 = 0x13F,
-	.image_y1 = 0x1DF,
+	.image_x1 = 0x1DF,
+	.image_y1 = 0x13F,
 	.cursor_x = 0,
 	.cursor_y = 0,
 	.color_font = color_GREEN,
@@ -55,7 +55,8 @@ struct tft_window fwin={
 void init_controller_STM32F072(void);
 void init_tft_display(uint8_t* buf);
 void tft_fast_clear(struct tft_window* win);
-
+uint8_t CAN_transmit (CAN_TxMailBox_TypeDef *tx);
+void Processing_SDO_Object(CAN_FIFOMailBox_TypeDef*);
 
 
 // Keys b0 - down b1 - OK  b2 - up
@@ -95,12 +96,19 @@ int main(void)
 
   /* USER CODE BEGIN Init */
 	init_controller_STM32F072();// Init RCC 48Mhz, GPIOx, bxCAN
-	//SystemCoreClockUpdate();
-	//HAL_InitTick(TICK_INT_PRIORITY);
-	init_tft_display(init_ili9486);
+	SystemCoreClockUpdate();
+	HAL_InitTick(TICK_INT_PRIORITY);
+
+	//init_tft_display(init_ili9486);init_r61581
+	init_tft_display(init_r61581);
 	tft_fast_clear(&fwin);
 
+	 tx_mailbox.TIR = ((0x700 + can_id)<<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
+	 tx_mailbox.TDTR = 1;// n на_отправку
+	 tx_mailbox.TDLR = 0;// d0-d3
+	 tx_mailbox.TDHR = 0;// d4-d7
 
+	 CAN_transmit(&tx_mailbox);
 
 
 
@@ -110,6 +118,17 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
+	  HAL_Delay(1500);
+	   fwin.color_background +=100;
+	  tft_fast_clear(&fwin);
+	  tx_mailbox.TIR = ((0x700 + can_id)<<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
+	 	 tx_mailbox.TDTR = 1;// n на_отправку
+	 	 tx_mailbox.TDLR = fwin.color_background;// d0-d3
+	 	 tx_mailbox.TDHR = 0;// d4-d7
+
+	 	 CAN_transmit(&tx_mailbox);
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -263,8 +282,8 @@ void tft_fast_clear(struct tft_window* win){
 void init_tft_display(uint8_t* buf){
 
 	uint8_t data = 0;
-	GPIOA->BSRR = tft_RD|tft_WR|tft_RS|tft_RST;
-	GPIOA->BRR  = tft_CS;
+	GPIOB->BSRR = tft_RD|tft_WR|tft_RS|tft_RST;
+	GPIOB->BRR  = tft_CS;
 
 	while(*buf != STOP_INIT){
 
@@ -401,8 +420,8 @@ void init_controller_STM32F072(void){
 	RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN; // включить блок syscfg
 	RCC->APB1ENR |= RCC_APB1ENR_PWREN;	  // управление питанием
 
-	SystemCoreClockUpdate();
-	HAL_InitTick(TICK_INT_PRIORITY);
+	//SystemCoreClockUpdate();
+	//HAL_InitTick(TICK_INT_PRIORITY);
 
   /******************** GPIO ************************************
 	 *
@@ -564,14 +583,15 @@ void init_controller_STM32F072(void){
 
  */
 /******************************  TIM14 **************************/
-	    RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
+/*
+    	RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
 	    TIM14->PSC =  48000000/1000 - 1;
 	    TIM14->DIER |= TIM_DIER_UIE; 	  // enable perepolnenia TIM14
 	    TIM14->CR1 |= TIM_CR1_CEN;		  // ON TIM14
 	    TIM14->ARR = 1; //1 ms
 
 	    NVIC_EnableIRQ(TIM14_IRQn);
-
+*/
 
 
 /***************************** CAN module ********************************
@@ -630,8 +650,9 @@ void init_controller_STM32F072(void){
 
 	// Получение данных
 	uint32_t speed;
-	Read_addr_CAN();
-	//can_speed =0;
+	//Read_addr_CAN();
+	can_speed =0;
+	can_id =  0x07;
 	switch(can_speed){ // 48 Мгц.
 
 		case 0x01: speed = 0x001c0002;break; //1000kb
