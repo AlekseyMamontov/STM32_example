@@ -8,7 +8,7 @@
 #ifndef INC_FONTS_H_
 #define INC_FONTS_H_
 
-uint8_t number20pt[] = {
+const uint8_t number20pt[] = {
 	16,24,
 	//20 @0 ' ' (2 pixels wide)
 	0b00000000,0, //
@@ -685,7 +685,7 @@ uint8_t number20pt[] = {
 	0b00000000, 0b00000000,
 };
 
-uint8_t console18pt[] =
+const uint8_t console18pt[] =
 {16,24,
 	//20 @0 ' ' (2 pixels wide)
 	0b00000000,0, //
@@ -5512,7 +5512,7 @@ uint8_t console18pt[] =
 
 
 // Character bitmaps for Lucida Console 8pt
-uint8_t console8pt[] =
+const uint8_t console8pt[] =
 {8,11,
 	// @0 ' ' (2 pixels wide)
 	0b00000000, //

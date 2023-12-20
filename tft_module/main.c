@@ -3,8 +3,9 @@
 /* USER CODE BEGIN Includes */
 #include "CANOpen.h"
 #include "tft_panel_8bit.h"
-#include "fonts.h"
+
 #define n_Sync_Object 1
+
 
 // 74hc165
 
@@ -19,13 +20,11 @@ struct tft_window fwin={
 	.image_y1 = 0x1dF,
 	.cursor_x = 0,
 	.cursor_y = 0,
-	.color_font = color_GREEN,
+	.color_font = color_WHITE,
 	.color_background = color_BLACK,
-	.font = NULL,
+	.font = number20pt,
 
 };
-
-
 
 
 
@@ -43,6 +42,12 @@ uint32_t gpio_time_pin[3]={0};
 uint32_t gpio_time_ms[3]={5,5,5};
 uint32_t gpio_input = 0;
 
+uint8_t test,rx_msg;
+uint16_t test_color;
+uint32_t rx_t1 = 0, rx_t2 = 0;
+
+
+
 // CanOpen
 uint32_t can_id,can_id_test = 0,can_speed,id_rxPDO1,id_txPDO1,id_rxSDO,id_txSDO,heartbroken;
 uint8_t  NMT_command = 0,NMT_status = NMT_status_Operational;
@@ -52,8 +57,32 @@ uint8_t  mask_gpio = 0xFF, send_txPDO1 = 0,send_txSDO = 0,
 		 reply_rxPDO1 = 0,reply_rxPDO1_mask = 0;
 uint32_t id  = 0;
 
+static uint8_t TEN_matrix_init[]={ SET_font18pt,   				// font 18pt
+							SET_cursorX,0,
+							SET_cursorY,0,   				// set X_cusror 18
+							SET_background,0x20,0x00,		// Set background  GREEN
+							0x20,0x20,0xCC,0xE0,0xF2,0xF0,0xE8,0xF6,0xE0,0x20,0x20,0x20, // Матрица
 
+							//0x20,0xd2,0xe5,0xec,0xef,0xe5,0xf0,0xe0,0xf2,0xf3,0xf0,0xe0, //txt Температура
+							SET_background,0x00,0x00,
+							SET_cursorX,5, //
+							SET_cursorY,2,
+							0xad,0xd1,
+							SET_cursorX,5, //
+							SET_cursorY,4,  //
+							0xc2,0xea,0xeb,0x3a,0x20,//Вкл:
+							SET_cursorX,28, //
+							SET_cursorY,4,
+							0xad,0xd1,
+							SET_cursorX,5,
+							SET_cursorY,5,
+							0xc2,0xfb,0xea,0xeb,0x3a, //Выкл:
+							SET_cursorX,28, //
+							SET_cursorY,5,
+							0xad,0xd1,
+							0,0,0};
 
+uint8_t tex_buf[20]={0};
 
 
 /* USER CODE END PFP */
@@ -77,7 +106,7 @@ int main(void)
 	init_controller_STM32F072();// Init RCC 48Mhz, GPIOx, bxCAN
 	SystemCoreClockUpdate();
 	HAL_InitTick(TICK_INT_PRIORITY);
-	//init_tft_display(init_ili9486);init_r61581
+
 	init_tft_display(init_r61581);
 	tft_fast_clear(&fwin);
 
@@ -87,6 +116,7 @@ int main(void)
 	 tx_mailbox.TDHR = 0;// d4-d7
 
 	 CAN_transmit(&tx_mailbox);
+     tft_printf(&fwin,TEN_matrix_init);
 
 
 
@@ -94,12 +124,133 @@ int main(void)
 
 
   /* USER CODE BEGIN WHILE */
-  uint32_t test,*buf;
+  test= 0;
+  rx_msg = 0;
+
+
+
+
   while (1)
   {
 
-	  HAL_Delay(1);
+	  if(send_txPDO1){
 
+	  	 	send_txPDO1 = 0;
+	  	 	keys_status = 0;
+	  	 	tx_mailbox.TIR = (id_txPDO1 <<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
+	  	 	tx_mailbox.TDTR = 1;// n на_отправку
+	  	 	tx_mailbox.TDLR = keys_status;// d0-d3
+	  	 	tx_mailbox.TDHR = 0;// d4-d7
+
+	  	 	if(CAN_transmit(&tx_mailbox))send_txPDO1 = 1;
+
+	  	  };
+
+	  if(rx_msg){
+
+		  rx_msg--;
+
+
+		  switch(test){
+
+	  	  	  case 0:
+	  	  		  tft_command((rx_t1&0xff00)>>8);
+	  	  	  break;
+	  	  	  case 1:
+		  		tft_command((rx_t1&0xff00)>>8);
+		  		tft_data8((rx_t1&0x00ff0000)>>16);
+		  	  break;
+		  	  case 2:
+		  		tft_command((rx_t1&0xff00)>>8);
+		  		tft_data8((rx_t1&0x00ff0000)>>16);
+		  		tft_data8((rx_t1&0xFF000000)>>24);
+		  	  break;
+		  	  case 3:
+			  	tft_command((rx_t1&0xff00)>>8);
+			  	tft_data8((rx_t1&0x00ff0000)>>16);
+			  	tft_data8((rx_t1&0xFF000000)>>24);
+			  	tft_data8(rx_t2&0xFF);
+		  	  break;
+		  	  case 4:
+			  	tft_command((rx_t1&0xff00)>>8);
+			  	tft_data8((rx_t1&0x00ff0000)>>16);
+			  	tft_data8((rx_t1&0xFF000000)>>24);
+			  	tft_data8(rx_t2&0xFF);
+			  	tft_data8((rx_t2&0xFF00)>>8);
+
+		  	  break;
+		  	  case 5:
+			  	tft_command((rx_t1&0xff00)>>8);
+			  	tft_data8((rx_t1&0x00ff0000)>>16);
+			  	tft_data8((rx_t1&0xFF000000)>>24);
+			  	tft_data8(rx_t2&0xFF);
+			  	tft_data8((rx_t2&0xFF00)>>8);
+			  	tft_data8((rx_t2&0xFF0000)>>16);
+		  	  break;
+		  	  case 6:
+			  	tft_command((rx_t1&0xff00)>>8);
+			  	tft_data8((rx_t1&0x00ff0000)>>16);
+			  	tft_data8((rx_t1&0xFF000000)>>24);
+			  	tft_data8(rx_t2&0xFF);
+			  	tft_data8((rx_t2&0xFF00)>>8);
+			  	tft_data8((rx_t2&0xFF0000)>>16);
+			  	tft_data8((rx_t2&0xFF000000)>>24);
+		  	  break;
+		  	  case 7:
+				  tft_command(0x36);
+				  tft_data8((rx_t1&0xff00)>>8);
+				  fwin.color_background = (rx_t1&0xFFFF0000)>>16;
+				  tft_fast_clear(&fwin);
+				  tft_printf(&fwin,TEN_matrix_init);
+		  	  break;
+		  	  case 8:
+
+		  		  if((rx_t1&0xff00)>>8 == 1){
+
+		  			  init_tft_display(init_r61581);
+
+		  		  }else if((rx_t1&0xff00)>>8 == 2){
+
+		  			  init_tft_display(r61581_v2);
+
+		  		  }else{
+
+		  			  init_tft_display(init_ili9486);
+
+		  		  };
+
+		  	  break;
+		  	  default:
+		  	  break;
+
+		  };
+
+
+
+	  };
+
+
+
+/*
+ *
+ *
+ * HAL_Delay(3000);
+
+      test--;
+      tft_command(0x36);
+      tft_data8(test);
+      tft_fast_clear(&fwin);
+	  tft_printf(&fwin,TEN_matrix_init);
+
+	  tx_mailbox.TIR = ((0x700 + can_id)<<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
+	  tx_mailbox.TDTR = 1;// n на_отправку
+	  tx_mailbox.TDLR = test;// d0-d3
+	  tx_mailbox.TDHR = 0;// d4-d7
+
+	  CAN_transmit(&tx_mailbox);
+ *
+ *
+ *
 	  if(test >= 1500){
 
 	     tft_fast_clear(&fwin);
@@ -114,7 +265,8 @@ int main(void)
 	  }else{test++;}
 
 
-
+	  //snprintf(tex_buf, 20, "%d", test);
+      test++;
 
 
 	  if(send_txPDO1){
@@ -129,7 +281,7 @@ int main(void)
 	 	if(CAN_transmit(&tx_mailbox))send_txPDO1 = 1;
 
 	  };
-
+*/
 
 
     /* USER CODE END WHILE */
@@ -161,8 +313,7 @@ void TIM14_IRQHandler(){
     if(tft_keys[pin_key_up] == 0x00ff) keys_status |= 0x04;;
 
     if(keys_status ){
-
-
+    	send_txPDO1++;
     };
 	TIM14->SR &= ~TIM_SR_UIF;
 };
@@ -197,6 +348,14 @@ void CEC_CAN_IRQHandler(void){
 					 break;
 
 					default:
+
+						if(id != id_rxPDO1) break;
+						if(NMT_status != NMT_status_Operational) break;
+
+						test = data0;
+						rx_t1 = CAN->sFIFOMailBox[0].RDLR;
+						rx_t2 = CAN->sFIFOMailBox[0].RDHR;
+						rx_msg++;
 				     break;
 				};
 			};
