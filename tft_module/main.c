@@ -3,14 +3,8 @@
 /* USER CODE BEGIN Includes */
 #include "CANOpen.h"
 #include "tft_panel_8bit.h"
-
 #define n_Sync_Object 1
 
-
-// 74hc165
-
-
-// tft_panel
 
 struct tft_window fwin={
 
@@ -22,7 +16,7 @@ struct tft_window fwin={
 	.cursor_y = 0,
 	.color_font = color_WHITE,
 	.color_background = color_BLACK,
-	.font = number20pt,
+	.font = console18pt,
 
 };
 
@@ -230,58 +224,6 @@ int main(void)
 	  };
 
 
-
-/*
- *
- *
- * HAL_Delay(3000);
-
-      test--;
-      tft_command(0x36);
-      tft_data8(test);
-      tft_fast_clear(&fwin);
-	  tft_printf(&fwin,TEN_matrix_init);
-
-	  tx_mailbox.TIR = ((0x700 + can_id)<<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
-	  tx_mailbox.TDTR = 1;// n на_отправку
-	  tx_mailbox.TDLR = test;// d0-d3
-	  tx_mailbox.TDHR = 0;// d4-d7
-
-	  CAN_transmit(&tx_mailbox);
- *
- *
- *
-	  if(test >= 1500){
-
-	     tft_fast_clear(&fwin);
-	     tx_mailbox.TIR = ((0x700 + can_id)<<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
-	 	 tx_mailbox.TDTR = 2;// n на_отправку
-	 	 tx_mailbox.TDLR = fwin.color_background;// d0-d3
-	 	 tx_mailbox.TDHR = 0;// d4-d7
-
-	 	 CAN_transmit(&tx_mailbox);
-	 	 test = 0;
-	 	 fwin.color_background +=100;
-	  }else{test++;}
-
-
-	  //snprintf(tex_buf, 20, "%d", test);
-      test++;
-
-
-	  if(send_txPDO1){
-
-	 	send_txPDO1 = 0;
-	 	keys_status = 0;
-	 	tx_mailbox.TIR = (id_txPDO1 <<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
-	 	tx_mailbox.TDTR = 1;// n на_отправку
-	 	tx_mailbox.TDLR = keys_status;// d0-d3
-	 	tx_mailbox.TDHR = 0;// d4-d7
-
-	 	if(CAN_transmit(&tx_mailbox))send_txPDO1 = 1;
-
-	  };
-*/
 
 
     /* USER CODE END WHILE */
