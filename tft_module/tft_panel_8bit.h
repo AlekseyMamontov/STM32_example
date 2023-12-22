@@ -346,7 +346,7 @@ uint16_t x0,x1,y0,y1;
 
 void tft_print_utf8 (struct tft_window *window,uint8_t* buf){
 
-uint16_t x0,x1,y0,y1;
+uint16_t x0,x1,y0,y1,symvol;
 
 	 x0 = (window->font[0])*(window->cursor_x)+(window->image_x0);
 	 x1 = x0 + ((window->font[0])-1);
@@ -366,7 +366,7 @@ uint16_t x0,x1,y0,y1;
 								};
 	if(symvol >= 0x20) {
 
-	symvol = symvol - 0x20;
+	//symvol = symvol - 0x20;
 
   		tft_command(0x2A);
     	tft_data16(x0);
@@ -457,34 +457,35 @@ void tft_printf(struct tft_window *window, uint8_t *text){
 
 
 
-// Функция декодирования UTF-8
+//////////////////////////// decode UTF-8 ///////////////////////////
 
 uint8_t* decode_utf8(uint8_t* buf,uint32_t* code_utf8){
 
     if (buf == NULL || code_utf8 == NULL || *buf == 0) return buf;
-    uint32_t codepoint = 0, n_bytes = 0;
+    uint32_t codepoint = 0;
+    uint8_t   byte = *buf++,
+    		  n_bytes = 0;
     *code_utf8 = 0;
 
-    // Определение количества бит в первом байте
+    // n bytes ?
 
-    if (!(*buf&0x80)){codepoint = *buf++;
-    }else{
-    		switch(*buf&0xF0){
-    		case 0xC0:  codepoint = (*buf++)&0x1F;n_bytes = 1;break;
-    		case 0xE0:  codepoint = (*buf++)&0x0F;n_bytes = 2;break;
-    		case 0xF0:  codepoint = (*buf++)&0x07;n_bytes = 3;break;
-    		default: buf++;break;}
-    };
+    if (!(byte&0x80)){codepoint = byte;
+    }else if((byte>>5) == 0x06){codepoint = byte&0x1F;n_bytes = 1;
+    }else if((byte>>4) == 0x0E){codepoint = byte&0x0F;n_bytes = 2;
+    }else if((byte>>3) == 0x1E){codepoint = byte&0x07;n_bytes = 3;}
+
     // decode bytes
     for (uint8_t i = 0; i < n_bytes; i++){
-        if (((*buf) >> 6) != 0x02){codepoint = 0; break;};
+        if ((*buf >> 6) != 0x02){codepoint = 0; break;};
         codepoint = (codepoint << 6) | ((*buf++) & 0x3F);
     };
 
     *code_utf8 = codepoint;
     return buf;
 }
-//  encode  в UTF-8
+
+//////////////////////////// encode  UTF-8  ////////////////////////////
+
 uint8_t* encode_utf8(uint8_t* buf,uint32_t* code_utf8) {
 
 	if (buf == NULL || code_utf8 == NULL || *buf == 0) return buf;
