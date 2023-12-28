@@ -29,7 +29,8 @@ CAN_TxMailBox_TypeDef 	tx_mailbox;
 uint32_t gpio_time_pin[8]={0};
 uint32_t gpio_time_ms[8]={10,10,10,10,10,10,10,10};
 uint32_t gpio_input = 0;
-
+uint32_t test_time = 0;
+uint16_t blink1 = 0, blink2 = 0;
 
 
 // CanOpen
@@ -60,7 +61,7 @@ int main(void)
 	SystemCoreClockUpdate();
 	HAL_InitTick(TICK_INT_PRIORITY);
 
-	GPIOB->BSRR = led_status; //
+	//GPIOB->BSRR = led_status; //
 
    //Bootup Protocol
 
@@ -71,7 +72,7 @@ int main(void)
 
    CAN_transmit(&tx_mailbox);
 
-   GPIOB->BRR = led_status; // Block on
+  //GPIOB->BRR = led_status; // Block on
    gpio_input = GPIOA->IDR & 0xff;
    send_txPDO1 = 0;
 
@@ -79,12 +80,9 @@ int main(void)
   {
     /* USER CODE END WHILE */
 
+/*
 
-	  /*
 	  HAL_Delay(1);
-
-	  gpio_input_now = GPIOA->IDR&0xff;
-	  if( gpio_input_now != gpio_input_old ){gpio_input_old = gpio_input_now; send_txPDO1 = 1;};
 
 	  if(!cycle2){
 
@@ -92,13 +90,21 @@ int main(void)
 
 		  if (tg){GPIOB->BSRR = 0x02;} else{GPIOB->BRR = 0x02;};
 
-		  cycle2 = 500;
+		  cycle2 = 200;
 	  };
 	  cycle2--;
+*/
 
 
 
-	  */
+      if(test_time > 10){
+    	  test_time = 0;
+    	  TIM3->CCR3 = blink1;
+    	  blink1++;
+    	  blink1 = blink1>200?0:blink1;
+      };
+
+
 
 	  if(send_txPDO1){
 
@@ -110,13 +116,14 @@ int main(void)
 
 		     if(CAN_transmit(&tx_mailbox) != 0){
 		    	 send_txPDO1 = 1;
-		    	 GPIOB->BRR = led_error;
+		    	 //GPIOB->BRR = led_error;
 		     }else{GPIOB->BSRR = led_error;}
 
 
 	  };
 	  if(reply_rxPDO1){
 
+		  /*
 	  		  	 reply_rxPDO1 --;
 	  		  	 tx_mailbox.TIR = (id_txPDO1 <<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
 	  		     tx_mailbox.TDTR = 1;// n на_отправку
@@ -125,8 +132,11 @@ int main(void)
 
 	  		     if(CAN_transmit(&tx_mailbox) != 0){
 	  		    	 reply_rxPDO1 = 1;
-	  		    	 GPIOB->BRR = led_error;
+	  		    	 //GPIOB->BRR = led_error;
 	  		     }else{GPIOB->BSRR = led_error;}
+*/
+
+		  TIM3->CCR4 = reply_rxPDO1_mask;
 
 
 	  	  };
@@ -153,6 +163,8 @@ void TIM14_IRQHandler(){
 			 send_PDO = 0,
 			 gpio_input_now = GPIOA->IDR&0xff;
 
+     test_time++;
+
 	for(uint32_t i=0; i < 8;i++){
 
 		if((gpio_input_now&const_bit) == (gpio_input&const_bit)){
@@ -168,6 +180,7 @@ void TIM14_IRQHandler(){
 	};
 	send_txPDO1 += send_PDO;
 	TIM14->SR &= ~TIM_SR_UIF;
+
 };
 
 
@@ -210,7 +223,11 @@ void CEC_CAN_IRQHandler(void){
 			};
 	exit:	SET_BIT(CAN->RF0R, CAN_RF0R_RFOM0);//CAN->RF0R |= 0b0100000;  сообщение прочитано.
 };
+void TIM3_IRQHandler(void)
+{
 
+    TIM3->SR &= ~TIM_SR_UIF; // Сброс флага прерывания от обновления таймера TIM3
+}
 void init_controller_STM32F042(void){
 
 	/*registr ACR  str.69
@@ -306,11 +323,14 @@ void init_controller_STM32F042(void){
 
 	GPIOA->OSPEEDR |= 0xFFFF;//0b0101010101010101  high speed
 
+	/*
     // пины Led_Status_Pin bit 0| Led_Error_Pin bit 1
 
     GPIOB->MODER |= 0x05;//0b0101 01 -General purpose output mode
     GPIOB->OTYPER |=0x03; // 0b11 1 - open drain
     GPIOB->OSPEEDR |= 0x05; //0101  speed medium
+
+	 */
 
     //id_can pull_down  b3-9
 
@@ -406,6 +426,7 @@ void init_controller_STM32F042(void){
 
  */
 /******************************  TIM14 **************************/
+
 	    RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
 	    TIM14->PSC =  48000000/1000 - 1;
 	    TIM14->DIER |= TIM_DIER_UIE; 	  // enable perepolnenia TIM14
@@ -413,6 +434,51 @@ void init_controller_STM32F042(void){
 	    TIM14->ARR = 1; //1 ms
 
 	    NVIC_EnableIRQ(TIM14_IRQn);
+
+
+
+/*---------------  PWM  TIM3 ---------------
+ Bits 6:4 OC1M: Output compare 1 mode
+These bits define the behavior of the output reference signal OC1REF from which OC1 and
+OC1N are derived. OC1REF is active high whereas OC1 and OC1N active level depends on
+CC1P and CC1NP bits.
+000: Frozen - The comparison between the output compare register TIMx_CCR1 and the
+counter TIMx_CNT has no effect on the outputs.(this mode is used to generate a timing base).
+001: Set channel 1 to active level on match. OC1REF signal is forced high when the counter
+TIMx_CNT matches the capture/compare register 1 (TIMx_CCR1).
+010: Set channel 1 to inactive level on match. OC1REF signal is forced low when the
+counter TIMx_CNT matches the capture/compare register 1 (TIMx_CCR1).
+011: Toggle - OC1REF toggles when TIMx_CNT=TIMx_CCR1.
+100: Force inactive level - OC1REF is forced low.
+101: Force active level - OC1REF is forced high.
+110: PWM mode 1 - In upcounting, channel 1 is active as long as TIMx_CNT<TIMx_CCR1
+else inactive. In downcounting, channel 1 is inactive (OC1REF=‘0) as long as
+TIMx_CNT>TIMx_CCR1 else active (OC1REF=1).
+111: PWM mode 2 - In upcounting, channel 1 is inactive as long as TIMx_CNT<TIMx_CCR1
+else active. In downcounting, channel 1 is active as long as TIMx_CNT>TIMx_CCR1 else
+inactive.
+
+ *
+ *
+ *
+ *
+ * */
+
+	    RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+	    TIM3->PSC = 120 - 1;
+	    TIM3->ARR = 200-1;
+	    GPIOB->MODER |= GPIO_MODER_MODER0_1 | GPIO_MODER_MODER1_1;  // PB0 и PB1 в режим альтернативной функции
+	    GPIOB->AFR[0] |= 0b00010001; // TIM_CH3, TIM_CH4
+	    TIM3->CR1 |= 0x80;
+	    TIM3->CCMR2 |= 0b110 << 4 | 0b110 << 12;//Bits 6:4 OC1M PWM 1
+	    TIM3->CCER |= TIM_CCER_CC3E|TIM_CCER_CC3P| TIM_CCER_CC4E|TIM_CCER_CC4P; // output ~low _
+	    TIM3->CCR3 = 10; //50%
+	    TIM3->CCR4 = 50; //75%
+	    // Включение таймера 3
+	    TIM3->CR1 |= TIM_CR1_CEN;
+	    //NVIC_EnableIRQ(TIM3_IRQn);
+
+
 
 
 /***************************** CAN module ********************************
@@ -453,7 +519,7 @@ void init_controller_STM32F042(void){
 
 	// перевод в режим иницилизации
 
-	GPIOB->BRR = led_error; //on_error
+	//GPIOB->BRR = led_error; //on_error
 
 	SET_BIT(CAN->MCR, CAN_MCR_INRQ);
 	while ((CAN->MSR & CAN_MSR_INAK) == 0){};
@@ -570,7 +636,7 @@ void init_controller_STM32F042(void){
 	CAN->MCR &=~ CAN_MCR_INRQ;
 	while((CAN->MSR & CAN_MSR_INAK)==CAN_MSR_INAK){}
 
-	GPIOB->BSRR = led_error; //off_error
+	//GPIOB->BSRR = led_error; //off_error
 /*
   	Bit 4 FMPIE1: FIFO1 message pending interrupt enable
 	Bit 1 FMPIE0: FIFO0 message pending interrupt enable
