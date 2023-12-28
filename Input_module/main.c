@@ -472,8 +472,8 @@ inactive.
 	    TIM3->CR1 |= 0x80;
 	    TIM3->CCMR2 |= 0b110 << 4 | 0b110 << 12;//Bits 6:4 OC1M PWM 1
 	    TIM3->CCER |= TIM_CCER_CC3E|TIM_CCER_CC3P| TIM_CCER_CC4E|TIM_CCER_CC4P; // output ~low _
-	    TIM3->CCR3 = 10; //50%
-	    TIM3->CCR4 = 50; //75%
+	    TIM3->CCR3 = 10; //5%
+	    TIM3->CCR4 = 50; //25%
 	    // Включение таймера 3
 	    TIM3->CR1 |= TIM_CR1_CEN;
 	    //NVIC_EnableIRQ(TIM3_IRQn);
