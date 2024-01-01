@@ -38,7 +38,7 @@ https://github.com/collin80/SavvyCAN
 
 Прошивки
 
-
+----------------------------
 candlelight Firmware
 
 flash_usb_can_adapter_STM32F072.bin
@@ -48,6 +48,7 @@ flash_usb_can_adapter_STM32F072.bin
 С Linux и Socketcan вы можете использовать все стандартные утилиты командной строки can-utils и даже Wireshark для взаимодействия с шиной. 
 https://github.com/candle-usb/candleLight_fw
 
+--------------------------------
 
 Canable slcan firmware
 -----------------------
