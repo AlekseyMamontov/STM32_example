@@ -70,7 +70,7 @@ https://python-can.readthedocs.io/
 
 Посетите страницу начала работы для получения дополнительной информации.
 
-
+Поддержка Javascript (NodeJS, Linux -> Electron)
 
 
 
