@@ -11,6 +11,10 @@ https://github.com/collin80/SavvyCAN (https://appimage.github.io/SavvyCAN/);
 
 https://www.csselectronics.com/pages/can-bus-interface-savvycan
 
+Скачать программу 
+
+https://appimage.github.io/SavvyCAN/
+
 ----------------------------------
 работа в терминале
 
