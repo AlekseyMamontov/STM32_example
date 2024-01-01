@@ -4,7 +4,7 @@ CANGAROO
 https://github.com/normaldotcom/cangaroo
 
 SavvyCAN
-https://github.com/collin80/SavvyCAN
+https://github.com/collin80/SavvyCAN (https://appimage.github.io/SavvyCAN/);
 
 https://www.csselectronics.com/pages/can-bus-interface-savvycan
 
