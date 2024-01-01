@@ -15,6 +15,10 @@ https://www.csselectronics.com/pages/can-bus-interface-savvycan
 
 https://appimage.github.io/SavvyCAN/
 
+WireShark
+https://www.wireshark.org/
+
+
 ----------------------------------
 работа в терминале
 
@@ -37,6 +41,10 @@ SavvyCAN (через slcan)
 
 https://github.com/collin80/SavvyCAN
 
+Программа тут ..
+
+WireShark
+https://www.wireshark.org/
 
 ----------------------------------------
 
