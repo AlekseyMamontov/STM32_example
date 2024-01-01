@@ -8,8 +8,7 @@ https://github.com/collin80/SavvyCAN (https://appimage.github.io/SavvyCAN/);
 
 https://www.csselectronics.com/pages/can-bus-interface-savvycan
 
-
-
+----------------------------------
 работа в терминале
 
 sudo apt-get install can-utils
@@ -18,7 +17,7 @@ sudo ip link set can0 up type can bitrate 500000 (скорость на шине
 
 candump can0 (мониторинг шины, номер шины)
 
-
+------------------------------------
 
 
 Windows 10
