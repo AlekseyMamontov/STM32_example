@@ -2,7 +2,10 @@ Linux
 
 CANGAROO
 https://github.com/normaldotcom/cangaroo
+
 SavvyCAN
+https://www.csselectronics.com/pages/can-bus-interface-savvycan
+
 
 работа в терминале
 sudo apt-get install can-utils
@@ -12,3 +15,5 @@ candump can0 (мониторинг шины, номер шины)
 Windows 10
 https://canable.io/utilities/cangaroo-win32-ccdcb64.zip
 
+Прошивки
+Canable  (SLCAND) https://github.com/normaldotcom/canable-fw?tab=readme-ov-file
