@@ -51,29 +51,54 @@ uint8_t  mask_gpio = 0xFF, send_txPDO1 = 0,send_txSDO = 0,
 		 reply_rxPDO1 = 0,reply_rxPDO1_mask = 0;
 uint32_t id  = 0;
 
-static uint8_t TEN_matrix_init[]={ SET_font18pt,   				// font 18pt
-							SET_cursorX,0,
-							SET_cursorY,0,   				// set X_cusror 18
-							SET_background,0x20,0x00,		// Set background  GREEN
+const static uint8_t TEN_matrix_init[]={
+							FUNC,SET_font18pt,   				// font 18pt
+							FUNC,SET_cursorX,8,
+							FUNC,SET_cursorY,0,   				// set X_cusror 18
+							FUNC,SET_background,0xF8,0x00,		// Set background red
 							0x20,0x20,0xCC,0xE0,0xF2,0xF0,0xE8,0xF6,0xE0,0x20,0x20,0x20, // Матрица
 
-							//0x20,0xd2,0xe5,0xec,0xef,0xe5,0xf0,0xe0,0xf2,0xf3,0xf0,0xe0, //txt Температура
-							SET_background,0x00,0x00,
-							SET_cursorX,5, //
-							SET_cursorY,2,
+						    FUNC,SET_background,0x00,0x00,
+							FUNC,SET_cursorX,15, //
+							FUNC,SET_cursorY,2,
 							0xad,0xd1,
-							SET_cursorX,5, //
-							SET_cursorY,4,  //
+							FUNC,SET_cursorX,9, //
+							FUNC,SET_cursorY,4,  //
 							0xc2,0xea,0xeb,0x3a,0x20,//Вкл:
-							SET_cursorX,28, //
-							SET_cursorY,4,
+							FUNC,SET_cursorX,18, //
+							FUNC,SET_cursorY,4,
 							0xad,0xd1,
-							SET_cursorX,5,
-							SET_cursorY,5,
+							FUNC,SET_cursorX,9,
+							FUNC,SET_cursorY,5,
 							0xc2,0xfb,0xea,0xeb,0x3a, //Выкл:
-							SET_cursorX,28, //
-							SET_cursorY,5,
+							FUNC,SET_cursorX,18, //
+							FUNC,SET_cursorY,5,
 							0xad,0xd1,
+
+							FUNC,SET_cursorX,8,
+							FUNC,SET_cursorY,7,
+							FUNC,SET_background,0x04,0x00, // green
+							0x20,0x20,0xCF,0xF3,0xE0,0xED,0xF1,0xEE,0xED,0x20,0x20,0x20, //txt Пуансон
+							FUNC,SET_background,0x00,0x00,
+							FUNC,SET_cursorX,15,
+							FUNC,SET_cursorY,9,
+							0xad,0xd1,
+							FUNC,SET_cursorX,9, //
+							FUNC,SET_cursorY,11,  //
+							0xc2,0xea,0xeb,0x3a,0x20,//Вкл:
+							FUNC,SET_cursorX,18, //
+							FUNC,SET_cursorY,11,
+							0xad,0xd1,
+							FUNC,SET_cursorX,9,
+							FUNC,SET_cursorY,12,
+							0xc2,0xfb,0xea,0xeb,0x3a, //Выкл:
+							FUNC,SET_cursorX,18, //
+							FUNC,SET_cursorY,12,
+							0xad,0xd1,
+							FUNC,SET_cursorX,0,
+							FUNC,SET_cursorY,14,// set X_cusror 18
+							FUNC,SET_background,0x00,0x1F,
+							0x20,0x20,0x20,0x20,0x20,0xC8,0xe7,0xe4,0xe5,0xeb,0xe8,0xe9,0x20,0x20,0x20,0x20,0x20, //txt  Изделиa
 							0,0,0};
 
 uint8_t tex_buf[20]={0};
@@ -191,13 +216,22 @@ int main(void)
 			  	tft_data8((rx_t2&0xFF000000)>>24);
 		  	  break;
 		  	  case 7:
+		  		tft_data8((rx_t1&0xff00)>>8);
+			  	tft_data8((rx_t1&0x00ff0000)>>16);
+			  	tft_data8((rx_t1&0xFF000000)>>24);
+			  	tft_data8(rx_t2&0xFF);
+			  	tft_data8((rx_t2&0xFF00)>>8);
+			  	tft_data8((rx_t2&0xFF0000)>>16);
+			  	tft_data8((rx_t2&0xFF000000)>>24);
+		  	  break;
+		  	  case 8:
 				  tft_command(0x36);
 				  tft_data8((rx_t1&0xff00)>>8);
-				  fwin.color_background = (rx_t1&0xFFFF0000)>>16;
+				  fwin.color_background = ((rx_t1&0xFF000000)>>24)|(rx_t1&0x00FF0000)>>8;
 				  tft_fast_clear(&fwin);
 				  tft_printf(&fwin,TEN_matrix_init);
 		  	  break;
-		  	  case 8:
+		  	  case 9:
 
 		  		  if((rx_t1&0xff00)>>8 == 1){
 
@@ -214,6 +248,10 @@ int main(void)
 		  		  };
 
 		  	  break;
+
+
+
+
 		  	  default:
 		  	  break;
 
