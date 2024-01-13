@@ -3,22 +3,14 @@
 /* USER CODE BEGIN Includes */
 #include "CANOpen.h"
 #include "tft_panel_8bit.h"
+#include "tft_widgets.h"
+
+
+
 #define n_Sync_Object 1
 
 
-struct tft_window fwin={
 
-	.image_x0 = 0,
-	.image_y0 = 0,
-	.image_x1 = 0x13F,
-	.image_y1 = 0x1dF,
-	.cursor_x = 0,
-	.cursor_y = 0,
-	.color_font = color_WHITE,
-	.color_background = color_BLACK,
-	.font = console18pt,
-
-};
 
 
 
@@ -51,56 +43,6 @@ uint8_t  mask_gpio = 0xFF, send_txPDO1 = 0,send_txSDO = 0,
 		 reply_rxPDO1 = 0,reply_rxPDO1_mask = 0;
 uint32_t id  = 0;
 
-const static uint8_t TEN_matrix_init[]={
-							FUNC,SET_font18pt,   				// font 18pt
-							FUNC,SET_cursorX,8,
-							FUNC,SET_cursorY,0,   				// set X_cusror 18
-							FUNC,SET_background,0xF8,0x00,		// Set background red
-							0x20,0x20,0xCC,0xE0,0xF2,0xF0,0xE8,0xF6,0xE0,0x20,0x20,0x20, // Матрица
-
-						    FUNC,SET_background,0x00,0x00,
-							FUNC,SET_cursorX,15, //
-							FUNC,SET_cursorY,2,
-							0xad,0xd1,
-							FUNC,SET_cursorX,9, //
-							FUNC,SET_cursorY,4,  //
-							0xc2,0xea,0xeb,0x3a,0x20,//Вкл:
-							FUNC,SET_cursorX,18, //
-							FUNC,SET_cursorY,4,
-							0xad,0xd1,
-							FUNC,SET_cursorX,9,
-							FUNC,SET_cursorY,5,
-							0xc2,0xfb,0xea,0xeb,0x3a, //Выкл:
-							FUNC,SET_cursorX,18, //
-							FUNC,SET_cursorY,5,
-							0xad,0xd1,
-
-							FUNC,SET_cursorX,8,
-							FUNC,SET_cursorY,7,
-							FUNC,SET_background,0x04,0x00, // green
-							0x20,0x20,0xCF,0xF3,0xE0,0xED,0xF1,0xEE,0xED,0x20,0x20,0x20, //txt Пуансон
-							FUNC,SET_background,0x00,0x00,
-							FUNC,SET_cursorX,15,
-							FUNC,SET_cursorY,9,
-							0xad,0xd1,
-							FUNC,SET_cursorX,9, //
-							FUNC,SET_cursorY,11,  //
-							0xc2,0xea,0xeb,0x3a,0x20,//Вкл:
-							FUNC,SET_cursorX,18, //
-							FUNC,SET_cursorY,11,
-							0xad,0xd1,
-							FUNC,SET_cursorX,9,
-							FUNC,SET_cursorY,12,
-							0xc2,0xfb,0xea,0xeb,0x3a, //Выкл:
-							FUNC,SET_cursorX,18, //
-							FUNC,SET_cursorY,12,
-							0xad,0xd1,
-							FUNC,SET_cursorX,0,
-							FUNC,SET_cursorY,14,// set X_cusror 18
-							FUNC,SET_background,0x00,0x1F,
-							0x20,0x20,0x20,0x20,0x20,0xC8,0xe7,0xe4,0xe5,0xeb,0xe8,0xe9,0x20,0x20,0x20,0x20,0x20, //txt  Изделиa
-							0,0,0};
-
 uint8_t tex_buf[20]={0};
 
 
@@ -127,7 +69,7 @@ int main(void)
 	HAL_InitTick(TICK_INT_PRIORITY);
 
 	init_tft_display(init_r61581);
-	tft_fast_clear(&fwin);
+	tft_fast_clear(&Panel_win);
 
 	 tx_mailbox.TIR = ((0x700 + can_id)<<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
 	 tx_mailbox.TDTR = 1;// n на_отправку
@@ -135,8 +77,10 @@ int main(void)
 	 tx_mailbox.TDHR = 0;// d4-d7
 
 	 CAN_transmit(&tx_mailbox);
-     tft_printf(&fwin,TEN_matrix_init);
-
+	 tft_init_widgets(&Panel_win,block_Widgets);
+	 tft_print_widgets(&Win_matrix_temp,Data_matrix);
+	 tft_print_widgets(&Win_punch_temp,Data_punch);
+	 tft_print_widgets(&Win_counter,Data_counter);
 
 
   /* USER CODE END Init */
@@ -227,9 +171,9 @@ int main(void)
 		  	  case 8:
 				  tft_command(0x36);
 				  tft_data8((rx_t1&0xff00)>>8);
-				  fwin.color_background = ((rx_t1&0xFF000000)>>24)|(rx_t1&0x00FF0000)>>8;
-				  tft_fast_clear(&fwin);
-				  tft_printf(&fwin,TEN_matrix_init);
+				  Panel_win.color_background = ((rx_t1&0xFF000000)>>24)|(rx_t1&0x00FF0000)>>8;
+				  tft_fast_clear(&Panel_win);
+				  tft_init_widgets(&Panel_win,block_Widgets);
 		  	  break;
 		  	  case 9:
 
