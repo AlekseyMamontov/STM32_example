@@ -419,6 +419,11 @@ uint16_t x0,x1,y0,y1;
 								};
 	if(symvol >= 0x20){
 
+		//временно
+		if(window->font == number32pt){
+			symvol = (symvol>0x2F && symvol<0x3A)? symvol-0x0f :  0x20 ;
+		}
+
 	symvol = symvol - 0x20;
 
   		tft_command(0x2A);

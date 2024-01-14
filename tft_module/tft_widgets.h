@@ -24,6 +24,14 @@
 #define SAVE_color_font 0x12
 #define LOAD_color_font 0x13
 #define CALL_Data_block 0x14
+#define SAVE_cursorX 0x15
+#define LOAD_cursorX 0x16
+#define SAVE_cursorY 0x17
+#define LOAD_cursorY 0x18
+#define SAVE_cursorXY 0x19
+#define LOAD_cursorXY 0x1A
+
+
 
 
 #define fSET_background(a,b) FUNC,SET_background,a,b
@@ -35,9 +43,12 @@
 #define fSAVE_color_font FUNC,SAVE_color_font
 #define fLOAD_color_font FUNC,LOAD_color_font
 #define fCALL_Data_block(a) FUNC,CALL_Data_block,a
-
-
-
+#define fSAVE_cursorX FUNC,SAVE_cursorX
+#define fLOAD_cursorX FUNC,LOAD_cursorX
+#define fSAVE_cursorY FUNC,SAVE_cursorY
+#define fLOAD_cursorY FUNC,LOAD_cursorY
+#define fSAVE_cursorXY FUNC,SAVE_cursorXY
+#define fLOAD_cursorXY FUNC,LOAD_cursorXY
 
 #define SET_font8pt 0x06
 #define SET_font18pt 0x07
@@ -144,7 +155,7 @@ uint8_t Widget_info2[]={
 
 };
 
-uint8_t Widget_info[]={
+const static uint8_t Widget_info[]={
 
 		//0
 		fSET_cursorXY(1,0),fSET_SYMVOL(0xEB,0xC0,0xA3),
@@ -198,22 +209,14 @@ uint8_t Widget_menu[]={
 };
 
 
-
-
-
-
-
-const static
 uint8_t
-Data_matrix[]={fSET_cursorXY(0,0),0x22,0x20,0x25,0,0},
+Data_matrix[]={fSET_cursorXY(0,0),0x20,0x31,0x30,0,0},
 Data_matrix_on[]={fSET_cursorXY(14,4),0x32,0x30,0x30,0,0},
 Data_matrix_off[]={fSET_cursorXY(14,5),0x32,0x30,0x35,0,0},
-Data_punch[]={fSET_cursorXY(0,0),0x21,0x20,0x25,0,0},
+Data_punch[]={fSET_cursorXY(0,0),0x20,0x32,0x35,0,0},
 Data_punch_on[]={fSET_cursorXY(14,11),0x32,0x30,0x33,0,0},
 Data_punch_off[]={fSET_cursorXY(14,12),0x32,0x30,0x38,0,0},
-Data_counter[]={fSET_cursorXY(0,0),0x21,0x20,0x20,0x20,0x20,0x20,0x27,0x20,0x20,0};
-
-
+Data_counter[]={fSET_cursorXY(0,0),0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x30,0};
 
 
 struct tft_window Win_matrix_temp={
@@ -286,6 +289,8 @@ void tft_print_widgets(struct tft_window *window, const uint8_t* text){
 
 	uint8_t alpha = 0;
 	uint8_t symvol = 0;
+	uint8_t cursorX = 0;
+	uint8_t cursorY = 0;
 	uint8_t *txt;
 	uint16_t background = window->color_background;
 	uint16_t fontcolor = window->color_font;
@@ -357,6 +362,11 @@ void tft_print_widgets(struct tft_window *window, const uint8_t* text){
 					    window->color_font = fontcolor;
 
 					break;
+					case SET_ENTER:
+						window->cursor_x = 0;
+						window->cursor_y = window->cursor_y +1 ;
+						break;
+
 					case SAVE_background:
 						 background = window->color_background;
 				    break;
@@ -379,14 +389,26 @@ void tft_print_widgets(struct tft_window *window, const uint8_t* text){
 						};
 					break;
 
-
-
-
-
-					case 0x0D:
-						window->cursor_x = 0;
-						window->cursor_y = window->cursor_y +1 ;
-					break;
+					case SAVE_cursorX:
+						 cursorX = window->cursor_x;
+						break;
+					case LOAD_cursorX:
+						window->cursor_x = cursorX;
+						break;
+					case SAVE_cursorY:
+						cursorY = window->cursor_y;
+						break;
+					case LOAD_cursorY:
+						window->cursor_y = cursorY;
+						break;
+					case SAVE_cursorXY:
+						cursorX = window->cursor_x;
+						cursorY = window->cursor_y;
+						break;
+					case LOAD_cursorXY:
+						window->cursor_x = cursorX;
+						window->cursor_y = cursorY;
+						break;
 				};
 			};
 		text++;
