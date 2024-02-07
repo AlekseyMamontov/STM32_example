@@ -237,12 +237,7 @@ void read_temperature(struct PLC_controller* plc){
 		  			  plc->temp2 = plc->temp2 >>5;
 		  			  plc->temp_period = plc->temp_pause; //....ms
 		  			  plc->current_cs =  0; // start_pause
-
-		  			  plc->can_send_temp.TIR = (id_txPDO1 <<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
-		  			  plc->can_send_temp.TDTR = 4;// n на_отправку
 		  			  plc->can_send_temp.TDLR = (plc->temp2) << 16 | plc->temp1;// d0-d3
-		  			  plc->can_send_temp.TDHR = 0;// d4-d7
-
 		  			  CAN_transmit(&(plc->can_send_temp));
 		  			  break;
 
