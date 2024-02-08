@@ -42,7 +42,7 @@
 #define pin_CS1 1 << CS1
 #define pin_CS2 1 << CS2
 
-
+#define MAX_IN_PIN 6
 
 
 struct PLC_controller {
@@ -53,17 +53,23 @@ struct PLC_controller {
 	uint16_t  temp_pause; //
 	uint16_t  temp1;
 	uint16_t  temp2;
+	uint16_t  temp_read;
 	uint16_t* current_temp;
 	uint32_t  current_cs;
-	uint8_t   spi_read_ok;
+	uint8_t   temp_status;// b0 -send_temperature, b1-spi_read_ok ,b2 -change temperature.
 	CAN_TxMailBox_TypeDef can_send_temp;
 
 
 	// In_block
 
-	uint16_t old_status_pin; // 15,12,11,10,9,8 + b2(220v)
-	uint16_t current_status_pin;
-	uint16_t time_ms ;
+	uint16_t pin_input; // 15,12,11,10,9,8 + b2(220v)
+	uint16_t pin_reg_shift[MAX_IN_PIN];
+	uint16_t pin_time_ms ;
+	uint16_t input_mask;
+
+	uint16_t status_pin;
+	uint8_t  hold_time_in_pin;
+	uint8_t  send_gpio_input;
 	CAN_TxMailBox_TypeDef can_send_input;
 
 	// Out_block_rele
@@ -109,14 +115,21 @@ struct PLC_controller PLC ={
 
 		// temperature max6675
 
-		.temp_period = 0,
-		.temp_pause = 500, // 500 ms
+		.temp_period = 1000,
+		.temp_pause = 1000, // 500 ms
 		.temp1 = 0,
 		.temp2 = 0,
 		.current_temp = &PLC.temp1,
-		.spi_read_ok = 1,
+
+
+		.current_cs = 0,
 
 		// input
+		.mask_rele_pin = 0xFF,
+		.pin_reg_shift={0xFF},
+		.hold_time_in_pin = 20,
+
+
 
 		// output
 
@@ -144,14 +157,17 @@ int main(void){
  	 // Set txPDO1 for temperature
 
  	 id_txPDO1 = txPDO1 + PLC.can_id;
+ 	 id_txPDO1 = txPDO2 + PLC.can_id;
 
- 	 PLC.can_send_temp.TIR = ((txPDO1 + PLC.can_id) <<21) | 0x01;// txPDO1
+ 	 PLC.can_send_temp.TIR = ((txPDO2 + PLC.can_id) <<21) | 0x01;// txPDO1
  	 PLC.can_send_temp.TDTR = 4;
  	 PLC.can_send_temp.TDLR = 0;
  	 PLC.can_send_temp.TDHR = 0;
 
-
-
+ 	 PLC.can_send_input.TIR = ((txPDO1 + PLC.can_id) <<21) | 0x01;
+ 	 PLC.can_send_input.TDTR = 1;
+ 	 PLC.can_send_input.TDLR = 0;
+ 	 PLC.can_send_input.TDHR = 0;
 
 
 
@@ -192,66 +208,145 @@ int main(void){
 
 
 void SysTick_Handler(void){
+	 if(ms_pause)ms_pause --;
+	 if(PLC.temp_period)PLC.temp_period --;
+};
+
+
+
+///////////////// Input Pins /////////////////////
+
+void input_8pin(){
+
+	uint16_t gpio_old = PLC.pin_input << 8,
+	         gpio_current = (GPIOA->IDR >>8)&0b10011111;
+
+	for(uint8_t i= 0; i< 8; i++ ){
+
+		PLC.pin_reg_shift[i] <<=1;
+		PLC.pin_reg_shift[i] |= gpio_current&1;
+
+		if((PLC.pin_reg_shift[i]&PLC.input_mask) == PLC.input_mask){ // 1
+
+			gpio_current |= 0x100;
+
+		}else if ((PLC.pin_reg_shift[i]&PLC.input_mask) != 0){
+
+			gpio_current |= (gpio_old&0x100);
+
+		};
+
+		gpio_old >>=1;
+		gpio_current >>=1;
+	};
+
+	if (PLC.pin_input == gpio_current) return;
+
+	PLC.pin_input = gpio_current;
+
+	PLC.can_send_input.TDLR = PLC.pin_input;
+	PLC.send_gpio_input = CAN_transmit(&PLC.can_send_input);
 
 };
 
+
 void TIM14_IRQHandler(){
 
-    if(ms_pause)ms_pause --;
-    if(PLC.time_ms)PLC.temp_period --;
+	//if(PLC.hold_time_in_pin) return;
+
+	input_8pin();
+
+	//PLC.hold_time_in_pin --;
+
+	//if(!PLC.hold_time_in_pin) NVIC_DisabledIRQ(TIM14_IRQn);
 
 	TIM14->SR &= ~TIM_SR_UIF;
 
 };
+
+void EXTI4_15_IRQHandler(){
+
+	PLC.status_pin = EXTI->PR & 0b1001111100000000;//8,9,10,11,12,15
+	PLC.hold_time_in_pin = 50;
+	EXTI->PR |= PLC.status_pin;
+	//NVIC_EnableIRQ(TIM14_IRQn);
+};
+
+
+
+
+
+
+/////////////// Temperatura //////////////////
+
+#define SEND_temperature 0x01
+#define SPI_read_OK 0x02
+#define Сhange_temperature 0x04
+
+
 void SPI2_IRQHandler(void){
 
 	uint16_t data;
 
 	if (SPI2->SR & SPI_SR_RXNE){
 
-		data = SPI2->DR;
-		*PLC.current_temp = ((data&0xFF)<<8)|((data&0xFF00)>>8);
 		GPIOB->BSRR = PLC.current_cs;
-		PLC.spi_read_ok |= 0x01;
+		data = SPI2->DR;
+		PLC.temp_read = ((data&0xFF)<<8)|((data&0xFF00)>>8);
+		PLC.temp_status |= SPI_read_OK;
 	};
 
 	SPI2->SR &= ~SPI_SR_RXNE;
 };
+// b0 -send_temperature, b1-spi_read_ok ,b2 -change temperature.
+
+
 
 void read_temperature(struct PLC_controller* plc){
 
 	  if(plc->temp_period) return;
-	  if(!(plc->spi_read_ok&1)) return;
+	  if(!(plc->temp_status&SPI_read_OK)) return; //read spi ok
 
 		  	switch (plc->current_cs){
 
 		  		  case pin_CS1:
 
-		  			  plc->temp1 = plc->temp1 >>5;
-		  			  plc->current_temp = &plc->temp2;
+		  			  plc->temp_read >>=5;
+		  			  if(plc->temp_read != plc->temp1){
+		  				  plc->temp_status |=Сhange_temperature;//change
+		  			  	  plc->temp1 = plc->temp_read;}
 		  			  plc->current_cs = pin_CS2;
+
 		  			  break;
 
 		  		  case pin_CS2:
 
-		  			  plc->temp2 = plc->temp2 >>5;
+		  			  plc->temp_read >>=5;
+		  			  if(plc->temp_read != plc->temp2){
+		  				  plc->temp_status |=Сhange_temperature;//change
+		  			  	  plc->temp2 = plc->temp_read;}
+
 		  			  plc->temp_period = plc->temp_pause; //....ms
 		  			  plc->current_cs =  0; // start_pause
-		  			  plc->can_send_temp.TDLR = (plc->temp2) << 16 | plc->temp1;// d0-d3
-		  			  CAN_transmit(&(plc->can_send_temp));
+
+		  			  if(plc->temp_status&Сhange_temperature){
+		  				  plc->can_send_temp.TDLR = (plc->temp2) << 16 | plc->temp1;// d0-d3
+		  				  plc->temp_status = SEND_temperature&CAN_transmit(&(plc->can_send_temp));
+		  				  }
+
 		  			  break;
 
 		  		  default:
-
-		  			  plc->current_temp = &plc->temp1; // start read temp
 		  			  plc->current_cs = pin_CS1;
 		  			  break;
 		  		  };
 
+		  	// b0 -send_temperature, b1-spi_read_ok ,b2 -change temperature.
+
 		  	if(plc->current_cs){
 
 		  			GPIOB->BRR = plc->current_cs;
-		  			plc->spi_read_ok &= ~1;
+		  			plc->temp_status &= ~SPI_read_OK;
 				    while (!(SPI2->SR & SPI_SR_TXE)){}; // Ожидание готовности передатчика
 				    SPI2->DR = 0x0000;
 
@@ -568,7 +663,7 @@ void init_controller_STM32F072(struct PLC_controller* plc){
     SysTick->LOAD = 48000000/1000 - 1;  // (48 mHz / 1000) -1  // 1ms
     SysTick->VAL = 0;  // reset
     SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk | SysTick_CTRL_ENABLE_Msk;
-    NVIC_SetPriority(SysTick_IRQn, 2);
+    //NVIC_SetPriority(SysTick_IRQn, 2);
     NVIC_EnableIRQ(SysTick_IRQn);
 
 /******************************  TIM14 **************************/
@@ -844,7 +939,8 @@ void init_controller_STM32F072(struct PLC_controller* plc){
     SPI2->CR1 = SPI_CR1_SSM|SPI_CR1_SSI|(0b101 << SPI_CR1_BR_Pos)|SPI_CR1_MSTR;
     SPI2->CR2 = 0b1111 < SPI_CR2_DS_Pos;// set default
     SPI2->CR1 |= SPI_CR1_SPE;
-
+    SPI2->CR2 |= SPI_CR2_RXNEIE;
+    NVIC_EnableIRQ(SPI2_IRQn);
 
 
 
