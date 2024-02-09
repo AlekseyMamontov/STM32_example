@@ -255,15 +255,15 @@ void input_8pin(){
 
 void TIM14_IRQHandler(){
 
-	//if(PLC.hold_time_in_pin) return;
+	if(!PLC.hold_time_in_pin) goto exit_tim14;
 
 	input_8pin();
 
-	//PLC.hold_time_in_pin --;
+	PLC.hold_time_in_pin --;
 
 	//if(!PLC.hold_time_in_pin) NVIC_DisabledIRQ(TIM14_IRQn);
 
-	TIM14->SR &= ~TIM_SR_UIF;
+exit_tim14:	TIM14->SR &= ~TIM_SR_UIF;
 
 };
 
@@ -271,10 +271,16 @@ void EXTI4_15_IRQHandler(){
 
 	PLC.status_pin = EXTI->PR & 0b1001111100000000;//8,9,10,11,12,15
 	PLC.hold_time_in_pin = 50;
-	EXTI->PR |= PLC.status_pin;
+    EXTI->PR |= PLC.status_pin;
 	//NVIC_EnableIRQ(TIM14_IRQn);
+
 };
 
+void EXTI2_3_IRQHandler(){
+
+	EXTI->PR |= 0b0100;
+
+};
 
 
 
@@ -567,6 +573,23 @@ void init_controller_STM32F072(struct PLC_controller* plc){
     GPIOC->BSRR = pl_165; //
 
 
+    	/******************************  SYStick **************************/
+
+        SysTick->LOAD = 48000000/1000 - 1;  // (48 mHz / 1000) -1  // 1ms
+        SysTick->VAL = 0;  // reset
+        SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk | SysTick_CTRL_ENABLE_Msk;
+        //NVIC_SetPriority(SysTick_IRQn, 2);
+
+
+        /******************************  TIM14 **************************/
+
+        RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
+    	TIM14->PSC =  48000000/1000 - 1;
+    	TIM14->DIER |= TIM_DIER_UIE; 	  // enable perepolnenia TIM14
+    	TIM14->CR1 |= TIM_CR1_CEN;		  // ON TIM14
+    	TIM14->ARR = 2; //2 ms
+
+
 /***************************** EXTIxx  *********************************
  *
  * SYSCFG_EXTICR1 exti0-3
@@ -651,36 +674,19 @@ void init_controller_STM32F072(struct PLC_controller* plc){
 				cleared by writing a 1 to the bit.
 
 
-
-
-    SYSCFG->EXTICR[0] = 0b0000000100010001;// EXT0..3 port B
-    EXTI->IMR |= 0b111;
-    EXTI->EMR |= 0b111;
-    EXTI->RTSR |=0b111;
-    EXTI->FTSR |= 0b111;
-
      */
+    //						 3   2	 1   0
+    SYSCFG->EXTICR[0] = 0b0000000100000000;// EXT0..3 port B2 - 220V
+    //						  11  10   9   8
+    //SYSCFG->EXTICR[] = 0b0000000100000000;// EXT11..8 port B2 - 220V
+
+    EXTI->IMR |= 0b1001111100000100; //15,12,11,10,9,8,2
+    //EXTI->EMR |= 0b1001111100000100;
+    EXTI->RTSR |=0b1001111100000100;
+    EXTI->FTSR |=0b1001111100000100;
 
 
-/******************************  SYStick **************************/
-
-    SysTick->LOAD = 48000000/1000 - 1;  // (48 mHz / 1000) -1  // 1ms
-    SysTick->VAL = 0;  // reset
-    SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk | SysTick_CTRL_ENABLE_Msk;
-    //NVIC_SetPriority(SysTick_IRQn, 2);
-    NVIC_EnableIRQ(SysTick_IRQn);
-
-/******************************  TIM14 **************************/
-
-    RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
-	TIM14->PSC =  48000000/1000 - 1;
-	TIM14->DIER |= TIM_DIER_UIE; 	  // enable perepolnenia TIM14
-	TIM14->CR1 |= TIM_CR1_CEN;		  // ON TIM14
-	TIM14->ARR = 2; //2 ms
-	NVIC_EnableIRQ(TIM14_IRQn);
-
-
-/***************************** CAN module ********************************
+    /***************************** CAN module ********************************
 
    	CAN GPIO Configuration
    	   	   PA11     ------> CAN_RX
@@ -738,7 +744,7 @@ void init_controller_STM32F072(struct PLC_controller* plc){
 	plc->can_speed = 0x03;//can_id&0x80?1:0;
 
 
-	switch(can_speed){ // 48 Мгц.
+	switch(plc->can_speed){ // 48 Мгц.
 
 		case 0x01: speed = 0x001c0002;break; //1000kb
 		case 0x02: speed = 0x001b0003;break; //800kb
@@ -805,11 +811,9 @@ void init_controller_STM32F072(struct PLC_controller* plc){
 
 */
 
-	id_rxPDO1 = rxPDO1 + can_id;
-	id_txPDO1 = txPDO1 + can_id;
-	id_rxSDO =  rxSDO + can_id;
-	id_txSDO = txSDO + can_id;
-	heartbroken = 0x700 + can_id;
+	id_rxPDO1 = rxPDO1 + plc->can_id;
+	id_rxSDO =  rxSDO +  plc->can_id;
+	heartbroken = 0x700 + plc->can_id;
 
 
 	CAN->FMR |=  CAN_FMR_FINIT; /*  init mode */
@@ -824,7 +828,7 @@ void init_controller_STM32F072(struct PLC_controller* plc){
 	CAN->sFilterRegister[1].FR1 = (id_rxSDO<<16 | heartbroken)<< 5;//0x02 test rtr bit for heartbroken
 	CAN->sFilterRegister[1].FR2 = (0x80 << 16 | 0x100 << 16)<< 5;
 
-	CAN->FMR &=~ CAN_FMR_FINIT; /* Leave filter init */
+	CAN->FMR &= ~CAN_FMR_FINIT; /* Leave filter init */
 	CAN->IER |= CAN_IER_FMPIE0; /* Set FIFO0 message pending IT enable */
 
 
@@ -841,10 +845,7 @@ void init_controller_STM32F072(struct PLC_controller* plc){
 	    1: Interrupt generated when state of FMP[1:0] bits are not 00b.
 */
 
-    /* CAN interrupt Init */
 
-	NVIC_SetPriority(CEC_CAN_IRQn,1);
-	NVIC_EnableIRQ(CEC_CAN_IRQn);
 
 
     // Включение тактирования SPI2
@@ -944,23 +945,27 @@ void init_controller_STM32F072(struct PLC_controller* plc){
     SPI2->CR2 = 0b1111 < SPI_CR2_DS_Pos;// set default
     SPI2->CR1 |= SPI_CR1_SPE;
     SPI2->CR2 |= SPI_CR2_RXNEIE;
+
+
+
+
+
+    // Systick
+    NVIC_EnableIRQ(SysTick_IRQn);
+
+    //SPI2
     NVIC_EnableIRQ(SPI2_IRQn);
 
+    /* CAN interrupt Init */
+	NVIC_SetPriority(CEC_CAN_IRQn,1);
+	NVIC_EnableIRQ(CEC_CAN_IRQn);
 
+	/* EXTI 0-1,2-3,4-15  */
+    NVIC_EnableIRQ(EXTI4_15_IRQn);
+    //NVIC_EnableIRQ(EXTI2_3_IRQn);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+    // TIM14
+    NVIC_EnableIRQ(TIM14_IRQn);
 
 
 }
