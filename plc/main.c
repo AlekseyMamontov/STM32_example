@@ -43,7 +43,9 @@
 #define pin_CS2 1 << CS2
 
 #define MAX_IN_PIN 6
-
+#define SEND_temperature 	0x01
+#define SPI_read_OK 		0x02
+#define Сhange_temperature 	0x04
 
 struct PLC_controller {
 
@@ -115,11 +117,12 @@ struct PLC_controller PLC ={
 
 		// temperature max6675
 
-		.temp_period = 1000,
-		.temp_pause = 1000, // 500 ms
+		.temp_period = 0,
+		.temp_pause = 500, // 500 ms
 		.temp1 = 0,
 		.temp2 = 0,
-		.current_temp = &PLC.temp1,
+		.temp_status =SPI_read_OK,
+		.current_cs =0,
 
 
 		.current_cs = 0,
@@ -279,9 +282,7 @@ void EXTI4_15_IRQHandler(){
 
 /////////////// Temperatura //////////////////
 
-#define SEND_temperature 0x01
-#define SPI_read_OK 0x02
-#define Сhange_temperature 0x04
+
 
 
 void SPI2_IRQHandler(void){
@@ -312,6 +313,7 @@ void read_temperature(struct PLC_controller* plc){
 		  		  case pin_CS1:
 
 		  			  plc->temp_read >>=5;
+
 		  			  if(plc->temp_read != plc->temp1){
 		  				  plc->temp_status |=Сhange_temperature;//change
 		  			  	  plc->temp1 = plc->temp_read;}
@@ -322,6 +324,7 @@ void read_temperature(struct PLC_controller* plc){
 		  		  case pin_CS2:
 
 		  			  plc->temp_read >>=5;
+
 		  			  if(plc->temp_read != plc->temp2){
 		  				  plc->temp_status |=Сhange_temperature;//change
 		  			  	  plc->temp2 = plc->temp_read;}
@@ -331,8 +334,9 @@ void read_temperature(struct PLC_controller* plc){
 
 		  			  if(plc->temp_status&Сhange_temperature){
 		  				  plc->can_send_temp.TDLR = (plc->temp2) << 16 | plc->temp1;// d0-d3
-		  				  plc->temp_status = SEND_temperature&CAN_transmit(&(plc->can_send_temp));
-		  				  }
+		  				  plc->temp_status |= SEND_temperature&CAN_transmit(&(plc->can_send_temp));
+		  				  plc->temp_status &=~Сhange_temperature;
+		  			  }
 
 		  			  break;
 
