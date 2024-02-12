@@ -8,70 +8,6 @@
 #ifndef INC_TFT_WIDGETS_H_
 #define INC_TFT_WIDGETS_H_
 
-
-
-#define FUNC 0x1b
-#define FUNCs(b) FUNC,b
-#define SET_background 0x01
-#define SET_font_color 0x02
-
-#define SET_cursorX 0x03
-#define SET_cursorXY 0x04
-#define SET_cursorY 0x05
-
-#define SAVE_background 0x10
-#define LOAD_background 0x11
-#define SAVE_color_font 0x12
-#define LOAD_color_font 0x13
-#define CALL_Data_block 0x14
-#define SAVE_cursorX 0x15
-#define LOAD_cursorX 0x16
-#define SAVE_cursorY 0x17
-#define LOAD_cursorY 0x18
-#define SAVE_cursorXY 0x19
-#define LOAD_cursorXY 0x1A
-
-
-
-
-#define fSET_background(a,b) FUNC,SET_background,a,b
-#define fSET_font_color(a,b) FUNC,SET_font_color,a,b
-#define fSET_cursorX(b)     FUNC,SET_cursorX,b
-#define fSET_cursorXY(a,b) 	 FUNC,SET_cursorXY,a,b
-#define fSAVE_background FUNC,SAVE_background
-#define fLOAD_background FUNC,LOAD_background
-#define fSAVE_color_font FUNC,SAVE_color_font
-#define fLOAD_color_font FUNC,LOAD_color_font
-#define fCALL_Data_block(a) FUNC,CALL_Data_block,a
-#define fSAVE_cursorX FUNC,SAVE_cursorX
-#define fLOAD_cursorX FUNC,LOAD_cursorX
-#define fSAVE_cursorY FUNC,SAVE_cursorY
-#define fLOAD_cursorY FUNC,LOAD_cursorY
-#define fSAVE_cursorXY FUNC,SAVE_cursorXY
-#define fLOAD_cursorXY FUNC,LOAD_cursorXY
-
-#define SET_font8pt 0x06
-#define SET_font18pt 0x07
-#define SET_fontNumber 0x08
-#define SET_fontNumber32 0x09
-#define fSET_font8pt FUNC,SET_font8pt
-#define fSET_font18pt FUNC,SET_font18pt
-#define fSET_fontNumber FUNC,SET_fontNumber
-#define fSET_fontNumber32 FUNC,SET_fontNumber32
-
-
-#define SET_ON_ALPHA 0x0A
-#define SET_OFF_ALPHA 0x0B
-#define SET_SYMVOL 0x0C
-#define SET_ENTER 0x0D
-
-#define fSET_ON_ALPHA FUNC,SET_ON_ALPHA
-#define fSET_OFF_ALPHA FUNC,SET_OFF_ALPHA
-#define fSET_SYMVOL(a,b,c) FUNC,SET_SYMVOL,a,b,c
-#define fSET_ENTER FUNC,SET_ENTER
-
-
-
 struct tft_window Panel_win={
 
 	.image_x0 = 0,
@@ -85,7 +21,23 @@ struct tft_window Panel_win={
 	.font = console18pt,
 
 };
+////////////////////////////////////////// SCREEN 1 /////////////////////////////////////////////
 
+struct tft_window Screen1_win={
+
+	.image_x0 = 0,
+	.image_y0 = 0,
+	.image_x1 = 0x13F,
+	.image_y1 = 0x1dF,
+	.cursor_x = 0,
+	.cursor_y = 0,
+	.color_font = color_WHITE,
+	.color_background = color_BLACK,
+	.font = console18pt,
+
+};
+
+//--------------- Widget Matrix ---------------------//
 
 const static
 uint8_t Widget_Matrix[]={
@@ -100,14 +52,41 @@ uint8_t Widget_Matrix[]={
 		fSET_cursorXY(8,2),fSET_SYMVOL(0xF8,0x00,0xA6),fSET_cursorX(19),fSET_SYMVOL(0xF8,0x00,0xA5),
 		fSET_cursorXY(8,3),fSET_SYMVOL(0xF8,0x00,0xA6),fSET_cursorX(19),fSET_SYMVOL(0xF8,0x00,0xA5),
 		// 4
-		fSET_cursorXY(8,4),fSET_SYMVOL(0xF8,0x00,0xA6),' ','o','n',':',fCALL_Data_block(0),fSET_cursorX(17),0xad,0xd1,fSET_SYMVOL(0xF8,0x00,0xA5),
+		fSET_cursorXY(8,4),fSET_SYMVOL(0xF8,0x00,0xA6),' ','o','n',':',fCALL_Widget_block(0),fSET_cursorX(17),0xad,0xd1,fSET_SYMVOL(0xF8,0x00,0xA5),
         // 5
-		fSET_cursorXY(8,5),fSET_SYMVOL(0xF8,0x00,0xA6),'o','f','f',':',fCALL_Data_block(1),fSET_cursorX(17),0xad,0xd1,fSET_SYMVOL(0xF8,0x00,0xA5),
+		fSET_cursorXY(8,5),fSET_SYMVOL(0xF8,0x00,0xA6),'o','f','f',':',fCALL_Widget_block(1),fSET_cursorX(17),0xad,0xd1,fSET_SYMVOL(0xF8,0x00,0xA5),
 		// 6
 		fSET_cursorXY(8,6),fSAVE_color_font,fSET_font_color(0xF8,0x00),0x9E,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9d,fLOAD_color_font,
 		0,0,0
 
 };
+
+uint8_t
+
+matrix[]={fSET_cursorXY(0,0),0x20,0x31,0x30,0,0},
+matrix_on[]={fSET_cursorXY(14,4),0x32,0x30,0x30,0,0},
+matrix_off[]={fSET_cursorXY(14,5),0x32,0x30,0x35,0,0};
+
+struct tft_window Win_matrix_temp={
+
+	.image_x0 = 180,
+	.image_y0 = 35,
+	.image_x1 = 0x13F,
+	.image_y1 = 0x1dF,
+	.cursor_x = 0,
+	.cursor_y = 0,
+	.color_font = color_WHITE,
+	.color_background = color_BLACK,
+	.font = number32pt,
+
+};
+
+
+
+
+
+
+
 
 const static
 uint8_t Widget_Punch[]={
@@ -121,9 +100,9 @@ uint8_t Widget_Punch[]={
 		fSET_cursorXY(8,9),fSET_SYMVOL(0x04,0x00,0xA6),fSET_cursorX(19),fSET_SYMVOL(0x04,0x00,0xA5),
 		fSET_cursorXY(8,10),fSET_SYMVOL(0x04,0x00,0xA6),fSET_cursorX(19),fSET_SYMVOL(0x04,0x00,0xA5),
 		// 4
-		fSET_cursorXY(8,11),fSET_SYMVOL(0x04,0x00,0xA6),' ','o','n',':',fCALL_Data_block(2),fSET_cursorX(17),0xad,0xd1,fSET_SYMVOL(0x04,0x00,0xA5),
+		fSET_cursorXY(8,11),fSET_SYMVOL(0x04,0x00,0xA6),' ','o','n',':',fCALL_Widget_block(2),fSET_cursorX(17),0xad,0xd1,fSET_SYMVOL(0x04,0x00,0xA5),
         // 5
-		fSET_cursorXY(8,12),fSET_SYMVOL(0x04,0x00,0xA6),'o','f','f',':',fCALL_Data_block(3),fSET_cursorX(17),0xad,0xd1,fSET_SYMVOL(0x04,0x00,0xA5),
+		fSET_cursorXY(8,12),fSET_SYMVOL(0x04,0x00,0xA6),'o','f','f',':',fCALL_Widget_block(3),fSET_cursorX(17),0xad,0xd1,fSET_SYMVOL(0x04,0x00,0xA5),
 		// 6
 		fSET_cursorXY(8,13),fSAVE_color_font,fSET_font_color(0x04,0x00),0x9E,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9d,fLOAD_color_font,
 		0,0,0
@@ -210,13 +189,15 @@ uint8_t Widget_menu[]={
 
 
 uint8_t
-Data_matrix[]={fSET_cursorXY(0,0),0x20,0x31,0x30,0,0},
-Data_matrix_on[]={fSET_cursorXY(14,4),0x32,0x30,0x30,0,0},
-Data_matrix_off[]={fSET_cursorXY(14,5),0x32,0x30,0x35,0,0},
+
 Data_punch[]={fSET_cursorXY(0,0),0x20,0x32,0x35,0,0},
 Data_punch_on[]={fSET_cursorXY(14,11),0x32,0x30,0x33,0,0},
 Data_punch_off[]={fSET_cursorXY(14,12),0x32,0x30,0x38,0,0},
 Data_counter[]={fSET_cursorXY(0,0),0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x30,0};
+
+
+
+
 
 
 struct tft_window Win_matrix_temp={
@@ -284,6 +265,69 @@ const static uint8_t* block_Wdata[MAX_Wdata]={
 
 };
 
+/*
+
+#define FUNC 0x1b
+#define FUNCs(b) FUNC,b
+#define SET_background 0x01
+#define SET_font_color 0x02
+
+#define SET_cursorX 0x03
+#define SET_cursorXY 0x04
+#define SET_cursorY 0x05
+
+#define SAVE_background 0x10
+#define LOAD_background 0x11
+#define SAVE_color_font 0x12
+#define LOAD_color_font 0x13
+#define CALL_Data_block 0x14
+#define SAVE_cursorX 0x15
+#define LOAD_cursorX 0x16
+#define SAVE_cursorY 0x17
+#define LOAD_cursorY 0x18
+#define SAVE_cursorXY 0x19
+#define LOAD_cursorXY 0x1A
+#define TXT_DATA 0x1B
+
+
+#define fSET_background(a,b) FUNC,SET_background,a,b
+#define fSET_font_color(a,b) FUNC,SET_font_color,a,b
+#define fSET_cursorX(b)     FUNC,SET_cursorX,b
+#define fSET_cursorXY(a,b) 	 FUNC,SET_cursorXY,a,b
+#define fSAVE_background FUNC,SAVE_background
+#define fLOAD_background FUNC,LOAD_background
+#define fSAVE_color_font FUNC,SAVE_color_font
+#define fLOAD_color_font FUNC,LOAD_color_font
+#define fCALL_Data_block(a) FUNC,CALL_Data_block,a
+#define fSAVE_cursorX FUNC,SAVE_cursorX
+#define fLOAD_cursorX FUNC,LOAD_cursorX
+#define fSAVE_cursorY FUNC,SAVE_cursorY
+#define fLOAD_cursorY FUNC,LOAD_cursorY
+#define fSAVE_cursorXY FUNC,SAVE_cursorXY
+#define fLOAD_cursorXY FUNC,LOAD_cursorXY
+
+#define SET_font8pt 0x06
+#define SET_font18pt 0x07
+#define SET_fontNumber 0x08
+#define SET_fontNumber32 0x09
+#define fSET_font8pt FUNC,SET_font8pt
+#define fSET_font18pt FUNC,SET_font18pt
+#define fSET_fontNumber FUNC,SET_fontNumber
+#define fSET_fontNumber32 FUNC,SET_fontNumber32
+
+
+#define SET_ON_ALPHA 0x0A
+#define SET_OFF_ALPHA 0x0B
+#define SET_SYMVOL 0x0C
+#define SET_ENTER 0x0D
+
+#define fSET_ON_ALPHA FUNC,SET_ON_ALPHA
+#define fSET_OFF_ALPHA FUNC,SET_OFF_ALPHA
+#define fSET_SYMVOL(a,b,c) FUNC,SET_SYMVOL,a,b,c
+#define fSET_ENTER FUNC,SET_ENTER
+
+*/
+
 
 void tft_print_widgets(struct tft_window *window, const uint8_t* text){
 
@@ -293,7 +337,7 @@ void tft_print_widgets(struct tft_window *window, const uint8_t* text){
 	uint8_t cursorY = 0;
 	uint8_t *txt;
 	uint16_t background = window->color_background;
-	uint16_t fontcolor = window->color_font;
+	uint16_t fontcolor =  window->color_font;
 
 	while (*text){
 
@@ -310,9 +354,11 @@ void tft_print_widgets(struct tft_window *window, const uint8_t* text){
 						text++;
 						window->cursor_x = *text;
 						break;
+
 					case SET_cursorXY:
 						text++;
 						window->cursor_x = *text;
+
 					case SET_cursorY:
 						text++;
 						window->cursor_y = *text;
@@ -325,6 +371,7 @@ void tft_print_widgets(struct tft_window *window, const uint8_t* text){
 						//text++;
 						window->color_font = window->color_font | (*text);
 						break;
+
 					case SET_background:
 						text++;
 						window->color_background = *text++;
@@ -379,7 +426,7 @@ void tft_print_widgets(struct tft_window *window, const uint8_t* text){
 					case LOAD_color_font:
 						window->color_font = fontcolor ;
 					break;
-					case CALL_Data_block:
+					case CALL_Widget_block:
 						text++;
 						if(*text < MAX_Wdata){
 
@@ -409,6 +456,11 @@ void tft_print_widgets(struct tft_window *window, const uint8_t* text){
 						window->cursor_x = cursorX;
 						window->cursor_y = cursorY;
 						break;
+
+					case 0:
+
+
+
 				};
 			};
 		text++;

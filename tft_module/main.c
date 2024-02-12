@@ -11,9 +11,6 @@
 
 
 
-
-
-
 /* USER CODE BEGIN PFP */
 void init_controller_STM32F072(void);
 uint8_t CAN_transmit (CAN_TxMailBox_TypeDef *tx);
