@@ -66,7 +66,7 @@ int main(void)
 	HAL_InitTick(TICK_INT_PRIORITY);
 
 	init_tft_display(init_r61581);
-	tft_fast_clear(&Panel_win);
+	//tft_fast_clear(&Panel_win);
 
 	 tx_mailbox.TIR = ((0x700 + can_id)<<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
 	 tx_mailbox.TDTR = 1;// n на_отправку
@@ -74,10 +74,10 @@ int main(void)
 	 tx_mailbox.TDHR = 0;// d4-d7
 
 	 CAN_transmit(&tx_mailbox);
-	 tft_init_widgets(&Panel_win,block_Widgets);
-	 tft_print_widgets(&Win_matrix_temp,Data_matrix);
-	 tft_print_widgets(&Win_punch_temp,Data_punch);
-	 tft_print_widgets(&Win_counter,Data_counter);
+	// tft_init_widgets(&Panel_win,block_Widgets);
+	// tft_print_widgets(&Win_matrix_temp,Data_matrix);
+	//tft_print_widgets(&Win_punch_temp,Data_punch);
+	// tft_print_widgets(&Win_counter,Data_counter);
 
 
   /* USER CODE END Init */
@@ -169,8 +169,8 @@ int main(void)
 				  tft_command(0x36);
 				  tft_data8((rx_t1&0xff00)>>8);
 				  Panel_win.color_background = ((rx_t1&0xFF000000)>>24)|(rx_t1&0x00FF0000)>>8;
-				  tft_fast_clear(&Panel_win);
-				  tft_init_widgets(&Panel_win,block_Widgets);
+				  //tft_fast_clear(&Panel_win);
+				  //tft_init_widgets(&Panel_win,block_Widgets);
 		  	  break;
 		  	  case 9:
 

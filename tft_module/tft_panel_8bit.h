@@ -93,9 +93,12 @@ struct tft_widget {
 	uint16_t 			status;
 	struct tft_window*  window;
 	uint8_t**			text_block;
-	uint8_t*   			code_block;
+	const uint8_t*   	code_block;
+	void *				data;
+	void				(*func)(void* data);
 
 };
+
 
 
 struct tft_screen{
@@ -754,11 +757,12 @@ void tft_print_widget(struct TFT_panel* panel, uint8_t num){
 	uint8_t symvol = 0;
 	uint8_t cursorX = 0;
 	uint8_t cursorY = 0;
-	uint8_t *txt,*text;
+	uint8_t *txt,*text,
+			max_widgets = panel->screens->n_widgets;
 
-	if(num > panel->screens->n_widgets) return;
+	if(num > max_widgets && !max_widgets) return;
 
-	struct tft_widget*  widget = *panel->screens->widgets + num;
+	struct tft_widget*  widget = *panel->screens->widgets + (num-1);
 	struct tft_window*  window =  widget->window;
 	text = widget->code_block;
 	uint16_t background = window->color_background;
@@ -834,6 +838,14 @@ void tft_print_widget(struct TFT_panel* panel, uint8_t num){
 	};
 };
 
+void tft_init_widgets(struct TFT_panel* panel){
+
+	for(uint8_t i=0; i < panel->screens->n_widgets; i++){
+
+		tft_print_widget(panel,i);
+
+	};
+};
 
 
 

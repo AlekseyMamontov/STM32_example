@@ -3,6 +3,20 @@
  *
  *  Created on: Jan 11, 2024
  *      Author: Oleksii
+ *
+ *
+    struct tft_widget {
+
+	uint16_t 			status;
+	struct tft_window*  window;
+	uint8_t**			text_block;
+	uint8_t*   			code_block;
+	void *				data;
+	void				(*func)(void* data);
+
+};
+ *
+ *
  */
 
 #ifndef INC_TFT_WIDGETS_H_
@@ -21,6 +35,11 @@ struct tft_window Panel_win={
 	.font = console18pt,
 
 };
+
+uint8_t text[]={0};
+
+
+
 ////////////////////////////////////////// SCREEN 1 /////////////////////////////////////////////
 
 struct tft_window Screen1_win={
@@ -37,10 +56,12 @@ struct tft_window Screen1_win={
 
 };
 
-//--------------- Widget Matrix ---------------------//
+
+
+/*--------------- Widget Matrix ---------------------*/
 
 const static
-uint8_t Widget_Matrix[]={
+uint8_t Matrix_code_block[]={
 
 		fSET_font18pt,
 		//0
@@ -59,14 +80,41 @@ uint8_t Widget_Matrix[]={
 		fSET_cursorXY(8,6),fSAVE_color_font,fSET_font_color(0xF8,0x00),0x9E,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9d,fLOAD_color_font,
 		0,0,0
 
+		};
+
+struct tft_widget w_matrix={
+
+	.status = 0x01,
+	.window = &Screen1_win,
+	.text_block = NULL,
+	.code_block = Matrix_code_block,
+	.data = NULL,
+	.func = NULL,
+
 };
 
-uint8_t
+uint8_t matrix_on[]={fSET_cursorXY(14,4),0x32,0x30,0x30,0,0};
+struct tft_widget w_matrix_on={
 
-matrix[]={fSET_cursorXY(0,0),0x20,0x31,0x30,0,0},
-matrix_on[]={fSET_cursorXY(14,4),0x32,0x30,0x30,0,0},
-matrix_off[]={fSET_cursorXY(14,5),0x32,0x30,0x35,0,0};
+	.status = 0x01,
+	.window = &Screen1_win,
+	.text_block = NULL,
+	.code_block = matrix_on,
+	.data = NULL,
+	.func = NULL,
 
+};
+uint8_t matrix_off[]={fSET_cursorXY(14,5),0x32,0x30,0x35,0,0};
+struct tft_widget w_matrix_off={
+
+	.status = 0x01,
+	.window = &Screen1_win,
+	.text_block = NULL,
+	.code_block = matrix_off,
+	.data = NULL,
+	.func = NULL,
+
+};
 struct tft_window Win_matrix_temp={
 
 	.image_x0 = 180,
@@ -78,18 +126,24 @@ struct tft_window Win_matrix_temp={
 	.color_font = color_WHITE,
 	.color_background = color_BLACK,
 	.font = number32pt,
+};
+uint8_t matrix_temp[]={fSET_cursorXY(0,0),0x20,0x31,0x30,0,0};
+struct tft_widget w_matrix_temp={
+
+	.status = 0x01,
+	.window = &Win_matrix_temp,
+	.text_block = NULL,
+	.code_block = matrix_temp,
+	.data = NULL,
+	.func = NULL,
 
 };
 
 
-
-
-
-
-
+/*----------------------------- Widget Punch --------------------------------*/
 
 const static
-uint8_t Widget_Punch[]={
+uint8_t Punch_code_block[]={
 
 		//0
 		fSET_cursorXY(8,7),fSET_SYMVOL(0x04,0x00,0xA3),
@@ -109,30 +163,124 @@ uint8_t Widget_Punch[]={
 
 };
 
-uint8_t Widget_info2[]={
+struct tft_widget w_punch={
 
-		//0
-		fSET_cursorXY(0,0),fSET_SYMVOL(0xEB,0xC0,0xA3),
-		fSAVE_background,fSET_background(0xEB,0xC0),' ','i','n','f','o',' ',fLOAD_background,
-		fSET_SYMVOL(0xEB,0xC0,0xA4),
-		// 1-3
-		fSET_cursorXY(0,1),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		fSET_cursorXY(0,2),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		fSET_cursorXY(0,3),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		fSET_cursorXY(0,4),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		fSET_cursorXY(0,5),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		fSET_cursorXY(0,6),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		fSET_cursorXY(0,7),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		fSET_cursorXY(0,8),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		fSET_cursorXY(0,9),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		fSET_cursorXY(0,10),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		fSET_cursorXY(0,11),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		fSET_cursorXY(0,12),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		// 4
-		fSET_cursorXY(0,13),fSAVE_color_font,fSET_font_color(0xEB,0xC0),0x9E,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9d,fLOAD_color_font,
+	.status = 0x01,
+	.window = &Screen1_win,
+	.text_block = NULL,
+	.code_block = Punch_code_block,
+	.data = NULL,
+	.func = NULL,
+
+};
+uint8_t punch_on[]={fSET_cursorXY(14,11),0x32,0x30,0x33,0,0};
+struct tft_widget w_punch_on={
+	.status = 0x01,
+	.window = &Screen1_win,
+	.text_block = NULL,
+	.code_block = punch_on,
+	.data = NULL,
+	.func = NULL,
+};
+uint8_t punch_off[]={fSET_cursorXY(14,12),0x32,0x30,0x38,0,0};
+struct tft_widget w_punch_off={
+	.status = 0x01,
+	.window = &Screen1_win,
+	.text_block = NULL,
+	.code_block = punch_off,
+	.data = NULL,
+	.func = NULL,
+};
+
+struct tft_window Win_punch_temp={
+
+	.image_x0 = 180,
+	.image_y0 = 205,
+	.image_x1 = 0x13F,
+	.image_y1 = 0x1dF,
+	.cursor_x = 0,
+	.cursor_y = 0,
+	.color_font = color_WHITE,
+	.color_background = color_BLACK,
+	.font = number32pt,
+
+};
+uint8_t punch_temp[]={fSET_cursorXY(0,0),0x20,0x32,0x35,0,0};
+struct tft_widget w_punch_temp={
+	.status = 0x01,
+	.window = &Win_punch_temp,
+	.text_block = NULL,
+	.code_block = punch_temp,
+	.data = NULL,
+	.func = NULL,
+
+};
+
+/*---------------------------------  Widget COUNTER  --------------------------------------*/
+
+const static
+uint8_t Pr_Counter_code_block[]={
+
+		//1
+		fSET_cursorXY(0,14),fSET_SYMVOL(0x00,0x1F,0xA3),
+		fSAVE_background,fSET_background(0x00,0x1F),0x20,0x20,0x20,0x20,0x20,0xC8,0xe7,0xe4,0xe5,0xeb,0xe8,0xe9,0x20,0x20,0x20,0x20,0x20,0x20,fLOAD_background,
+		fSET_SYMVOL(0x00,0x1f,0xA4),
+		//2
+		fSET_cursorXY(0,15),fSET_SYMVOL(0x00,0x1f,0xA6),fSET_cursorX(19),fSET_SYMVOL(0x00,0x1f,0xA5),
+		//2
+		fSET_cursorXY(0,16),fSET_SYMVOL(0x00,0x1f,0xA6),fSET_cursorX(19),fSET_SYMVOL(0x00,0x1f,0xA5),
+		fSET_cursorXY(0,17),fSAVE_color_font,fSET_font_color(0x00,0x1f),
+		0x9E,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9d,fLOAD_color_font,
 		0,0,0
 
 };
+
+struct tft_widget w_product_counter={
+
+	.status = 0x01,
+	.window = &Screen1_win,
+	.text_block = NULL,
+	.code_block = Pr_Counter_code_block,
+	.data = NULL,
+	.func = NULL,
+
+};
+
+struct tft_window Win_product_counter={
+
+	.image_x0 = 8,
+	.image_y0 = 366,
+	.image_x1 = 0x13F,
+	.image_y1 = 0x1dF,
+	.cursor_x = 0,
+	.cursor_y = 0,
+	.color_font = color_WHITE,
+	.color_background = color_BLACK,
+	.font = number32pt,
+
+};
+
+uint8_t product_counter[]={fSET_cursorXY(0,0),0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x30,0};
+
+struct tft_widget w_counter_data ={
+	.status = 0x01,
+	.window = &Win_product_counter,
+	.text_block = NULL,
+	.code_block = product_counter,
+	.data = NULL,
+	.func = NULL,
+
+};
+
+
+
+
+
+
+
+
+/*--------------- Widget Info---------------------*/
+
 
 const static uint8_t Widget_info[]={
 
@@ -158,27 +306,23 @@ const static uint8_t Widget_info[]={
 		0,0,0
 
 };
+struct tft_widget w_info_block={
 
-
-const static
-uint8_t Widget_Counter[]={
-
-		//1
-		fSET_cursorXY(0,14),fSET_SYMVOL(0x00,0x1F,0xA3),
-		fSAVE_background,fSET_background(0x00,0x1F),0x20,0x20,0x20,0x20,0x20,0xC8,0xe7,0xe4,0xe5,0xeb,0xe8,0xe9,0x20,0x20,0x20,0x20,0x20,0x20,fLOAD_background,
-		fSET_SYMVOL(0x00,0x1f,0xA4),
-		//2
-		fSET_cursorXY(0,15),fSET_SYMVOL(0x00,0x1f,0xA6),fSET_cursorX(19),fSET_SYMVOL(0x00,0x1f,0xA5),
-		//2
-		fSET_cursorXY(0,16),fSET_SYMVOL(0x00,0x1f,0xA6),fSET_cursorX(19),fSET_SYMVOL(0x00,0x1f,0xA5),
-		fSET_cursorXY(0,17),fSAVE_color_font,fSET_font_color(0x00,0x1f),
-		0x9E,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9d,fLOAD_color_font,
-		0,0,0
+	.status = 0x01,
+	.window = &Screen1_win,
+	.text_block = NULL,
+	.code_block = Widget_info,
+	.data = NULL,
+	.func = NULL,
 
 };
 
+
+/*------------------------------------ Widget MENU ----------------------------------------------*/
+
+
 const static
-uint8_t Widget_menu[]={
+uint8_t screen1_menu_code[]={
 
 		//1
 		fSET_cursorXY(0,19),fSAVE_background,fSET_background(0x01,0x28),
@@ -187,86 +331,64 @@ uint8_t Widget_menu[]={
 
 };
 
+struct tft_widget w_widget_menu0={
 
-uint8_t
-
-Data_punch[]={fSET_cursorXY(0,0),0x20,0x32,0x35,0,0},
-Data_punch_on[]={fSET_cursorXY(14,11),0x32,0x30,0x33,0,0},
-Data_punch_off[]={fSET_cursorXY(14,12),0x32,0x30,0x38,0,0},
-Data_counter[]={fSET_cursorXY(0,0),0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x30,0};
-
-
-
-
-
-
-struct tft_window Win_matrix_temp={
-
-	.image_x0 = 180,
-	.image_y0 = 35,
-	.image_x1 = 0x13F,
-	.image_y1 = 0x1dF,
-	.cursor_x = 0,
-	.cursor_y = 0,
-	.color_font = color_WHITE,
-	.color_background = color_BLACK,
-	.font = number32pt,
+	.status = 0x01,
+	.window = &Screen1_win,
+	.text_block = NULL,
+	.code_block = screen1_menu_code,
+	.data = NULL,
+	.func = NULL,
 
 };
-struct tft_window Win_punch_temp={
-
-	.image_x0 = 180,
-	.image_y0 = 205,
-	.image_x1 = 0x13F,
-	.image_y1 = 0x1dF,
-	.cursor_x = 0,
-	.cursor_y = 0,
-	.color_font = color_WHITE,
-	.color_background = color_BLACK,
-	.font = number32pt,
-
-};
-
-struct tft_window Win_counter={
-
-	.image_x0 = 8,
-	.image_y0 = 366,
-	.image_x1 = 0x13F,
-	.image_y1 = 0x1dF,
-	.cursor_x = 0,
-	.cursor_y = 0,
-	.color_font = color_WHITE,
-	.color_background = color_BLACK,
-	.font = number32pt,
-
-};
-
 
 
 #define MAX_Widgets 5
 const static
-uint8_t* block_Widgets[MAX_Widgets]={
+struct tft_widget* Screen_1_widgets[]={
 
-		Widget_Matrix,
-		Widget_Punch,
-		Widget_Counter,
-		Widget_menu,
-		Widget_info,
-
-};
-
-#define MAX_Wdata 4
-const static uint8_t* block_Wdata[MAX_Wdata]={
-
-		Data_matrix_on,
-		Data_matrix_off,
-		Data_punch_on,
-		Data_punch_off,
+		&w_matrix,
+		&w_matrix_on,
+		&w_matrix_off,
+		&w_matrix_temp,
+		&w_punch,
+		&w_punch_on,
+		&w_punch_off,
+		&w_punch_temp,
+		&w_product_counter,
+		&w_counter_data,
 
 };
 
-/*
 
+/* old
+ *
+ *
+ *
+uint8_t Widget_info2[]={
+
+		//0
+		fSET_cursorXY(0,0),fSET_SYMVOL(0xEB,0xC0,0xA3),
+		fSAVE_background,fSET_background(0xEB,0xC0),' ','i','n','f','o',' ',fLOAD_background,
+		fSET_SYMVOL(0xEB,0xC0,0xA4),
+		// 1-3
+		fSET_cursorXY(0,1),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
+		fSET_cursorXY(0,2),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
+		fSET_cursorXY(0,3),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
+		fSET_cursorXY(0,4),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
+		fSET_cursorXY(0,5),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
+		fSET_cursorXY(0,6),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
+		fSET_cursorXY(0,7),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
+		fSET_cursorXY(0,8),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
+		fSET_cursorXY(0,9),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
+		fSET_cursorXY(0,10),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
+		fSET_cursorXY(0,11),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
+		fSET_cursorXY(0,12),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
+		// 4
+		fSET_cursorXY(0,13),fSAVE_color_font,fSET_font_color(0xEB,0xC0),0x9E,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9d,fLOAD_color_font,
+		0,0,0
+
+};
 #define FUNC 0x1b
 #define FUNCs(b) FUNC,b
 #define SET_background 0x01
@@ -326,7 +448,7 @@ const static uint8_t* block_Wdata[MAX_Wdata]={
 #define fSET_SYMVOL(a,b,c) FUNC,SET_SYMVOL,a,b,c
 #define fSET_ENTER FUNC,SET_ENTER
 
-*/
+
 
 
 void tft_print_widgets(struct tft_window *window, const uint8_t* text){
@@ -467,15 +589,7 @@ void tft_print_widgets(struct tft_window *window, const uint8_t* text){
 	};
 };
 
-void tft_init_widgets(struct tft_window *window, const uint8_t** text){
-
-	for(uint8_t i=0;i<MAX_Widgets;i++){
-
-		tft_print_widgets(window,*text++);
-
-	};
-
-};
+*/
 
 
 
