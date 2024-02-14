@@ -90,13 +90,13 @@ struct tft_window {
 
 struct tft_widget {
 
-	uint16_t 			status;
 	struct tft_window*  window;
-	uint8_t**			text_block;
 	const uint8_t*   	code_block;
 	void *				data;
 	void				(*func)(void* data);
-
+	uint8_t**			text_block;
+	uint16_t			n_text;
+	uint16_t 			status;
 };
 
 
@@ -107,9 +107,11 @@ struct tft_screen{
 
     struct
     tft_widget**   widgets;
-    uint8_t    	   n_widgets;
-    uint8_t*       dinamic_widgets;
-    uint8_t    	   n_dinamic_widgets;
+    uint8_t    	    n_widgets;
+    uint8_t*       static_widgets;
+    uint8_t    	    n_static_widgets;
+    uint8_t*       dinamic_widgets; // number widgets
+    uint8_t    	    n_dinamic_widgets;
 
     struct tft_screen *next;
     struct tft_screen *prev;
@@ -759,14 +761,14 @@ void tft_print_widget(struct TFT_panel* panel, uint8_t num){
 	uint8_t cursorY = 0;
 	uint8_t *txt,*text,
 			max_widgets = panel->screens->n_widgets;
-
 	if(num > max_widgets && !max_widgets) return;
 
 	struct tft_widget*  widget = *panel->screens->widgets + (num-1);
 	struct tft_window*  window =  widget->window;
-	text = widget->code_block;
 	uint16_t background = window->color_background;
 	uint16_t fontcolor =  window->color_font;
+
+	text = widget->code_block;
 
 	while (*text){
 
@@ -778,9 +780,9 @@ void tft_print_widget(struct TFT_panel* panel, uint8_t num){
 			text++;
 			switch (*text){
 
-					case SET_cursorX: text++;window->cursor_x = *text;break;
-					case SET_cursorXY: text++;window->cursor_x = *text;
-					case SET_cursorY: text++; window->cursor_y = *text; break;
+					case SET_cursorX:	text++;window->cursor_x = *text;break;
+					case SET_cursorXY:	text++;window->cursor_x = *text;
+					case SET_cursorY:	text++; window->cursor_y = *text; break;
 
 					case SET_font_color:text++; window->color_font = *text++;
 										window->color_font = window->color_font << 8;
@@ -797,9 +799,9 @@ void tft_print_widget(struct TFT_panel* panel, uint8_t num){
 					case SET_fontNumber:   window->font = number20pt; break;
 					case SET_fontNumber32: window->font = number32pt; break;
 
-
 					case SET_ON_ALPHA:  alpha = 1;break;
 					case SET_OFF_ALPHA: alpha = 0;break;
+
 					case SET_SYMVOL: fontcolor = window->color_font;
 									 text++;
 									 window->color_font = *text++;
@@ -808,20 +810,25 @@ void tft_print_widget(struct TFT_panel* panel, uint8_t num){
 									 if(*text)tft_terminal_print(window,*text);
 									 window->color_font = fontcolor;
 									 break;
+
 					case SET_ENTER: window->cursor_x = 0;
 									window->cursor_y = window->cursor_y +1 ;
 									break;
+
 					case SAVE_background: background = window->color_background;break;
 					case LOAD_background: window->color_background = background ;break;
 					case SAVE_color_font: fontcolor = window->color_font ;break;
 					case LOAD_color_font: window->color_font = fontcolor ;break;
+
 					case CALL_Widget_block: text++; tft_print_widget(panel,*text);break;
+
 					case SAVE_cursorX: cursorX = window->cursor_x; break;
 					case LOAD_cursorX: window->cursor_x = cursorX; break;
 					case SAVE_cursorY: cursorY = window->cursor_y; break;
 					case LOAD_cursorY: window->cursor_y = cursorY; break;
 					case SAVE_cursorXY:cursorX = window->cursor_x; cursorY = window->cursor_y;break;
 					case LOAD_cursorXY:window->cursor_x = cursorX; window->cursor_y = cursorY; break;
+
 					case TXT_DATA: text++;
 								   txt = *widget->text_block + *text;
 								   while(*txt){tft_terminal_print(window,*txt++);}
