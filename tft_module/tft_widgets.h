@@ -37,10 +37,12 @@ struct tft_window Panel_win={
 };
 
 uint8_t text[]={0};
+struct TFT_panel TFT_CAN_module;
+const struct tft_screen Screen1;
+const struct tft_screen Screen2;
+const struct tft_screen Screen3;
 
-
-
-////////////////////////////////////////// SCREEN 1 /////////////////////////////////////////////
+//////////////////////////////////// SCREEN 1 ////////////////////////////////////
 
 struct tft_window Screen1_win={
 
@@ -56,13 +58,9 @@ struct tft_window Screen1_win={
 
 };
 
-
-
-/*--------------- Widget Matrix ---------------------*/
-
+/* Widget Matrix */
 const static
 uint8_t Matrix_code_block[]={
-
 		fSET_font18pt,
 		//0
 		fSET_cursorXY(8,0),fSET_SYMVOL(0xF8,0x00,0xA3),
@@ -73,50 +71,47 @@ uint8_t Matrix_code_block[]={
 		fSET_cursorXY(8,2),fSET_SYMVOL(0xF8,0x00,0xA6),fSET_cursorX(19),fSET_SYMVOL(0xF8,0x00,0xA5),
 		fSET_cursorXY(8,3),fSET_SYMVOL(0xF8,0x00,0xA6),fSET_cursorX(19),fSET_SYMVOL(0xF8,0x00,0xA5),
 		// 4
-		fSET_cursorXY(8,4),fSET_SYMVOL(0xF8,0x00,0xA6),' ','o','n',':',fCALL_Widget_block(0),fSET_cursorX(17),0xad,0xd1,fSET_SYMVOL(0xF8,0x00,0xA5),
+		fSET_cursorXY(8,4),fSET_SYMVOL(0xF8,0x00,0xA6),' ','o','n',':',fCALL_Widget_block(1),fSET_cursorX(17),0xad,0xd1,fSET_SYMVOL(0xF8,0x00,0xA5),
         // 5
-		fSET_cursorXY(8,5),fSET_SYMVOL(0xF8,0x00,0xA6),'o','f','f',':',fCALL_Widget_block(1),fSET_cursorX(17),0xad,0xd1,fSET_SYMVOL(0xF8,0x00,0xA5),
+		fSET_cursorXY(8,5),fSET_SYMVOL(0xF8,0x00,0xA6),'o','f','f',':',fCALL_Widget_block(2),fSET_cursorX(17),0xad,0xd1,fSET_SYMVOL(0xF8,0x00,0xA5),
 		// 6
 		fSET_cursorXY(8,6),fSAVE_color_font,fSET_font_color(0xF8,0x00),0x9E,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9d,fLOAD_color_font,
 		0,0,0
-
-		};
-
-struct tft_widget w_matrix={
-
+};
+#define MATRIX_BUILD 0
+struct tft_widget
+w_matrix={
 	.status = 0x01,
 	.window = &Screen1_win,
 	.text_block = NULL,
 	.code_block = Matrix_code_block,
 	.data = NULL,
 	.func = NULL,
-
 };
-
+#define MATRIX_ON 1
 uint8_t matrix_on[]={fSET_cursorXY(14,4),0x32,0x30,0x30,0,0};
-struct tft_widget w_matrix_on={
-
+struct tft_widget
+w_matrix_on={
 	.status = 0x01,
 	.window = &Screen1_win,
 	.text_block = NULL,
 	.code_block = matrix_on,
 	.data = NULL,
 	.func = NULL,
-
 };
+#define MATRIX_OFF 2
 uint8_t matrix_off[]={fSET_cursorXY(14,5),0x32,0x30,0x35,0,0};
-struct tft_widget w_matrix_off={
-
+struct tft_widget
+w_matrix_off={
 	.status = 0x01,
 	.window = &Screen1_win,
 	.text_block = NULL,
 	.code_block = matrix_off,
 	.data = NULL,
 	.func = NULL,
-
 };
-struct tft_window Win_matrix_temp={
-
+struct tft_window
+win_matrix_temp={
 	.image_x0 = 180,
 	.image_y0 = 35,
 	.image_x1 = 0x13F,
@@ -127,24 +122,34 @@ struct tft_window Win_matrix_temp={
 	.color_background = color_BLACK,
 	.font = number32pt,
 };
+#define MATRIX_TEMPERATURE 3
 uint8_t matrix_temp[]={fSET_cursorXY(0,0),0x20,0x31,0x30,0,0};
-struct tft_widget w_matrix_temp={
-
+uint8_t matrix_temp_old[]={0x20,0x31,0x30,0,0};
+struct
+w_data_to_char matrix_data={
+	.data = 0,
+	.len = 3,
+	.new_char = (matrix_temp+4),
+	.old_char = matrix_temp_old,
+	.panel = &TFT_CAN_module,
+	.num_widget = MATRIX_TEMPERATURE,
+};
+struct tft_widget
+w_matrix_temp={
 	.status = 0x01,
-	.window = &Win_matrix_temp,
+	.window = &win_matrix_temp,
 	.text_block = NULL,
 	.code_block = matrix_temp,
-	.data = NULL,
-	.func = NULL,
-
+	.data = (void*)&matrix_data,
+	.func = widget_print_data,
 };
 
 
-/*----------------------------- Widget Punch --------------------------------*/
 
-const static
-uint8_t Punch_code_block[]={
+/* Widget Punch */
 
+const static uint8_t
+Punch_code_block[]={
 		//0
 		fSET_cursorXY(8,7),fSET_SYMVOL(0x04,0x00,0xA3),
 		fSAVE_background,fSET_background(0x04,0x00),0x20,0x20,0xCF,0xF3,0xE0,0xED,0xF1,0xEE,0xED,0x20,fLOAD_background,
@@ -154,27 +159,27 @@ uint8_t Punch_code_block[]={
 		fSET_cursorXY(8,9),fSET_SYMVOL(0x04,0x00,0xA6),fSET_cursorX(19),fSET_SYMVOL(0x04,0x00,0xA5),
 		fSET_cursorXY(8,10),fSET_SYMVOL(0x04,0x00,0xA6),fSET_cursorX(19),fSET_SYMVOL(0x04,0x00,0xA5),
 		// 4
-		fSET_cursorXY(8,11),fSET_SYMVOL(0x04,0x00,0xA6),' ','o','n',':',fCALL_Widget_block(2),fSET_cursorX(17),0xad,0xd1,fSET_SYMVOL(0x04,0x00,0xA5),
+		fSET_cursorXY(8,11),fSET_SYMVOL(0x04,0x00,0xA6),' ','o','n',':',fCALL_Widget_block(5),fSET_cursorX(17),0xad,0xd1,fSET_SYMVOL(0x04,0x00,0xA5),
         // 5
-		fSET_cursorXY(8,12),fSET_SYMVOL(0x04,0x00,0xA6),'o','f','f',':',fCALL_Widget_block(3),fSET_cursorX(17),0xad,0xd1,fSET_SYMVOL(0x04,0x00,0xA5),
+		fSET_cursorXY(8,12),fSET_SYMVOL(0x04,0x00,0xA6),'o','f','f',':',fCALL_Widget_block(6),fSET_cursorX(17),0xad,0xd1,fSET_SYMVOL(0x04,0x00,0xA5),
 		// 6
 		fSET_cursorXY(8,13),fSAVE_color_font,fSET_font_color(0x04,0x00),0x9E,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9d,fLOAD_color_font,
 		0,0,0
-
 };
-
-struct tft_widget w_punch={
-
+#define PUNCH_BUILD 4
+struct tft_widget
+w_punch={
 	.status = 0x01,
 	.window = &Screen1_win,
 	.text_block = NULL,
 	.code_block = Punch_code_block,
 	.data = NULL,
 	.func = NULL,
-
 };
+#define PUNCH_ON 5
 uint8_t punch_on[]={fSET_cursorXY(14,11),0x32,0x30,0x33,0,0};
-struct tft_widget w_punch_on={
+struct tft_widget
+w_punch_on={
 	.status = 0x01,
 	.window = &Screen1_win,
 	.text_block = NULL,
@@ -182,8 +187,10 @@ struct tft_widget w_punch_on={
 	.data = NULL,
 	.func = NULL,
 };
+#define PUNCH_OFF 6
 uint8_t punch_off[]={fSET_cursorXY(14,12),0x32,0x30,0x38,0,0};
-struct tft_widget w_punch_off={
+struct tft_widget
+w_punch_off={
 	.status = 0x01,
 	.window = &Screen1_win,
 	.text_block = NULL,
@@ -191,9 +198,8 @@ struct tft_widget w_punch_off={
 	.data = NULL,
 	.func = NULL,
 };
-
-struct tft_window Win_punch_temp={
-
+struct tft_window
+Win_punch_temp={
 	.image_x0 = 180,
 	.image_y0 = 205,
 	.image_x1 = 0x13F,
@@ -203,24 +209,33 @@ struct tft_window Win_punch_temp={
 	.color_font = color_WHITE,
 	.color_background = color_BLACK,
 	.font = number32pt,
-
 };
-uint8_t punch_temp[]={fSET_cursorXY(0,0),0x20,0x32,0x35,0,0};
-struct tft_widget w_punch_temp={
+#define PUNCH_TEMPERATURE 7
+uint8_t punch_temp[]={fSET_cursorXY(0,0),0x20,0x31,0x30,0,0};
+uint8_t punch_temp_old[]={0x20,0x31,0x30,0,0};
+struct w_data_to_char
+punch_data={
+	.data = 0,
+	.len = 3,
+	.new_char = (punch_temp+4),
+	.old_char = punch_temp_old,
+	.panel = &TFT_CAN_module,
+	.num_widget = PUNCH_TEMPERATURE,
+};
+struct tft_widget
+w_punch_temp={
 	.status = 0x01,
 	.window = &Win_punch_temp,
 	.text_block = NULL,
 	.code_block = punch_temp,
-	.data = NULL,
-	.func = NULL,
-
+	.data = (void*)&punch_data,
+	.func = widget_print_data,
 };
 
-/*---------------------------------  Widget COUNTER  --------------------------------------*/
 
-const static
-uint8_t Pr_Counter_code_block[]={
-
+/*--  Widget COUNTER --*/
+const static uint8_t
+Pr_Counter_code_block[]={
 		//1
 		fSET_cursorXY(0,14),fSET_SYMVOL(0x00,0x1F,0xA3),
 		fSAVE_background,fSET_background(0x00,0x1F),0x20,0x20,0x20,0x20,0x20,0xC8,0xe7,0xe4,0xe5,0xeb,0xe8,0xe9,0x20,0x20,0x20,0x20,0x20,0x20,fLOAD_background,
@@ -232,22 +247,19 @@ uint8_t Pr_Counter_code_block[]={
 		fSET_cursorXY(0,17),fSAVE_color_font,fSET_font_color(0x00,0x1f),
 		0x9E,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9d,fLOAD_color_font,
 		0,0,0
-
 };
-
-struct tft_widget w_product_counter={
-
+#define COUNTER_BUILD 8
+struct tft_widget
+w_product_counter={
 	.status = 0x01,
 	.window = &Screen1_win,
 	.text_block = NULL,
 	.code_block = Pr_Counter_code_block,
 	.data = NULL,
 	.func = NULL,
-
 };
-
-struct tft_window Win_product_counter={
-
+struct tft_window
+Win_product_counter={
 	.image_x0 = 8,
 	.image_y0 = 366,
 	.image_x1 = 0x13F,
@@ -257,32 +269,34 @@ struct tft_window Win_product_counter={
 	.color_font = color_WHITE,
 	.color_background = color_BLACK,
 	.font = number32pt,
-
 };
-
-uint8_t product_counter[]={fSET_cursorXY(0,0),0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x30,0};
-
-struct tft_widget w_counter_data ={
+#define COUNTER_DATA 9
+uint8_t product_counter[]={fSET_cursorXY(0,0),0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x30,0,0};
+uint8_t product_counter_old[]={0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x30,0,0};
+struct w_data_to_char
+counter_data={
+	.data = 0,
+	.len = 9,
+	.new_char = (product_counter+4),
+	.old_char = product_counter_old,
+	.panel = &TFT_CAN_module,
+	.num_widget = COUNTER_DATA,
+};
+struct tft_widget
+w_counter_data ={
 	.status = 0x01,
 	.window = &Win_product_counter,
 	.text_block = NULL,
 	.code_block = product_counter,
-	.data = NULL,
-	.func = NULL,
-
+	.data = (void*)&counter_data,
+	.func = widget_print_data,
 };
-
-
-
-
-
-
 
 
 /*--------------- Widget Info---------------------*/
 
 
-const static uint8_t Widget_info[]={
+const static uint8_t info_code_block[]={
 
 		//0
 		fSET_cursorXY(1,0),fSET_SYMVOL(0xEB,0xC0,0xA3),
@@ -306,59 +320,99 @@ const static uint8_t Widget_info[]={
 		0,0,0
 
 };
-struct tft_widget w_info_block={
-
+#define INFO_BUILD 10
+struct tft_widget
+w_info_block={
 	.status = 0x01,
 	.window = &Screen1_win,
 	.text_block = NULL,
-	.code_block = Widget_info,
+	.code_block = info_code_block,
 	.data = NULL,
 	.func = NULL,
-
 };
 
 
 /*------------------------------------ Widget MENU ----------------------------------------------*/
 
 
-const static
-uint8_t screen1_menu_code[]={
-
+const static uint8_t
+screen1_menu_code[]={
 		//1
 		fSET_cursorXY(0,19),fSAVE_background,fSET_background(0x01,0x28),
-		0x20,0xA9,0x20,'m','e','n','u',0x20,'o','k',0x20,0x20,'u','p',0x20,'d','o','w','n',0x20,fLOAD_background,
+		0x20,0xA9,'m','e','n','u',0x20,'o','k',0x20,0x98,'u','p',0x20,0x20,'d','o','w','n',0x20,fLOAD_background,
 		0,0,0
-
 };
-
-struct tft_widget w_widget_menu0={
-
+#define MENU_BUILD 11
+struct tft_widget
+w_widget_menu0={
 	.status = 0x01,
 	.window = &Screen1_win,
 	.text_block = NULL,
 	.code_block = screen1_menu_code,
 	.data = NULL,
 	.func = NULL,
-
 };
 
 
-#define MAX_Widgets 5
 const static
 struct tft_widget* Screen_1_widgets[]={
 
-		&w_matrix,
-		&w_matrix_on,
-		&w_matrix_off,
-		&w_matrix_temp,
-		&w_punch,
-		&w_punch_on,
-		&w_punch_off,
-		&w_punch_temp,
-		&w_product_counter,
-		&w_counter_data,
+		&w_matrix,			// MATRIX_BUILD 0
+		&w_matrix_on,   	// MATRIX_ON 1
+		&w_matrix_off,  	// MATRIX_OFF 2
+		&w_matrix_temp, 	// MATRIX_TEMPERATURE 3
 
+		&w_punch,       	// PUNCH_BUILD 4
+		&w_punch_on,		// PUNCH_ON 5
+		&w_punch_off,		// PUNCH_OFF 6
+		&w_punch_temp,		// PUNCH_TEMPERATURE 7
+
+		&w_product_counter, // COUNTER_BUILD 8
+		&w_counter_data,    // COUNTER_DATA 9
+
+		&w_info_block,      // INFO_BUILD 10
+		&w_widget_menu0,	// MENU_BUILD 11
 };
+uint8_t screen1_build[]={0,3,4,7,8,9,10,11};
+uint8_t screen1_dynamic[]={1,2,3,5,6,7,9};
+
+const struct tft_screen
+Screen1={
+	    .widgets = Screen_1_widgets,
+		.n_widgets = sizeof(Screen_1_widgets),
+	    .build_widgets = screen1_build,			 // number
+	    .n_build_widgets = sizeof(screen1_build),
+	    .dynamic_widgets = screen1_dynamic, 		 // number widgets
+	    .n_dynamic_widgets =sizeof(screen1_dynamic),
+
+	    .next = &Screen2,
+	    .prev = NULL,
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////// SCREEN 2 /////////////////////////////////////////////
+
+
+
+
+
+
+////////////////////////////////////////// SCREEN 3 /////////////////////////////////////////////
 
 
 /* old

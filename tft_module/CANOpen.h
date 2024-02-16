@@ -365,4 +365,44 @@ struct SDO_Object{
 
 };
 
+struct data_in_can_message{
+
+	uint32_t  id_object;
+	uint32_t* data_in_message;
+	uint8_t   n_bits;
+	uint8_t   bit_offset;
+
+};
+
+
+
+
+struct CANopen{
+
+	uint32_t  	can_id;
+	struct
+	PDO_Object**  pdo;
+	uint8_t		  n_pdo;
+	struct
+	SDO_Object**  sdo;
+	uint8_t		  n_sdo;
+
+
+
+
+
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
 #endif /* INC_CANOPEN_H_ */

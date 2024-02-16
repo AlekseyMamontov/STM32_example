@@ -25,16 +25,49 @@ uint32_t gpio_time_pin[3]={0};
 uint32_t gpio_time_ms[3]={5,5,5};
 uint32_t gpio_input = 0;
 
-uint8_t test,rx_msg;
+uint8_t  test,rx_msg;
 uint16_t test_color;
 uint32_t rx_t1 = 0, rx_t2 = 0;
 
+uint16_t ms_pause = 0;
+
+// Input
+
+uint8_t pin_product_counter;
 
 
-// CanOpen
-uint32_t can_id,can_id_test = 0,can_speed,id_rxPDO1,id_txPDO1,id_rxSDO,id_txSDO,heartbroken;
-uint8_t  NMT_command = 0,NMT_status = NMT_status_Operational;
+// CanOpen block
 
+uint32_t can_id,can_speed,
+		 idRxPDO1,idRxPDO2,idRxPDO3,idRxPDO4,
+		 idTxPDO1,idTxPDO2,idTxPDO3,idTxPDO4,
+		 idRxSDO,idTxSDO,heartbroken;
+
+uint8_t  NMT_command = 0,NMT_status = NMT_status_Operational,
+		 sendTxPDO1 = 0 ;
+
+struct data_in_can_message
+matrix_can ={
+	.data_in_message = &matrix_data.data,
+	.id_object = txPDO2+0x03,
+	.bit_offset = 0,
+	.n_bits = 16,
+},
+punch_can={
+	.data_in_message = &punch_data.data,
+	.id_object = txPDO2+0x03,
+	.bit_offset = 16,
+	.n_bits = 16,
+},
+counter_can={
+	.data_in_message = &counter_data.data,
+	.id_object = txPDO1+0x03,
+	.bit_offset = 0,
+	.n_bits = 1,
+};
+
+
+/*
 uint32_t *sync_data, *Sync_obj[n_Sync_Object]={NULL};
 uint8_t  mask_gpio = 0xFF, send_txPDO1 = 0,send_txSDO = 0,
 		 reply_rxPDO1 = 0,reply_rxPDO1_mask = 0;
@@ -42,13 +75,20 @@ uint32_t id  = 0;
 
 uint8_t tex_buf[20]={0};
 
+*/
 
-/* USER CODE END PFP */
+struct TFT_panel TFT_CAN_module={
 
-/**
-  * @brief  The application entry point.
-  * @retval int
-  */
+	.init_tft = init_r61581,
+	.screens = &Screen1,
+    .window = &Panel_win,
+
+};
+
+
+
+
+
 int main(void)
 {
   /* USER CODE BEGIN 1 */
@@ -61,23 +101,22 @@ int main(void)
 
 
   /* USER CODE BEGIN Init */
-	init_controller_STM32F072();// Init RCC 48Mhz, GPIOx, bxCAN
-	SystemCoreClockUpdate();
-	HAL_InitTick(TICK_INT_PRIORITY);
 
-	init_tft_display(init_r61581);
-	//tft_fast_clear(&Panel_win);
+
+	init_controller_STM32F072();// Init RCC 48Mhz, GPIOx, bxCAN
+	init_tft_display(TFT_CAN_module.init_tft);
+	tft_fast_clear(TFT_CAN_module.window);
+	tft_build_widgets(&TFT_CAN_module);
+
 
 	 tx_mailbox.TIR = ((0x700 + can_id)<<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
 	 tx_mailbox.TDTR = 1;// n на_отправку
 	 tx_mailbox.TDLR = can_id;// d0-d3
 	 tx_mailbox.TDHR = 0;// d4-d7
 
-	 CAN_transmit(&tx_mailbox);
-	// tft_init_widgets(&Panel_win,block_Widgets);
-	// tft_print_widgets(&Win_matrix_temp,Data_matrix);
-	//tft_print_widgets(&Win_punch_temp,Data_punch);
-	// tft_print_widgets(&Win_counter,Data_counter);
+	CAN_transmit(&tx_mailbox);
+
+
 
 
   /* USER CODE END Init */
@@ -87,135 +126,66 @@ int main(void)
   test= 0;
   rx_msg = 0;
 
-
+  tft_pause_ms = 5000;
 
 
   while (1)
   {
 
-	  if(send_txPDO1){
+	  if(sendTxPDO1){
 
-	  	 	send_txPDO1 = 0;
+	  	 	sendTxPDO1 = 0;
 	  	 	keys_status = 0;
-	  	 	tx_mailbox.TIR = (id_txPDO1 <<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
+	  	 	tx_mailbox.TIR = (idTxPDO1 <<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
 	  	 	tx_mailbox.TDTR = 1;// n на_отправку
 	  	 	tx_mailbox.TDLR = keys_status;// d0-d3
 	  	 	tx_mailbox.TDHR = 0;// d4-d7
 
-	  	 	if(CAN_transmit(&tx_mailbox))send_txPDO1 = 1;
+	  	 	if(CAN_transmit(&tx_mailbox))sendTxPDO1 = 1;
 
 	  	  };
 
-	  if(rx_msg){
+	  // test
 
-		  rx_msg--;
+	  tft_pause_ms = 2000;
+	  while(tft_pause_ms){};
 
+	  w_matrix_temp.func(w_matrix_temp.data);
+	  w_punch_temp.func(w_punch_temp.data);
+	  w_counter_data.func(w_counter_data.data);
 
-		  switch(test){
+	  matrix_data.data++;
+	  punch_data.data++;
+	  counter_data.data++;
 
-	  	  	  case 0:
-	  	  		  tft_command((rx_t1&0xff00)>>8);
-	  	  	  break;
-	  	  	  case 1:
-		  		tft_command((rx_t1&0xff00)>>8);
-		  		tft_data8((rx_t1&0x00ff0000)>>16);
-		  	  break;
-		  	  case 2:
-		  		tft_command((rx_t1&0xff00)>>8);
-		  		tft_data8((rx_t1&0x00ff0000)>>16);
-		  		tft_data8((rx_t1&0xFF000000)>>24);
-		  	  break;
-		  	  case 3:
-			  	tft_command((rx_t1&0xff00)>>8);
-			  	tft_data8((rx_t1&0x00ff0000)>>16);
-			  	tft_data8((rx_t1&0xFF000000)>>24);
-			  	tft_data8(rx_t2&0xFF);
-		  	  break;
-		  	  case 4:
-			  	tft_command((rx_t1&0xff00)>>8);
-			  	tft_data8((rx_t1&0x00ff0000)>>16);
-			  	tft_data8((rx_t1&0xFF000000)>>24);
-			  	tft_data8(rx_t2&0xFF);
-			  	tft_data8((rx_t2&0xFF00)>>8);
+	 if(matrix_data.data == 1000) matrix_data.data = 0;
+	 if(punch_data.data == 1000) punch_data.data = 0;
+	 if(counter_data.data == 1000000000) counter_data.data = 0;
 
-		  	  break;
-		  	  case 5:
-			  	tft_command((rx_t1&0xff00)>>8);
-			  	tft_data8((rx_t1&0x00ff0000)>>16);
-			  	tft_data8((rx_t1&0xFF000000)>>24);
-			  	tft_data8(rx_t2&0xFF);
-			  	tft_data8((rx_t2&0xFF00)>>8);
-			  	tft_data8((rx_t2&0xFF0000)>>16);
-		  	  break;
-		  	  case 6:
-			  	tft_command((rx_t1&0xff00)>>8);
-			  	tft_data8((rx_t1&0x00ff0000)>>16);
-			  	tft_data8((rx_t1&0xFF000000)>>24);
-			  	tft_data8(rx_t2&0xFF);
-			  	tft_data8((rx_t2&0xFF00)>>8);
-			  	tft_data8((rx_t2&0xFF0000)>>16);
-			  	tft_data8((rx_t2&0xFF000000)>>24);
-		  	  break;
-		  	  case 7:
-		  		tft_data8((rx_t1&0xff00)>>8);
-			  	tft_data8((rx_t1&0x00ff0000)>>16);
-			  	tft_data8((rx_t1&0xFF000000)>>24);
-			  	tft_data8(rx_t2&0xFF);
-			  	tft_data8((rx_t2&0xFF00)>>8);
-			  	tft_data8((rx_t2&0xFF0000)>>16);
-			  	tft_data8((rx_t2&0xFF000000)>>24);
-		  	  break;
-		  	  case 8:
-				  tft_command(0x36);
-				  tft_data8((rx_t1&0xff00)>>8);
-				  Panel_win.color_background = ((rx_t1&0xFF000000)>>24)|(rx_t1&0x00FF0000)>>8;
-				  //tft_fast_clear(&Panel_win);
-				  //tft_init_widgets(&Panel_win,block_Widgets);
-		  	  break;
-		  	  case 9:
-
-		  		  if((rx_t1&0xff00)>>8 == 1){
-
-		  			  init_tft_display(init_r61581);
-
-		  		  }else if((rx_t1&0xff00)>>8 == 2){
-
-		  			  init_tft_display(r61581_v2);
-
-		  		  }else{
-
-		  			  init_tft_display(init_ili9486);
-
-		  		  };
-
-		  	  break;
-
-
-
-
-		  	  default:
-		  	  break;
-
-		  };
-
-
-
-	  };
-
-
-
-
-    /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
   }
-  /* USER CODE END 3 */
+
+
+
 }
 
 
 
 
 /*------------------ TIMERS -------------------*/
+
+
+
+
+
+
+
+
+
+
+void SysTick_Handler(void){
+	 if(ms_pause)ms_pause --;
+	 if(tft_pause_ms)tft_pause_ms--;
+};
 
 void TIM14_IRQHandler(){
 
@@ -234,7 +204,7 @@ void TIM14_IRQHandler(){
     if(tft_keys[pin_key_up] == 0x00ff) keys_status |= 0x04;;
 
     if(keys_status ){
-    	send_txPDO1++;
+    	sendTxPDO1++;
     };
 	TIM14->SR &= ~TIM_SR_UIF;
 };
@@ -270,7 +240,7 @@ void CEC_CAN_IRQHandler(void){
 
 					default:
 
-						if(id != id_rxPDO1) break;
+						if(id != idRxPDO1) break;
 						if(NMT_status != NMT_status_Operational) break;
 
 						test = data0;
@@ -518,22 +488,21 @@ void init_controller_STM32F072(void){
      */
 
 
+	/******************************  SYStick **************************/
+
+    SysTick->LOAD = 48000000/1000 - 1;  // (48 mHz / 1000) -1  // 1ms
+    SysTick->VAL = 0;  // reset
+    SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk | SysTick_CTRL_ENABLE_Msk;
+    //NVIC_SetPriority(SysTick_IRQn, 2);
 
 
+    /******************************  TIM14 **************************/
 
-
-
-
-
-/******************************  TIM14 **************************/
-
-    	RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
-	    TIM14->PSC =  48000000/1000 - 1;
-	    TIM14->DIER |= TIM_DIER_UIE; 	  // enable perepolnenia TIM14
-	    TIM14->CR1 |= TIM_CR1_CEN;		  // ON TIM14
-	    TIM14->ARR = 2; //2 ms
-
-	    NVIC_EnableIRQ(TIM14_IRQn);
+    RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
+	TIM14->PSC =  48000000/1000 - 1;
+	TIM14->DIER |= TIM_DIER_UIE; 	  // enable perepolnenia TIM14
+	TIM14->CR1 |= TIM_CR1_CEN;		  // ON TIM14
+	TIM14->ARR = 2; //2 ms
 
 
 /***************************** CAN module ********************************
@@ -580,15 +549,6 @@ void init_controller_STM32F072(void){
 	// выход из сна.
 	CLEAR_BIT(CAN->MCR, CAN_MCR_SLEEP);
 	while (CAN->MSR & CAN_MSR_SLAK){};
-
-	/*// reset default
-	CLEAR_BIT(CAN->MCR, CAN_MCR_TTCM);// Clear 0 /Set 1 the time triggered communication mode
-	CLEAR_BIT(CAN->MCR, CAN_MCR_ABOM);// Clear 0 /Set 1 the automatic bus-off management
-	CLEAR_BIT(CAN->MCR, CAN_MCR_AWUM);// Clear 0 /Set 1 the automatic wake-up mode
-	CLEAR_BIT(CAN->MCR, CAN_MCR_NART);// Set 1/ Clear 0 the automatic retransmission
-	CLEAR_BIT(CAN->MCR, CAN_MCR_RFLM);// Set the receive FIFO locked mode
-	CLEAR_BIT(CAN->MCR, CAN_MCR_TXFP);// Set the transmit FIFO priority
-	*/
 
 	// get can_id
 	uint32_t speed;
@@ -662,25 +622,44 @@ void init_controller_STM32F072(void){
 				1: Must match, the bit of the incoming identifier mu
 
 */
+	// rxPDO
+	idRxPDO1 =  rxPDO1 + can_id;
+	idRxPDO2 =  rxPDO2 + can_id;
+	idRxPDO3 =  rxPDO3 + can_id;
+	idRxPDO4 =  rxPDO4 + can_id;
 
-	id_rxPDO1 = rxPDO1 + can_id;
-	id_txPDO1 = txPDO1 + can_id;
-	id_rxSDO =  rxSDO + can_id;
-	id_txSDO = txSDO + can_id;
+	// txPDO
+	idTxPDO1 = txPDO1 + can_id;
+	idTxPDO2 = txPDO2 + can_id;
+	idTxPDO3 = txPDO3 + can_id;
+	idTxPDO4 = txPDO4 + can_id;
+
+	idRxSDO = rxSDO + can_id;
+	idTxSDO = txSDO + can_id;
 	heartbroken = 0x700 + can_id;
 
 
 	CAN->FMR |=  CAN_FMR_FINIT; /*  init mode */
-	CAN->FA1R |= (CAN_FA1R_FACT0|CAN_FA1R_FACT1);//Activate filter 0,1
-	CAN->FM1R |= (CAN_FM1R_FBM0 |CAN_FM1R_FBM1); //ID_list
-	CAN->FS1R  &=~(CAN_FS1R_FSC0|CAN_FS1R_FSC1);  //16bit
-	CAN->FFA1R &=~CAN_FFA1R_FFA0; // filtr0 -> FIFO0
-	CAN->FFA1R |= CAN_FFA1R_FFA1; // filtr1 -> FIFO1
+	CAN->FA1R |= (CAN_FA1R_FACT0|CAN_FA1R_FACT1|CAN_FA1R_FACT2);//Activate filter 0,1
+	CAN->FM1R |= (CAN_FM1R_FBM0 |CAN_FM1R_FBM1|CAN_FM1R_FBM2); //ID_list
+	CAN->FS1R  &=~(CAN_FS1R_FSC0|CAN_FS1R_FSC1|CAN_FS1R_FSC2);  //16bit
 
-	CAN->sFilterRegister[0].FR1 = id_rxPDO1<< 5;
-	CAN->sFilterRegister[0].FR2 = 0;
-	CAN->sFilterRegister[1].FR1 = (id_rxSDO<<16 | heartbroken)<< 5;//0x02 test rtr bit for heartbroken
-	CAN->sFilterRegister[1].FR2 = (0x80 << 16 | 0x100 << 16)<< 5;
+	CAN->FFA1R &=~CAN_FFA1R_FFA0; // filtr0 -> FIFO0
+	CAN->FFA1R &=~CAN_FFA1R_FFA1; // filtr1 -> FIFO0
+	CAN->FFA1R |= CAN_FFA1R_FFA2; // filtr1 -> FIFO2
+
+	// CanOpen rxPDO1,2,3,4
+	CAN->sFilterRegister[0].FR1 = idRxPDO1<< 16 | idRxPDO2<< 5;
+	CAN->sFilterRegister[0].FR2 = idRxPDO3<< 16 | idRxPDO4<< 5;
+	// NMT command
+	CAN->sFilterRegister[1].FR1 = 0;
+	CAN->sFilterRegister[1].FR2	= 0;
+
+	// rxSDO, Heartbroken
+	CAN->sFilterRegister[2].FR1 = (idRxSDO<<16 | heartbroken)<< 5;//0x02 test rtr bit for heartbroken
+	CAN->sFilterRegister[2].FR2 = (0x80 << 16 | 0x100 << 16)<< 5;
+
+
 
 	CAN->FMR &=~ CAN_FMR_FINIT; /* Leave filter init */
 	CAN->IER |= CAN_IER_FMPIE0; /* Set FIFO0 message pending IT enable */
@@ -698,10 +677,12 @@ void init_controller_STM32F072(void){
 	    0: No interrupt generated when state of FMP[1:0] bits are not 00b.
 	    1: Interrupt generated when state of FMP[1:0] bits are not 00b.
 */
-
+	 NVIC_EnableIRQ(SysTick_IRQn);
+	 NVIC_EnableIRQ(TIM14_IRQn);
     /* CAN interrupt Init */
 	NVIC_SetPriority(CEC_CAN_IRQn,1);
 	NVIC_EnableIRQ(CEC_CAN_IRQn);
+    // Systick
 
 }
 
@@ -724,6 +705,107 @@ uint8_t CAN_transmit (CAN_TxMailBox_TypeDef *tx){
 
 
 
+///////////////////////////////////////////// OLD //////////////////////////////////////////////////
+
+/*
+	  if(rx_msg){
+
+		  rx_msg--;
+
+
+		  switch(test){
+
+	  	  	  case 0:
+	  	  		  tft_command((rx_t1&0xff00)>>8);
+	  	  	  break;
+	  	  	  case 1:
+		  		tft_command((rx_t1&0xff00)>>8);
+		  		tft_data8((rx_t1&0x00ff0000)>>16);
+		  	  break;
+		  	  case 2:
+		  		tft_command((rx_t1&0xff00)>>8);
+		  		tft_data8((rx_t1&0x00ff0000)>>16);
+		  		tft_data8((rx_t1&0xFF000000)>>24);
+		  	  break;
+		  	  case 3:
+			  	tft_command((rx_t1&0xff00)>>8);
+			  	tft_data8((rx_t1&0x00ff0000)>>16);
+			  	tft_data8((rx_t1&0xFF000000)>>24);
+			  	tft_data8(rx_t2&0xFF);
+		  	  break;
+		  	  case 4:
+			  	tft_command((rx_t1&0xff00)>>8);
+			  	tft_data8((rx_t1&0x00ff0000)>>16);
+			  	tft_data8((rx_t1&0xFF000000)>>24);
+			  	tft_data8(rx_t2&0xFF);
+			  	tft_data8((rx_t2&0xFF00)>>8);
+
+		  	  break;
+		  	  case 5:
+			  	tft_command((rx_t1&0xff00)>>8);
+			  	tft_data8((rx_t1&0x00ff0000)>>16);
+			  	tft_data8((rx_t1&0xFF000000)>>24);
+			  	tft_data8(rx_t2&0xFF);
+			  	tft_data8((rx_t2&0xFF00)>>8);
+			  	tft_data8((rx_t2&0xFF0000)>>16);
+		  	  break;
+		  	  case 6:
+			  	tft_command((rx_t1&0xff00)>>8);
+			  	tft_data8((rx_t1&0x00ff0000)>>16);
+			  	tft_data8((rx_t1&0xFF000000)>>24);
+			  	tft_data8(rx_t2&0xFF);
+			  	tft_data8((rx_t2&0xFF00)>>8);
+			  	tft_data8((rx_t2&0xFF0000)>>16);
+			  	tft_data8((rx_t2&0xFF000000)>>24);
+		  	  break;
+		  	  case 7:
+		  		tft_data8((rx_t1&0xff00)>>8);
+			  	tft_data8((rx_t1&0x00ff0000)>>16);
+			  	tft_data8((rx_t1&0xFF000000)>>24);
+			  	tft_data8(rx_t2&0xFF);
+			  	tft_data8((rx_t2&0xFF00)>>8);
+			  	tft_data8((rx_t2&0xFF0000)>>16);
+			  	tft_data8((rx_t2&0xFF000000)>>24);
+		  	  break;
+		  	  case 8:
+				  tft_command(0x36);
+				  tft_data8((rx_t1&0xff00)>>8);
+				  Panel_win.color_background = ((rx_t1&0xFF000000)>>24)|(rx_t1&0x00FF0000)>>8;
+				  //tft_fast_clear(&Panel_win);
+				  //tft_init_widgets(&Panel_win,block_Widgets);
+		  	  break;
+		  	  case 9:
+
+		  		  if((rx_t1&0xff00)>>8 == 1){
+
+		  			  init_tft_display(init_r61581);
+
+		  		  }else if((rx_t1&0xff00)>>8 == 2){
+
+		  			  init_tft_display(r61581_v2);
+
+		  		  }else{
+
+		  			  init_tft_display(init_ili9486);
+
+		  		  };
+
+		  	  break;
+
+
+
+
+		  	  default:
+		  	  break;
+
+		  };
+
+
+
+	  };
+
+
+*/
 
 
 

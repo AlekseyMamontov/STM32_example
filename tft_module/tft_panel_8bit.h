@@ -69,6 +69,9 @@
 #define color_FUCHSIA	0xF81F
 #define color_PURPLE	0x8010
 
+
+ uint16_t tft_pause_ms = 0;
+
 // --------------- Struct tft_display -----------//
 
 struct tft_window {
@@ -91,7 +94,7 @@ struct tft_window {
 struct tft_widget {
 
 	struct tft_window*  window;
-	const uint8_t*   	code_block;
+	const uint8_t*		code_block;
 	void *				data;
 	void				(*func)(void* data);
 	uint8_t**			text_block;
@@ -105,13 +108,13 @@ struct tft_screen{
 
 	// Widgets
 
-    struct
+    const struct
     tft_widget**   widgets;
     uint8_t    	    n_widgets;
-    uint8_t*       static_widgets;
-    uint8_t    	    n_static_widgets;
-    uint8_t*       dinamic_widgets; // number widgets
-    uint8_t    	    n_dinamic_widgets;
+    uint8_t*       build_widgets; // number
+    uint8_t    	    n_build_widgets;
+    uint8_t*       dynamic_widgets; // number widgets
+    uint8_t    	    n_dynamic_widgets;
 
     struct tft_screen *next;
     struct tft_screen *prev;
@@ -122,11 +125,11 @@ struct TFT_panel {
 
 	// Init
 
-	uint8_t* init_tft;
+	const uint8_t* init_tft;
 
 	// Screens
-
-	struct
+	struct tft_window* window;
+	const struct
 	tft_screen* screens;
 
 	// Keys
@@ -137,6 +140,11 @@ struct TFT_panel {
 	uint8_t  buffer_keys;
 	uint8_t  n_buffer;
 
+	// CAN
+
+	struct
+	data_in_can_message** data_can;
+	uint8_t 		    n_data_can;
 
 
 };
@@ -295,7 +303,11 @@ void init_tft_display(const uint8_t* buf){
 	while(*buf != STOP_INIT){
 
 		data = *buf++;
-		if(data == PAUSE_INIT){HAL_Delay(*buf++);continue;}
+		if(data == PAUSE_INIT){
+			tft_pause_ms = *buf++;
+			while(tft_pause_ms){};
+			continue;
+		}
 		tft_command(data);
 		data = *buf++;
 		if(data == 0) continue;
@@ -661,13 +673,13 @@ const uint32_t tft_data_to_char[11] ={
 	1000000000,
 };
 
-void tft_convert_data_to_char(uint8_t* buf, uint32_t data_to_char, uint8_t len){
+void tft_convert_data32_to_char(uint8_t* buf, uint32_t data_to_char, uint8_t len){
 
  uint8_t i,numeral,symbol = 0x20;
  uint8_t correct = 11 - len;
 
  if(correct)
-	 for(i=0; i<correct;i++) *(buf+i) = symbol;
+	 for(i=0; i<correct; i++) *(buf+i) = symbol;
 
  uint32_t del = tft_data_to_char[len];  ///del /=10;
 
@@ -684,11 +696,36 @@ void tft_convert_data_to_char(uint8_t* buf, uint32_t data_to_char, uint8_t len){
 
 	};
 };
+void tft_convert_data_to_char(uint8_t* buf, uint32_t data_to_char, uint8_t len){
+
+ uint8_t i,numeral,symbol = 0x20;
+
+	 for(i=0; i<len;i++) *(buf+i) = symbol;
+
+ uint32_t del = tft_data_to_char[len];  ///del /=10;
+
+	for(i=0;i<len;i++){
+
+	   if(data_to_char >= del){
+		   numeral = data_to_char/del;
+		   data_to_char %=del;
+		   symbol = 0x30;
+	  }else numeral = 0;
+
+   	  if ((del /= 10) < 1) symbol = 0x30;
+   	  buf[i] = symbol + numeral;
+
+	};
+};
 
 void tft_convert_data_to_char2(char* buf,uint32_t data,uint8_t len){
     if(buf == NULL) return;
     snprintf(buf,len,"%lu",data);
 };
+
+
+
+
 
 //---------------------------- Widgets ----------------------//
 
@@ -763,7 +800,7 @@ void tft_print_widget(struct TFT_panel* panel, uint8_t num){
 			max_widgets = panel->screens->n_widgets;
 	if(num > max_widgets && !max_widgets) return;
 
-	struct tft_widget*  widget = *panel->screens->widgets + (num-1);
+	struct tft_widget*  widget = *(panel->screens->widgets + num);
 	struct tft_window*  window =  widget->window;
 	uint16_t background = window->color_background;
 	uint16_t fontcolor =  window->color_font;
@@ -820,7 +857,7 @@ void tft_print_widget(struct TFT_panel* panel, uint8_t num){
 					case SAVE_color_font: fontcolor = window->color_font ;break;
 					case LOAD_color_font: window->color_font = fontcolor ;break;
 
-					case CALL_Widget_block: text++; tft_print_widget(panel,*text);break;
+					case CALL_Widget_block: text++;tft_print_widget(panel,*text);break;
 
 					case SAVE_cursorX: cursorX = window->cursor_x; break;
 					case LOAD_cursorX: window->cursor_x = cursorX; break;
@@ -845,14 +882,44 @@ void tft_print_widget(struct TFT_panel* panel, uint8_t num){
 	};
 };
 
-void tft_init_widgets(struct TFT_panel* panel){
+void tft_build_widgets(struct TFT_panel* panel){
 
-	for(uint8_t i=0; i < panel->screens->n_widgets; i++){
+	const uint8_t* num_widget = panel->screens->build_widgets;
+	uint8_t num,max_number = panel->screens->n_widgets;
 
-		tft_print_widget(panel,i);
-
+	for(uint8_t i=0; i < panel->screens->n_build_widgets; i++){
+		num = *(num_widget+i);
+		if(num < max_number){tft_print_widget(panel,num);};
 	};
 };
+
+
+struct
+w_data_to_char{
+	uint32_t data;
+	uint8_t* old_char;
+	uint8_t* new_char;
+	struct
+	TFT_panel* panel;
+	uint8_t  len;
+	uint8_t  num_widget;
+};
+
+void widget_print_data(void* str){
+
+	struct w_data_to_char* txt;
+	uint8_t stat = 0;
+	txt = (struct w_data_to_char *) str;
+	tft_convert_data_to_char(txt->new_char,txt->data,txt->len);
+	for(uint8_t i=0;i<txt->len;i++){
+		if(*(txt->old_char+i) != *(txt->new_char+i)){
+			*(txt->old_char+i) = *(txt->new_char+i);
+			  stat = 1;}
+	};
+	if(stat) tft_print_widget(txt->panel,txt->num_widget);
+};
+
+
 
 
 
