@@ -33,8 +33,10 @@ uint16_t ms_pause = 0;
 
 // Input
 
-uint8_t pin_product_counter;
+#define PRODUCT_COUNTER 1
 
+uint16_t input_old = PRODUCT_COUNTER;
+uint16_t input_new = PRODUCT_COUNTER;
 
 // CanOpen block
 
@@ -52,22 +54,37 @@ matrix_can ={
 	.id_object = txPDO2+0x03,
 	.bit_offset = 0,
 	.n_bits = 16,
+	.status = 0,
 },
 punch_can={
 	.data_in_message = &punch_data.data,
 	.id_object = txPDO2+0x03,
 	.bit_offset = 16,
 	.n_bits = 16,
+	.status = 0,
 },
 counter_can={
 	.data_in_message = &counter_data.data,
 	.id_object = txPDO1+0x03,
 	.bit_offset = 0,
 	.n_bits = 1,
+	.status = 0,
 };
 
 
 /*
+ 				data_frame = CAN->sFIFOMailBox[0].RDHR;
+				data_frame <<=32;
+				data_frame |= CAN->sFIFOMailBox[0].RDLR;
+				mask_frame = (1 << matrix_can.n_bits)-1;
+				mask_frame <<=matrix_can.bit_offset;
+				data_frame &= mask_frame;
+				data_frame >>=matrix_can.bit_offset;
+				*(matrix_can.data_in_message) =  data_frame;
+ *
+ *
+ *
+ *
 uint32_t *sync_data, *Sync_obj[n_Sync_Object]={NULL};
 uint8_t  mask_gpio = 0xFF, send_txPDO1 = 0,send_txSDO = 0,
 		 reply_rxPDO1 = 0,reply_rxPDO1_mask = 0;
@@ -127,12 +144,12 @@ int main(void)
   rx_msg = 0;
 
   tft_pause_ms = 5000;
-
+  uint64_t temp,temp_mask;
 
   while (1)
   {
 
-	  if(sendTxPDO1){
+ 	  if(sendTxPDO1){
 
 	  	 	sendTxPDO1 = 0;
 	  	 	keys_status = 0;
@@ -145,22 +162,65 @@ int main(void)
 
 	  	  };
 
-	  // test
 
-	  tft_pause_ms = 2000;
-	  while(tft_pause_ms){};
 
-	  w_matrix_temp.func(w_matrix_temp.data);
-	  w_punch_temp.func(w_punch_temp.data);
-	  w_counter_data.func(w_counter_data.data);
+	  if(matrix_can.status){
 
-	  matrix_data.data++;
-	  punch_data.data++;
-	  counter_data.data++;
+		temp = matrix_can.data_frame[1];
+		temp <<= 32;
+		temp |= matrix_can.data_frame[0];
+		temp_mask = (1<< matrix_can.n_bits)-1;
+		temp_mask <<= matrix_can.bit_offset;
+		temp &=temp_mask;
+		temp >>=matrix_can.bit_offset;
+		*(matrix_can.data_in_message)= temp;
+		matrix_can.status--; // can_frame _ok
+		w_matrix_temp.status ++; // display visible
 
-	 if(matrix_data.data == 1000) matrix_data.data = 0;
-	 if(punch_data.data == 1000) punch_data.data = 0;
-	 if(counter_data.data == 1000000000) counter_data.data = 0;
+	  };
+
+	  if(punch_can.status){
+
+		temp = punch_can.data_frame[1];
+		temp <<= 32;
+		temp |= punch_can.data_frame[0];
+		temp_mask = (1<< punch_can.n_bits)-1;
+		temp_mask <<= punch_can.bit_offset;
+		temp &=temp_mask;
+		temp >>=punch_can.bit_offset;
+		*(punch_can.data_in_message)= temp;
+		punch_can.status--;
+		w_punch_temp.status ++;
+
+	  };
+
+	  if(counter_can.status){
+
+		temp = counter_can.data_frame[1];
+		temp <<= 32;
+		temp |= counter_can.data_frame[0];
+		temp_mask = (1<< counter_can.n_bits)-1;
+		temp_mask <<= counter_can.bit_offset;
+		temp &=temp_mask;
+		//temp >>=counter_can.bit_offset;
+		input_new &=~PRODUCT_COUNTER;
+		input_new |=temp?PRODUCT_COUNTER:0;
+		// \_
+		if((input_old & PRODUCT_COUNTER) == 1 &&
+		   (input_new & PRODUCT_COUNTER) == 0){
+			*(counter_can.data_in_message) += 1;
+			if(*(counter_can.data_in_message) == 1000000000) *(counter_can.data_in_message) = 0;
+			w_counter_data.status ++;
+		};
+			input_old &=~PRODUCT_COUNTER;
+			input_old |=(input_new&PRODUCT_COUNTER);
+			w_counter_data.status--;
+	  };
+
+
+	  dynamic_build_widgets(&TFT_CAN_module);
+
+
 
   }
 
@@ -213,41 +273,65 @@ void TIM14_IRQHandler(){
 void CEC_CAN_IRQHandler(void){
 
 	uint32_t id,dlc;
-	 uint8_t data0;
+	uint8_t data0;
 
-			if((CAN->RF0R & 0b0011) == 0) goto exit; //no message
-			// индефикатор = тип сообщения ? extd : std
-			id = CAN->sFIFOMailBox[0].RIR&0b0100?CAN->sFIFOMailBox[0].RIR >> 3:CAN->sFIFOMailBox[0].RIR >> 21;
-			dlc = CAN->sFIFOMailBox[0].RDTR &0b01111;// получение из регистра длины кадра
-			if((CAN->sFIFOMailBox[0].RIR & 0b010) == 0 && dlc != 0){// тип сообщения 0 - data / 1- rtr
 
-				//dlc = dlc>8? 8:dlc;
-				data0 = CAN->sFIFOMailBox[0].RDLR&0xff;
+	if((CAN->RF0R & 0b0011) == 0) goto exit; //no message
+	// индефикатор = тип сообщения ? extd : std
+	id = CAN->sFIFOMailBox[0].RIR&0b0100?CAN->sFIFOMailBox[0].RIR >> 3:CAN->sFIFOMailBox[0].RIR >> 21;
+	dlc = CAN->sFIFOMailBox[0].RDTR &0b01111;// получение из регистра длины кадра
+	if((CAN->sFIFOMailBox[0].RIR & 0b010) == 0 && dlc != 0){// тип сообщения 0 - data / 1- rtr
 
-				switch (id){
+	//dlc = dlc>8? 8:dlc;
+	data0 = CAN->sFIFOMailBox[0].RDLR&0xff;
 
-					 case 0:
-					  if(dlc < 2) break;
-					  if(data0 == 0 || data0 == can_id ){
-						  NMT_command  = (CAN->sFIFOMailBox[0].RDLR&0xff00) >>8;
-						  switch(NMT_command){
-					  	  	  case NMT_start : NMT_status = NMT_status_Operational;break;
-					  	  	  case NMT_pre_operational: NMT_status = NMT_status_Pre_Operational;break;
-					  	  	  case NMT_stop: NMT_status = NMT_status_Stopped;break;
-					  	  	  default:break;}
-					  };
-					 break;
+	switch (id){
 
-					default:
+		case 0:
+		if(dlc < 2) break;
+		if(data0 == 0 || data0 == can_id ){
+		NMT_command  = (CAN->sFIFOMailBox[0].RDLR&0xff00) >>8;
+		switch(NMT_command){
+			case NMT_start : NMT_status = NMT_status_Operational;break;
+			case NMT_pre_operational: NMT_status = NMT_status_Pre_Operational;break;
+			case NMT_stop: NMT_status = NMT_status_Stopped;break;
+			default:break;}
+		};
+		break;
 
-						if(id != idRxPDO1) break;
-						if(NMT_status != NMT_status_Operational) break;
+		default:
+			if(id == idRxPDO1){
+				if(NMT_status != NMT_status_Operational) break;
 
-						test = data0;
-						rx_t1 = CAN->sFIFOMailBox[0].RDLR;
-						rx_t2 = CAN->sFIFOMailBox[0].RDHR;
-						rx_msg++;
-				     break;
+					break;
+			}
+			if( id == matrix_can.id_object ){
+
+				matrix_can.data_frame[0] =CAN->sFIFOMailBox[0].RDLR;
+				matrix_can.data_frame[1] =CAN->sFIFOMailBox[0].RDHR;
+				matrix_can.dlc_frame = dlc;
+				matrix_can.status ++;
+			}
+
+			if(id == punch_can.id_object){
+
+				punch_can.data_frame[0] =CAN->sFIFOMailBox[0].RDLR;
+				punch_can.data_frame[1] =CAN->sFIFOMailBox[0].RDHR;
+				punch_can.dlc_frame = dlc;
+				punch_can.status ++;
+			}
+
+
+			if(id == counter_can.id_object){
+
+				counter_can.data_frame[0] =CAN->sFIFOMailBox[0].RDLR;
+				counter_can.data_frame[1] =CAN->sFIFOMailBox[0].RDHR;
+				counter_can.dlc_frame = dlc;
+				counter_can.status ++;
+
+			}
+
+		break;
 				};
 			};
 	exit:	SET_BIT(CAN->RF0R, CAN_RF0R_RFOM0);//CAN->RF0R |= 0b0100000;  сообщение прочитано.
@@ -649,15 +733,15 @@ void init_controller_STM32F072(void){
 	CAN->FFA1R |= CAN_FFA1R_FFA2; // filtr1 -> FIFO2
 
 	// CanOpen rxPDO1,2,3,4
-	CAN->sFilterRegister[0].FR1 = idRxPDO1<< 16 | idRxPDO2<< 5;
-	CAN->sFilterRegister[0].FR2 = idRxPDO3<< 16 | idRxPDO4<< 5;
+	CAN->sFilterRegister[0].FR1 = (idRxPDO1<< 16 | idRxPDO2)<< 5;
+	CAN->sFilterRegister[0].FR2 = (idRxPDO3<< 16 | idRxPDO4)<< 5;
 	// NMT command
-	CAN->sFilterRegister[1].FR1 = 0;
-	CAN->sFilterRegister[1].FR2	= 0;
+	CAN->sFilterRegister[1].FR1 = (matrix_can.id_object <<16 | punch_can.id_object) << 5;
+	CAN->sFilterRegister[1].FR2	= (counter_can.id_object << 16 | 0) << 5; //counter_can.id_object
 
 	// rxSDO, Heartbroken
 	CAN->sFilterRegister[2].FR1 = (idRxSDO<<16 | heartbroken)<< 5;//0x02 test rtr bit for heartbroken
-	CAN->sFilterRegister[2].FR2 = (0x80 << 16 | 0x100 << 16)<< 5;
+	CAN->sFilterRegister[2].FR2 = (0x80 << 16 | 0x100 )<< 5;
 
 
 
@@ -708,6 +792,50 @@ uint8_t CAN_transmit (CAN_TxMailBox_TypeDef *tx){
 ///////////////////////////////////////////// OLD //////////////////////////////////////////////////
 
 /*
+
+ 	  tft_pause_ms = 2000;
+	  while(tft_pause_ms){};
+
+	  w_matrix_temp.func(w_matrix_temp.data);
+	  w_punch_temp.func(w_punch_temp.data);
+	  w_counter_data.func(w_counter_data.data);
+
+	  matrix_data.data++;
+	  punch_data.data++;
+	  counter_data.data++;
+
+	 if(matrix_data.data == 1000) matrix_data.data = 0;
+	 if(punch_data.data == 1000) punch_data.data = 0;
+	 if(counter_data.data == 1000000000) counter_data.data = 0;
+
+
+
+
+
+ *
+ *
+ 	  if(sendTxPDO1){
+
+	  	 	sendTxPDO1 = 0;
+	  	 	keys_status = 0;
+	  	 	tx_mailbox.TIR = (idTxPDO1 <<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
+	  	 	tx_mailbox.TDTR = 1;// n на_отправку
+	  	 	tx_mailbox.TDLR = keys_status;// d0-d3
+	  	 	tx_mailbox.TDHR = 0;// d4-d7
+
+	  	 	if(CAN_transmit(&tx_mailbox))sendTxPDO1 = 1;
+
+	  	  };
+
+	  // test
+
+ *
+ *
+ *
+ *
+ *
+ *
+ *
 	  if(rx_msg){
 
 		  rx_msg--;

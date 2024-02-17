@@ -92,7 +92,7 @@ w_matrix={
 uint8_t matrix_on[]={fSET_cursorXY(14,4),0x32,0x30,0x30,0,0};
 struct tft_widget
 w_matrix_on={
-	.status = 0x01,
+	.status = 0x00,
 	.window = &Screen1_win,
 	.text_block = NULL,
 	.code_block = matrix_on,
@@ -103,7 +103,7 @@ w_matrix_on={
 uint8_t matrix_off[]={fSET_cursorXY(14,5),0x32,0x30,0x35,0,0};
 struct tft_widget
 w_matrix_off={
-	.status = 0x01,
+	.status = 0x00,
 	.window = &Screen1_win,
 	.text_block = NULL,
 	.code_block = matrix_off,
@@ -180,7 +180,7 @@ w_punch={
 uint8_t punch_on[]={fSET_cursorXY(14,11),0x32,0x30,0x33,0,0};
 struct tft_widget
 w_punch_on={
-	.status = 0x01,
+	.status = 0x001,
 	.window = &Screen1_win,
 	.text_block = NULL,
 	.code_block = punch_on,
@@ -191,7 +191,7 @@ w_punch_on={
 uint8_t punch_off[]={fSET_cursorXY(14,12),0x32,0x30,0x38,0,0};
 struct tft_widget
 w_punch_off={
-	.status = 0x01,
+	.status = 0x00,
 	.window = &Screen1_win,
 	.text_block = NULL,
 	.code_block = punch_off,
@@ -215,6 +215,7 @@ uint8_t punch_temp[]={fSET_cursorXY(0,0),0x20,0x31,0x30,0,0};
 uint8_t punch_temp_old[]={0x20,0x31,0x30,0,0};
 struct w_data_to_char
 punch_data={
+	.status = 0,
 	.data = 0,
 	.len = 3,
 	.new_char = (punch_temp+4),
@@ -374,10 +375,11 @@ struct tft_widget* Screen_1_widgets[]={
 		&w_widget_menu0,	// MENU_BUILD 11
 };
 uint8_t screen1_build[]={0,3,4,7,8,9,10,11};
-uint8_t screen1_dynamic[]={1,2,3,5,6,7,9};
+uint8_t screen1_dynamic[]={3,7,9,1,2,5,6};
 
 const struct tft_screen
 Screen1={
+
 	    .widgets = Screen_1_widgets,
 		.n_widgets = sizeof(Screen_1_widgets),
 	    .build_widgets = screen1_build,			 // number
@@ -387,6 +389,7 @@ Screen1={
 
 	    .next = &Screen2,
 	    .prev = NULL,
+
 };
 
 

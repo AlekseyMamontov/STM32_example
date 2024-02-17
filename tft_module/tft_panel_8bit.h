@@ -108,7 +108,7 @@ struct tft_screen{
 
 	// Widgets
 
-    const struct
+    struct
     tft_widget**   widgets;
     uint8_t    	    n_widgets;
     uint8_t*       build_widgets; // number
@@ -903,9 +903,14 @@ w_data_to_char{
 	TFT_panel* panel;
 	uint8_t  len;
 	uint8_t  num_widget;
+	uint8_t  status;
 };
 
+// Print data block
+
 void widget_print_data(void* str){
+
+	if(!str) return;
 
 	struct w_data_to_char* txt;
 	uint8_t stat = 0;
@@ -917,13 +922,29 @@ void widget_print_data(void* str){
 			  stat = 1;}
 	};
 	if(stat) tft_print_widget(txt->panel,txt->num_widget);
+
 };
 
 
 
 
 
+void dynamic_build_widgets(struct TFT_panel* panel){
 
+	const struct tft_screen *src = panel->screens;
+	const uint8_t* num = src->dynamic_widgets;
+	struct tft_widget *wid;
+
+	for(uint8_t i=0;i < src->n_dynamic_widgets;i++ ){
+
+		wid = *(src->widgets + *(num+i));
+		if(wid == NULL || !wid->status) continue;
+		if(wid->func != NULL && wid->data != NULL) wid->func(wid->data);
+		wid->status--;
+
+	};
+
+};
 
 
 
