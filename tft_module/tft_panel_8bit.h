@@ -88,6 +88,14 @@ struct tft_window {
 	const uint8_t *font;
 
 };
+// sprite
+struct tft_sprite{	//_rgb565
+  uint16_t	x;
+  uint16_t 	y;
+  uint16_t  width;
+  uint16_t  height;
+  uint8_t* 	 pixeldata;
+};
 
 // static - widgets
 
@@ -95,11 +103,15 @@ struct tft_widget {
 
 	struct tft_window*  window;
 	const uint8_t*		code_block;
+	uint8_t**			text_block;
+	struct
+	tft_sprite**		image_block;
 	void *				data;
 	void				(*func)(void* data);
-	uint8_t**			text_block;
-	uint16_t			n_text;
-	uint16_t 			status;
+
+	uint8_t			n_texts;
+	uint8_t			n_images;
+	uint8_t 		status;
 };
 
 
@@ -150,8 +162,6 @@ struct TFT_panel {
 };
 
 
-
-
 struct tft_stm32raw{
 
 	uint32_t color_pixel;
@@ -160,8 +170,6 @@ struct tft_stm32raw{
 	uint32_t border_pixel;
 
 };
-
-
 
 
 /**************** TFT module ***************/
@@ -722,6 +730,46 @@ void tft_convert_data_to_char2(char* buf,uint32_t data,uint8_t len){
     if(buf == NULL) return;
     snprintf(buf,len,"%lu",data);
 };
+// ------------------------- Sprite ------------------------//
+
+
+void tft_sprite_RGB565(struct tft_window *window,struct tft_sprite *sprite){
+
+	uint16_t x0,x1,y0,y1;
+	uint32_t data_out0,data_out1,data_size = sprite->height * sprite->width ;
+	const uint8_t* byte = sprite->pixeldata;
+
+	x0 = window->image_x0 + sprite->x;
+	y0 = window->image_y0 + sprite->y;
+	x1 = x0 + sprite->width  -1;
+	y1 = y0 + sprite->height -1;
+
+	tft_command(0x2A);
+	tft_data16(x0);
+	tft_data16(x1);
+	tft_command(0x2B);
+	tft_data16(y0);
+	tft_data16(y1);
+	tft_command(0x2C);
+
+	for(uint32_t i=0; i < data_size; i++){
+
+		 data_out0 = ~(*byte);
+		 data_out0 <<= 16;
+		 data_out0 |= *byte++;
+		 data_out1 = ~(*byte);
+		 data_out1 <<= 16;
+		 data_out1 |= *byte++;
+
+			GPIOA->BSRR = data_out1;
+			GPIOB->BRR =  tft_WR;
+			GPIOB->BSRR = tft_WR;
+			GPIOA->BSRR = data_out0;
+			GPIOB->BRR =  tft_WR;
+			GPIOB->BSRR = tft_WR;
+
+	};
+};
 
 
 
@@ -749,7 +797,7 @@ void tft_convert_data_to_char2(char* buf,uint32_t data,uint8_t len){
 #define LOAD_cursorY 0x18
 #define SAVE_cursorXY 0x19
 #define LOAD_cursorXY 0x1A
-#define TXT_DATA 0x1B
+
 
 #define fSET_background(a,b) FUNC,SET_background,a,b
 #define fSET_font_color(a,b) FUNC,SET_font_color,a,b
@@ -787,7 +835,13 @@ void tft_convert_data_to_char2(char* buf,uint32_t data,uint8_t len){
 #define fSET_SYMVOL(a,b,c) FUNC,SET_SYMVOL,a,b,c
 #define fSET_ENTER FUNC,SET_ENTER
 
+#define TXT_DATA 0x1B
 #define fSET_TXT_DATA(а) FUNC,TXT_DATA,a
+
+#define IMAGE_RGB565 0x1C
+#define fIMAGE_RGB565(a) FUNC,IMAGE_RGB565,a
+
+
 
 
 void tft_print_widget(struct TFT_panel* panel, uint8_t num){
@@ -870,6 +924,12 @@ void tft_print_widget(struct TFT_panel* panel, uint8_t num){
 								   txt = *widget->text_block + *text;
 								   while(*txt){tft_terminal_print(window,*txt++);}
 								   break;
+					case IMAGE_RGB565:
+						 	 	 	text++;
+						 	 	 	if(*text >= widget->n_images)break;
+									tft_sprite_RGB565(window,*(widget->image_block + (*text)));
+									break;
+
 
 
 					case 0:break;
@@ -926,7 +986,29 @@ void widget_print_data(void* str){
 };
 
 
+struct
+animation_image{
 
+	struct
+	TFT_panel* 			panel;
+	uint32_t			 data;
+	uint8_t*   current_sprite;
+	uint8_t  	   num_widget;
+	uint8_t 		 old_data;
+	uint8_t			 new_data;
+	uint8_t  		   status;
+
+};
+
+void widget_sprite_on_off(void* sprite){
+
+	if(!sprite) return;
+	struct animation_image*
+	img = (struct animation_image*) sprite;
+	if(img->current_sprite == NULL) return;
+	*(img->current_sprite) = img->data&0xff;
+	tft_print_widget(img->panel,img->num_widget);
+};
 
 
 void dynamic_build_widgets(struct TFT_panel* panel){

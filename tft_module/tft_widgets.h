@@ -354,6 +354,54 @@ w_widget_menu0={
 	.func = NULL,
 };
 
+//--------------------- Cylinder_block -------------------//
+
+struct tft_sprite cylinder_off={
+	.x = 48,
+	.y = 40,
+	.width = 32,
+	.height= 62,
+	.pixeldata = cyl_off,
+};
+struct tft_sprite cylinder_on={
+	.x = 48,
+	.y = 40,
+	.width = 32,
+	.height= 62,
+	.pixeldata = cyl_on,
+};
+struct tft_sprite* cylindr_image[2]={
+	&cylinder_off,
+	&cylinder_on,
+};
+
+#define CYLINDR_BUILD 12
+static uint8_t
+screen1_cylindr_code[]={fIMAGE_RGB565(0),0,0};
+
+struct animation_image
+w_cylindr_animation={
+	.status = 0x01,
+	.current_sprite = screen1_cylindr_code + 2,
+	.new_data = 0,
+	.old_data = 1,
+	.panel = &TFT_CAN_module,
+	.num_widget = CYLINDR_BUILD,
+};
+struct tft_widget
+w_cylindr ={
+
+	.status = 0x01,
+	.window = &Screen1_win,
+	.image_block = cylindr_image,
+	.n_images = sizeof(cylindr_image),
+	.text_block = NULL,
+	.code_block = screen1_cylindr_code,
+	.data = (void*) &w_cylindr_animation,
+	.func = widget_sprite_on_off,
+
+};
+
 
 const static
 struct tft_widget* Screen_1_widgets[]={
@@ -373,9 +421,11 @@ struct tft_widget* Screen_1_widgets[]={
 
 		&w_info_block,      // INFO_BUILD 10
 		&w_widget_menu0,	// MENU_BUILD 11
+		&w_cylindr,  		// CYLINDR_BUILD 12
 };
-uint8_t screen1_build[]={0,3,4,7,8,9,10,11};
-uint8_t screen1_dynamic[]={3,7,9,1,2,5,6};
+
+uint8_t screen1_build[]={0,3,4,7,8,9,10,11,12};
+uint8_t screen1_dynamic[]={3,7,9,12,1,2,5,6};
 
 const struct tft_screen
 Screen1={
@@ -418,235 +468,7 @@ Screen1={
 ////////////////////////////////////////// SCREEN 3 /////////////////////////////////////////////
 
 
-/* old
- *
- *
- *
-uint8_t Widget_info2[]={
 
-		//0
-		fSET_cursorXY(0,0),fSET_SYMVOL(0xEB,0xC0,0xA3),
-		fSAVE_background,fSET_background(0xEB,0xC0),' ','i','n','f','o',' ',fLOAD_background,
-		fSET_SYMVOL(0xEB,0xC0,0xA4),
-		// 1-3
-		fSET_cursorXY(0,1),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		fSET_cursorXY(0,2),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		fSET_cursorXY(0,3),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		fSET_cursorXY(0,4),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		fSET_cursorXY(0,5),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		fSET_cursorXY(0,6),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		fSET_cursorXY(0,7),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		fSET_cursorXY(0,8),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		fSET_cursorXY(0,9),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		fSET_cursorXY(0,10),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		fSET_cursorXY(0,11),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		fSET_cursorXY(0,12),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(7),fSET_SYMVOL(0xEB,0xC0,0xA5),
-		// 4
-		fSET_cursorXY(0,13),fSAVE_color_font,fSET_font_color(0xEB,0xC0),0x9E,0x9C,0x9C,0x9C,0x9C,0x9C,0x9C,0x9d,fLOAD_color_font,
-		0,0,0
-
-};
-#define FUNC 0x1b
-#define FUNCs(b) FUNC,b
-#define SET_background 0x01
-#define SET_font_color 0x02
-
-#define SET_cursorX 0x03
-#define SET_cursorXY 0x04
-#define SET_cursorY 0x05
-
-#define SAVE_background 0x10
-#define LOAD_background 0x11
-#define SAVE_color_font 0x12
-#define LOAD_color_font 0x13
-#define CALL_Data_block 0x14
-#define SAVE_cursorX 0x15
-#define LOAD_cursorX 0x16
-#define SAVE_cursorY 0x17
-#define LOAD_cursorY 0x18
-#define SAVE_cursorXY 0x19
-#define LOAD_cursorXY 0x1A
-#define TXT_DATA 0x1B
-
-
-#define fSET_background(a,b) FUNC,SET_background,a,b
-#define fSET_font_color(a,b) FUNC,SET_font_color,a,b
-#define fSET_cursorX(b)     FUNC,SET_cursorX,b
-#define fSET_cursorXY(a,b) 	 FUNC,SET_cursorXY,a,b
-#define fSAVE_background FUNC,SAVE_background
-#define fLOAD_background FUNC,LOAD_background
-#define fSAVE_color_font FUNC,SAVE_color_font
-#define fLOAD_color_font FUNC,LOAD_color_font
-#define fCALL_Data_block(a) FUNC,CALL_Data_block,a
-#define fSAVE_cursorX FUNC,SAVE_cursorX
-#define fLOAD_cursorX FUNC,LOAD_cursorX
-#define fSAVE_cursorY FUNC,SAVE_cursorY
-#define fLOAD_cursorY FUNC,LOAD_cursorY
-#define fSAVE_cursorXY FUNC,SAVE_cursorXY
-#define fLOAD_cursorXY FUNC,LOAD_cursorXY
-
-#define SET_font8pt 0x06
-#define SET_font18pt 0x07
-#define SET_fontNumber 0x08
-#define SET_fontNumber32 0x09
-#define fSET_font8pt FUNC,SET_font8pt
-#define fSET_font18pt FUNC,SET_font18pt
-#define fSET_fontNumber FUNC,SET_fontNumber
-#define fSET_fontNumber32 FUNC,SET_fontNumber32
-
-
-#define SET_ON_ALPHA 0x0A
-#define SET_OFF_ALPHA 0x0B
-#define SET_SYMVOL 0x0C
-#define SET_ENTER 0x0D
-
-#define fSET_ON_ALPHA FUNC,SET_ON_ALPHA
-#define fSET_OFF_ALPHA FUNC,SET_OFF_ALPHA
-#define fSET_SYMVOL(a,b,c) FUNC,SET_SYMVOL,a,b,c
-#define fSET_ENTER FUNC,SET_ENTER
-
-
-
-
-void tft_print_widgets(struct tft_window *window, const uint8_t* text){
-
-	uint8_t alpha = 0;
-	uint8_t symvol = 0;
-	uint8_t cursorX = 0;
-	uint8_t cursorY = 0;
-	uint8_t *txt;
-	uint16_t background = window->color_background;
-	uint16_t fontcolor =  window->color_font;
-
-	while (*text){
-
-	 if (*text >= 0x20){
-
-
-		tft_terminal_print(window,*text);
-
-		}else if(*text == FUNC){
-			text++;
-			switch (*text){
-
-					case SET_cursorX: //set cursor X
-						text++;
-						window->cursor_x = *text;
-						break;
-
-					case SET_cursorXY:
-						text++;
-						window->cursor_x = *text;
-
-					case SET_cursorY:
-						text++;
-						window->cursor_y = *text;
-						break;
-
-					case SET_font_color:
-						text++;
-						window->color_font = *text++;
-						window->color_font = window->color_font << 8;
-						//text++;
-						window->color_font = window->color_font | (*text);
-						break;
-
-					case SET_background:
-						text++;
-						window->color_background = *text++;
-						window->color_background = window->color_background << 8;
-						//text++;
-						window->color_background = window->color_background | (*text);
-					break;
-
-					case SET_font18pt:
-						window->font = console18pt;
-					break;
-
-					case SET_font8pt:
-						window->font = console8pt;
-					break;
-
-					case SET_fontNumber:
-				        window->font = number20pt;
-					break;
-					case SET_fontNumber32:
-						window->font = number32pt;
-					break;
-
-
-					case SET_ON_ALPHA:  alpha = 1;break;
-					case SET_OFF_ALPHA: alpha = 0;break;
-					case SET_SYMVOL:
-
-						fontcolor = window->color_font;
-						text++;
-						window->color_font = *text++;
-						window->color_font = window->color_font << 8;
-					    window->color_font = window->color_font | (*text++);
-					    if(*text)tft_terminal_print(window,*text);
-					    window->color_font = fontcolor;
-
-					break;
-					case SET_ENTER:
-						window->cursor_x = 0;
-						window->cursor_y = window->cursor_y +1 ;
-						break;
-
-					case SAVE_background:
-						 background = window->color_background;
-				    break;
-					case LOAD_background:
-						 window->color_background = background;
-				    break;
-					case SAVE_color_font:
-						fontcolor = window->color_font;
-					break;
-					case LOAD_color_font:
-						window->color_font = fontcolor ;
-					break;
-					case CALL_Widget_block:
-						text++;
-						if(*text < MAX_Wdata){
-
-							txt = block_Wdata[*text];
-							tft_print_widgets(window,txt);
-
-						};
-					break;
-
-					case SAVE_cursorX:
-						 cursorX = window->cursor_x;
-						break;
-					case LOAD_cursorX:
-						window->cursor_x = cursorX;
-						break;
-					case SAVE_cursorY:
-						cursorY = window->cursor_y;
-						break;
-					case LOAD_cursorY:
-						window->cursor_y = cursorY;
-						break;
-					case SAVE_cursorXY:
-						cursorX = window->cursor_x;
-						cursorY = window->cursor_y;
-						break;
-					case LOAD_cursorXY:
-						window->cursor_x = cursorX;
-						window->cursor_y = cursorY;
-						break;
-
-					case 0:
-
-
-
-				};
-			};
-		text++;
-	};
-};
-
-*/
 
 
 

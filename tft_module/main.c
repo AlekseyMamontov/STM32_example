@@ -3,6 +3,7 @@
 /* USER CODE BEGIN Includes */
 #include "CANOpen.h"
 #include "tft_panel_8bit.h"
+#include "tft_screens.h"
 #include "tft_widgets.h"
 
 
@@ -34,9 +35,10 @@ uint16_t ms_pause = 0;
 // Input
 
 #define PRODUCT_COUNTER 1
+#define CYLINDR 2
 
-uint16_t input_old = PRODUCT_COUNTER;
-uint16_t input_new = PRODUCT_COUNTER;
+uint16_t input_old = PRODUCT_COUNTER|CYLINDR;
+uint16_t input_new = PRODUCT_COUNTER|CYLINDR;
 
 // CanOpen block
 
@@ -69,8 +71,14 @@ counter_can={
 	.bit_offset = 0,
 	.n_bits = 1,
 	.status = 0,
+},
+cylindr_can={
+	.data_in_message = &w_cylindr_animation.data,
+	.id_object = txPDO1+0x03,
+	.bit_offset = 0,
+	.n_bits = 1,
+	.status = 0,
 };
-
 
 /*
  				data_frame = CAN->sFIFOMailBox[0].RDHR;
@@ -214,9 +222,28 @@ int main(void)
 		};
 			input_old &=~PRODUCT_COUNTER;
 			input_old |=(input_new&PRODUCT_COUNTER);
-			w_counter_data.status--;
+			counter_can.status--;
 	  };
 
+	  if(cylindr_can.status){
+
+		temp = cylindr_can.data_frame[1];
+		temp <<= 32;
+		temp |= cylindr_can.data_frame[0];
+		temp_mask = (1<< cylindr_can.n_bits)-1;
+		temp_mask <<= cylindr_can.bit_offset;
+		temp &=temp_mask;
+		input_new &=~CYLINDR;
+		input_new |=temp?CYLINDR:0;
+		// \_
+		if((input_old&CYLINDR) != (input_new&CYLINDR)){
+			*(cylindr_can.data_in_message) = temp?0:1;
+			w_cylindr.status ++;
+		};
+			input_old &=~CYLINDR;
+			input_old |=(input_new&CYLINDR);
+			cylindr_can.status--;
+	  };
 
 	  dynamic_build_widgets(&TFT_CAN_module);
 
@@ -330,7 +357,14 @@ void CEC_CAN_IRQHandler(void){
 				counter_can.status ++;
 
 			}
+			if(id == cylindr_can.id_object){
 
+				cylindr_can.data_frame[0] =CAN->sFIFOMailBox[0].RDLR;
+				cylindr_can.data_frame[1] =CAN->sFIFOMailBox[0].RDHR;
+				cylindr_can.dlc_frame = dlc;
+				cylindr_can.status ++;
+
+			}
 		break;
 				};
 			};
