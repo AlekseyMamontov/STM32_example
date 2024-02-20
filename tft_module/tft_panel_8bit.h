@@ -94,7 +94,7 @@ struct tft_sprite{	//_rgb565
   uint16_t 	y;
   uint16_t  width;
   uint16_t  height;
-  uint8_t* 	 pixeldata;
+ const uint8_t* 	 pixeldata;
 };
 
 // static - widgets
@@ -104,7 +104,7 @@ struct tft_widget {
 	struct tft_window*  window;
 	const uint8_t*		code_block;
 	uint8_t**			text_block;
-	struct
+	const struct
 	tft_sprite**		image_block;
 	void *				data;
 	void				(*func)(void* data);
@@ -503,7 +503,7 @@ uint16_t x0,x1,y0,y1;
 
 		//временно
 		if(window->font == number32pt){
-			symvol = (symvol>0x2F && symvol<0x3A)? symvol-0x0f :  0x20 ;
+			symvol = (symvol>0x2F && symvol<0x3B)? symvol-0x0f :  0x20 ;
 		}
 
 	symvol = symvol - 0x20;

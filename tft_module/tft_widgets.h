@@ -370,7 +370,7 @@ struct tft_sprite cylinder_on={
 	.height= 62,
 	.pixeldata = cyl_on,
 };
-struct tft_sprite* cylindr_image[2]={
+const struct tft_sprite* cylindr_image[2]={
 	&cylinder_off,
 	&cylinder_on,
 };
@@ -401,6 +401,103 @@ w_cylindr ={
 	.func = widget_sprite_on_off,
 
 };
+//--------------------- 220V_block -------------------//
+struct tft_window V_230_win={
+
+	.image_x0 = 48,
+	.image_y0 = 120,
+	.image_x1 = 0x13F,
+	.image_y1 = 0x1dF,
+	.cursor_x = 0,
+	.cursor_y = 0,
+	.color_font = color_YELLOW,
+	.color_background = color_BLACK,
+	.font = number32pt,
+
+};
+static uint8_t
+screen1_V230v2_code[]={fSET_cursorXY(0,0),0x3A,0,0};
+struct tft_widget
+W_V230v2={
+	.status = 0x01,
+	.window = &V_230_win,
+	.text_block = NULL,
+	.code_block = screen1_V230v2_code,
+	.data = NULL,
+	.func = NULL,
+
+};
+
+
+
+
+
+const
+struct tft_sprite V230off={
+	.x = 48,
+	.y = 120,
+	.width = 32,
+	.height= 47,
+	.pixeldata = V230_off,
+};
+struct tft_sprite V230on={
+	.x = 48,
+	.y = 120,
+	.width = 32,
+	.height= 47,
+	.pixeldata = V230_on,
+};
+const struct tft_sprite* V230_image[2]={
+	&V230off,
+	&V230on,
+};
+
+#define V230_BUILD 13
+static uint8_t
+screen1_V230_code[]={fIMAGE_RGB565(0),0,0};
+
+struct animation_image
+w_V230_animation={
+	.status = 0x01,
+	.current_sprite = screen1_V230_code + 2,
+	.new_data = 0,
+	.old_data = 1,
+	.panel = &TFT_CAN_module,
+	.num_widget = V230_BUILD,
+};
+struct tft_widget
+w_V230 ={
+
+	.status = 0x01,
+	.window = &Screen1_win,
+	.image_block = V230_image,
+	.n_images = sizeof(V230_image),
+	.text_block = NULL,
+	.code_block = screen1_V230_code,
+	.data = (void*) &w_V230_animation,
+	.func = widget_sprite_on_off,
+
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 const static
@@ -422,9 +519,11 @@ struct tft_widget* Screen_1_widgets[]={
 		&w_info_block,      // INFO_BUILD 10
 		&w_widget_menu0,	// MENU_BUILD 11
 		&w_cylindr,  		// CYLINDR_BUILD 12
+		&W_V230v2
+//		&w_V230,			// V230_BUILD
 };
 
-uint8_t screen1_build[]={0,3,4,7,8,9,10,11,12};
+uint8_t screen1_build[]={0,3,4,7,8,9,10,11,12,13};
 uint8_t screen1_dynamic[]={3,7,9,12,1,2,5,6};
 
 const struct tft_screen
