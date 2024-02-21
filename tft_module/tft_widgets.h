@@ -416,7 +416,7 @@ struct tft_window V_230_win={
 
 };
 static uint8_t
-screen1_V230v2_code[]={fSET_cursorXY(0,0),0x3A,0,0};
+screen1_V230v2_code[]={fSET_cursorXY(0,0),0x3A,fSET_cursorXY(0,1),0x3B,fSET_cursorXY(0,2),0x3D,0,0};
 struct tft_widget
 W_V230v2={
 	.status = 0x01,
