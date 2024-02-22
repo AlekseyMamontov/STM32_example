@@ -5,9 +5,26 @@
 //#include "dimmer_color.h"
 #define n_Sync_Object 1
 
-#define Color_R TIM3->CCR1
-#define Color_G TIM3->CCR2
-#define Color_B TIM3->CCR3
+#define Dimmer_1 TIM3->CCR4
+#define Dimmer_2 TIM3->CCR3
+#define Dimmer_3 TIM3->CCR2
+#define Dimmer_4 TIM3->CCR1
+
+#define Dimmer_5 TIM2->CCR4
+#define Dimmer_6 TIM2->CCR3
+#define Dimmer_7 TIM2->CCR2
+#define Dimmer_8 TIM2->CCR1
+
+
+#define find_Dimmer_1 0x01
+#define find_Dimmer_2 0x02
+#define find_Dimmer_3 0x04
+#define find_Dimmer_4 0x08
+#define find_Dimmer_5 0x10
+#define find_Dimmer_6 0x20
+#define find_Dimmer_7 0x40
+#define find_Dimmer_8 0x80
+
 #define Led_Status 4
 #define Led_Error  2
 
@@ -21,7 +38,13 @@ uint16_t test_time = 0,blink1 =0;
 // CanOpen
 CAN_FIFOMailBox_TypeDef rx_mailbox;
 CAN_TxMailBox_TypeDef 	tx_mailbox;
-uint32_t can_id,can_speed,id_rxPDO1,id_txPDO1,id_rxSDO,id_txSDO,heartbroken;
+
+uint32_t
+can_id,can_speed,
+id_rxPDO1,id_rxPDO2,id_txPDO1,
+id_rxSDO,id_txSDO,heartbroken;
+
+
 uint8_t  NMT_command = 0,NMT_status = NMT_status_Operational;
 
 uint32_t *sync_data,*Sync_obj[n_Sync_Object]={NULL};
@@ -35,75 +58,53 @@ int main(void)
 {
 
 	init_controller_STM32F042();
-	//SystemCoreClockUpdate();
-	//HAL_InitTick(TICK_INT_PRIORITY);
 
-/*
-	tx_mailbox.TIR = ((0x700 + can_id)<<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
-	   tx_mailbox.TDTR = 1;// n на_отправку
+
+	   tx_mailbox.TIR = (id_txPDO1<<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
+	   tx_mailbox.TDTR = 8;// n на_отправку
 	   tx_mailbox.TDLR = 0;// d0-d3
 	   tx_mailbox.TDHR = 0;// d4-d7
 
 	   CAN_transmit(&tx_mailbox);
-*/
 
- uint8_t r,g,b;
 
+ uint32_t msg_dimmer;
 
   while (1){
 
-	 for(uint8_t i = 0; i< 201;i++){
-		 test_time = 20;
-		 while(test_time){};
-		 Color_R = i;
-	 };
-	 for(uint8_t i = 0; i< 201;i++){
-	 		 test_time = 20;
-	 		 while(test_time){};
-	 		 Color_G = i;
-	 };
 
-	 for(uint8_t i = 0; i< 201;i++){
-	 		 test_time = 20;
-	 		 while(test_time){};
-	 		 Color_B = i;
-	 };
+	  if(send_txPDO1){
 
 
-	 r = 200;
 
-	 for(uint8_t i = 0; i< 201;i++){
-	 		 test_time = 20;
-	 		 while(test_time){};
-	 		 Color_R = r--;
+		   tx_mailbox.TIR = ((0x700 + can_id)<<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
+		   tx_mailbox.TDTR = 8;// n на_отправку
 
-	 	 };
+		   msg_dimmer  = Dimmer_4 & 0xff;
+		   msg_dimmer <<= 8;
+		   msg_dimmer |= Dimmer_3 & 0xff;
+		   msg_dimmer <<= 8;
+		   msg_dimmer |= Dimmer_2 & 0xff;
+		   msg_dimmer <<= 8;
+		   msg_dimmer |= Dimmer_1 & 0xff;
+		   tx_mailbox.TDLR =  msg_dimmer;// d0-d3
 
-	 g = 200;
+		   msg_dimmer  = Dimmer_5 & 0xff;
+		   msg_dimmer <<= 8;
+		   msg_dimmer |= Dimmer_6 & 0xff;
+		   msg_dimmer <<= 8;
+		   msg_dimmer |= Dimmer_7 & 0xff;
+		   msg_dimmer <<= 8;
+		   msg_dimmer |= Dimmer_8 & 0xff;
+		   tx_mailbox.TDHR = msg_dimmer;// d4-d7
 
-		 for(uint8_t i = 0; i< 201;i++){
-		 		 test_time = 20;
-		 		 while(test_time){};
-		 		 Color_G = g--;
+		   CAN_transmit(&tx_mailbox);
+		   send_txPDO1 --;
 
-		 	 };
-	  b = 200;
-
-	  	  for(uint8_t i = 0; i< 201;i++){
-	  		 		 test_time = 20;
-	  		 		 while(test_time){};
-	  		 		 Color_B = b--;
-
-	  	  };
-
-
-	  	 test_time = 3000;
-	  	 while(test_time){};
+	  };
 
 
-  }
-
-
+  };
 
 
 }
@@ -123,7 +124,7 @@ void TIM14_IRQHandler(){
 void CEC_CAN_IRQHandler(void){
 
 	uint32_t id,dlc;
-	 uint8_t data0;
+	 uint8_t data0,data1;
 
 			if((CAN->RF0R & 0b0011) == 0) goto exit; //no message
 			// индефикатор = тип сообщения ? extd : std
@@ -150,13 +151,49 @@ void CEC_CAN_IRQHandler(void){
 
 					default:
 
-						if(id != id_rxPDO1) break;
-						if(NMT_status != NMT_status_Operational) break;
-						if(dlc){reply_rxPDO1_mask = data0;
-					   }else{reply_rxPDO1_mask = 0;}
-					    reply_rxPDO1 = 1;
+						if(id == id_rxPDO1){;
 
-				     break;
+							if(NMT_status != NMT_status_Operational) break;
+							if(dlc < 1) break;
+							if( data0 == 0 ){send_txPDO1++;break;}
+							if(dlc < 2) break;
+
+							data1 = (CAN->sFIFOMailBox[0].RDLR&0xff00) >>8;
+
+							if(data0&find_Dimmer_1) Dimmer_1 = data1;
+							if(data0&find_Dimmer_2) Dimmer_2 = data1;
+							if(data0&find_Dimmer_3) Dimmer_3 = data1;
+							if(data0&find_Dimmer_4) Dimmer_4 = data1;
+							if(data0&find_Dimmer_5) Dimmer_5 = data1;
+							if(data0&find_Dimmer_6) Dimmer_6 = data1;
+							if(data0&find_Dimmer_7) Dimmer_7 = data1;
+							if(data0&find_Dimmer_8) Dimmer_8 = data1;
+
+							break;
+
+						}else if(id == id_rxPDO2){
+
+						if(NMT_status != NMT_status_Operational) break;
+						if(dlc < 1) break;
+						Dimmer_1 = CAN->sFIFOMailBox[0].RDLR&0x000000ff;
+						if(dlc < 2) break;
+						Dimmer_2 = CAN->sFIFOMailBox[0].RDLR&0x0000ff00 >> 8;
+						if(dlc < 3) break;
+						Dimmer_3 = CAN->sFIFOMailBox[0].RDLR&0x00ff0000 >>16;
+						if(dlc < 4) break;
+						Dimmer_4 = CAN->sFIFOMailBox[0].RDLR&0xff000000 >>24;
+						if(dlc < 5) break;
+						Dimmer_5 = CAN->sFIFOMailBox[0].RDHR&0x000000ff;
+						if(dlc < 6) break;
+						Dimmer_6 = CAN->sFIFOMailBox[0].RDHR&0x0000ff00 >> 8;
+						if(dlc < 7) break;
+						Dimmer_7 = CAN->sFIFOMailBox[0].RDHR&0x00ff0000 >>16;
+						if(dlc < 8) break;
+						Dimmer_8 = CAN->sFIFOMailBox[0].RDHR&0xff000000 >>24;
+
+						};
+
+				    break;
 				};
 			};
 	exit:	SET_BIT(CAN->RF0R, CAN_RF0R_RFOM0);//CAN->RF0R |= 0b0100000;  сообщение прочитано.
@@ -609,9 +646,10 @@ void init_controller_STM32F042(void){
 */
 
 	id_rxPDO1 = rxPDO1 + can_id;
+	id_rxPDO2 = rxPDO2 + can_id;
 	id_txPDO1 = txPDO1 + can_id;
 	id_rxSDO =  rxSDO + can_id;
-	id_txSDO = txSDO + can_id;
+	id_txSDO =  txSDO + can_id;
 	heartbroken = 0x700 + can_id;
 
 
@@ -622,7 +660,7 @@ void init_controller_STM32F042(void){
 	CAN->FFA1R &=~CAN_FFA1R_FFA0; // filtr0 -> FIFO0
 	CAN->FFA1R |= CAN_FFA1R_FFA1; // filtr1 -> FIFO1
 
-	CAN->sFilterRegister[0].FR1 = id_rxPDO1<< 5;
+	CAN->sFilterRegister[0].FR1 = (id_rxPDO1<< 16 | id_rxPDO2 ) << 5;
 	CAN->sFilterRegister[0].FR2 = 0;
 	CAN->sFilterRegister[1].FR1 = (id_rxSDO<<16 | heartbroken)<< 5;//0x02 test rtr bit for heartbroken
 	CAN->sFilterRegister[1].FR2 = (0x80 << 16 | 0x100 << 16)<< 5;
@@ -675,8 +713,83 @@ void Error_Handler(void)
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
+
+  GPIOB->BRR = 1 << Led_Error;
+
   while (1)
   {
+
   }
   /* USER CODE END Error_Handler_Debug */
 }
+
+
+
+
+/*
+
+	 for(uint8_t i = 0; i< 201;i++){
+		 test_time = 20;
+		 while(test_time){};
+		 Color_R = i;
+		 Color_G1 = i;
+		// canal2 = i;
+	 };
+	 for(uint8_t i = 0; i< 201;i++){
+	 		 test_time = 20;
+	 		 while(test_time){};
+	 		 Color_G = i;
+	 		Color_R1 = i;
+	 		Color_White = i;
+	 };
+
+	 for(uint8_t i = 0; i< 201;i++){
+	 		 test_time = 20;
+	 		 while(test_time){};
+	 		 Color_B = i;
+	 		Color_B1 = i;
+
+	 };
+
+
+	 r = 200;
+
+	 for(uint8_t i = 0; i< 201;i++){
+	 		 test_time = 20;
+	 		 while(test_time){};
+	 		 Color_R = r;
+	 		//canal2 = r;
+	 		Color_G1 = r--;
+	 	 };
+
+	 g = 200;
+
+		 for(uint8_t i = 0; i< 201;i++){
+		 		 test_time = 20;
+		 		 while(test_time){};
+		 		 Color_G = g;
+		 		Color_B1 = g;
+		 		Color_White = g--;
+		 	 };
+	  b = 200;
+
+	  	  for(uint8_t i = 0; i< 201;i++){
+	  		 		 test_time = 20;
+	  		 		 while(test_time){};
+	  		 		 Color_B = b;
+	  		 		Color_R1 = b--;
+
+	  	  };
+
+
+	  	 test_time = 3000;
+	  	 while(test_time){};
+
+
+  }
+
+
+
+
+
+ */
