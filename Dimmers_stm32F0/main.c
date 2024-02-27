@@ -33,6 +33,8 @@ void init_controller_STM32F042(void);
 uint8_t CAN_transmit (CAN_TxMailBox_TypeDef *tx);
 //void Processing_SDO_Object(CAN_FIFOMailBox_TypeDef*);
 void SDO_object(void);
+#define ADDR_SAVE_FLASH 0x08003C00 //042C4x4
+void Load_default_dimmers(void);
 uint16_t test_time = 0,blink1 =0;
 
 // CanOpen
@@ -58,7 +60,7 @@ int main(void)
 {
 
 	init_controller_STM32F042();
-
+	Load_default_dimmers();
 
 	   tx_mailbox.TIR = (id_txPDO1<<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
 	   tx_mailbox.TDTR = 8;// n на_отправку
@@ -199,8 +201,35 @@ void CEC_CAN_IRQHandler(void){
 };
 
 
-#define ADDR_SAVE_FLASH 0x08003C00 //042C4x4
 
+void Load_default_dimmers(){
+
+	volatile  uint8_t*  addr8  = (volatile uint8_t*) ADDR_SAVE_FLASH+2;
+	volatile  uint16_t* addr16 = (volatile uint16_t*)ADDR_SAVE_FLASH;
+
+				if(*addr16 == 0xFFFF){
+
+					Dimmer_1 = 0;
+					Dimmer_2 = 0;
+					Dimmer_3 = 0;
+					Dimmer_4 = 0;
+					Dimmer_5 = 0;
+					Dimmer_6 = 0;
+					Dimmer_7 = 0;
+					Dimmer_8 = 0;
+
+				}else{
+
+					Dimmer_1 = *addr8++;
+					Dimmer_2 = *addr8++;
+					Dimmer_3 = *addr8++;
+					Dimmer_4 = *addr8++;
+					Dimmer_5 = *addr8++;
+					Dimmer_6 = *addr8++;
+					Dimmer_7 = *addr8++;
+					Dimmer_8 = *addr8;
+				};
+};
 
 void SDO_object(){
 
@@ -213,88 +242,89 @@ void SDO_object(){
 
 	//no message?
 	if((CAN->RF1R & 0b0011) == 0) return;
+
 	// индефикатор = тип сообщения ? extd : std
 	id = CAN->sFIFOMailBox[1].RIR&0b0100?CAN->sFIFOMailBox[1].RIR >> 3:CAN->sFIFOMailBox[1].RIR >> 21;
 	dlc = CAN->sFIFOMailBox[1].RDTR &0b01111;// получение из регистра длины кадра
-	if((CAN->sFIFOMailBox[1].RIR & 0b010) != 0 && dlc < 4)return;// тип сообщения 0 - data / 1- rtr
-	if(id !=id_rxSDO ) return;
+	if((CAN->sFIFOMailBox[1].RIR & 0b010) != 0 && dlc < 4)goto sdo_exit;// тип сообщения 0 - data / 1- rtr
+	if(id !=id_rxSDO ) goto sdo_exit;
 
 
-	cmd = 		CAN->sFIFOMailBox[1].RDLR&0xFF;
-	index =    (CAN->sFIFOMailBox[1].RDLR&0x00FFFF00) >> 8;
-	subindex = (CAN->sFIFOMailBox[1].RDLR&0xFF000000) >> 24;
-	data = 		CAN->sFIFOMailBox[1].RDHR;
+		cmd = 		CAN->sFIFOMailBox[1].RDLR&0xFF;
+		index =    (CAN->sFIFOMailBox[1].RDLR&0x00FFFF00) >> 8;
+		subindex = (CAN->sFIFOMailBox[1].RDLR&0xFF000000) >> 24;
+		data = 		CAN->sFIFOMailBox[1].RDHR;
 
-	error = 0x06010000;
+		error = 0x06010000;
 
-	switch(index){
+		switch(index){
 
-		case 0x1010: // save to flash default parametr
+			case 0x1010: // save to flash default parametr
 
-			if(dlc < 8)break;
-			if(cmd !=0x23) break;
-			if(subindex != 1)break;
-			if(data != 0x65766173)break;
-			addr16 = (volatile uint16_t*)ADDR_SAVE_FLASH;
-			counter = *addr16;
-			if(counter == 0xFFFF)counter = 0;
-			counter++;
-			// key
-			FLASH->KEYR = 0x45670123;
-			FLASH->KEYR = 0xCDEF89AB;
-			//clear
-				while (FLASH->SR & FLASH_SR_BSY){};
-				if (FLASH->SR & FLASH_SR_EOP) FLASH->SR = FLASH_SR_EOP;
-				FLASH->CR |= FLASH_CR_PER;
-				FLASH->AR =  ADDR_SAVE_FLASH; //addr segment
-				FLASH->CR |= FLASH_CR_STRT;
-				while (!(FLASH->SR & FLASH_SR_EOP));//check operation end
-				FLASH->SR = FLASH_SR_EOP;
-				FLASH->CR &= ~FLASH_CR_PER;
-			//save
-				while (FLASH->SR & FLASH_SR_BSY){};
-				if (FLASH->SR & FLASH_SR_EOP) FLASH->SR = FLASH_SR_EOP;
-				FLASH->CR |= FLASH_CR_PG;
+				if(dlc < 8)break;
+				if(cmd !=0x23) break;
+				if(subindex != 1)break;
+				if(data != 0x65766173)break;
+				addr16 = (volatile uint16_t*)ADDR_SAVE_FLASH;
+				counter = *addr16;
+				if(counter == 0xFFFF)counter = 0;
+				counter++;
+					// key
+					FLASH->KEYR = 0x45670123;
+					FLASH->KEYR = 0xCDEF89AB;
+					//clear
+					while (FLASH->SR & FLASH_SR_BSY){};
+					if (FLASH->SR & FLASH_SR_EOP) FLASH->SR = FLASH_SR_EOP;
+					FLASH->CR |= FLASH_CR_PER;
+					FLASH->AR =  ADDR_SAVE_FLASH; //addr segment
+					FLASH->CR |= FLASH_CR_STRT;
+					while (!(FLASH->SR & FLASH_SR_EOP));//check operation end
+					FLASH->SR = FLASH_SR_EOP;
+					FLASH->CR &= ~FLASH_CR_PER;
+					//save
+					while (FLASH->SR & FLASH_SR_BSY){};
+					if (FLASH->SR & FLASH_SR_EOP) FLASH->SR = FLASH_SR_EOP;
+					FLASH->CR |= FLASH_CR_PG;
 
-				*addr16++ = counter;
-				while (!(FLASH->SR & FLASH_SR_EOP)){};
-				FLASH->SR = FLASH_SR_EOP;
+					*addr16++ = counter;
+					while (!(FLASH->SR & FLASH_SR_EOP)){};
+					FLASH->SR = FLASH_SR_EOP;
 
-				counter = Dimmer_2&0xFF;
-				counter <<=8;
-				counter |=Dimmer_1&0xff;
-				*addr16++ = counter;
-				while (!(FLASH->SR & FLASH_SR_EOP)){};
-				FLASH->SR = FLASH_SR_EOP;
+					counter = Dimmer_2&0xFF;
+					counter <<=8;
+					counter |=Dimmer_1&0xff;
+					*addr16++ = counter;
+					while (!(FLASH->SR & FLASH_SR_EOP)){};
+					FLASH->SR = FLASH_SR_EOP;
 
-				counter = Dimmer_4&0xFF;
-				counter <<=8;
-				counter |=Dimmer_3&0xff;
-				*addr16++ = counter;
-				while (!(FLASH->SR & FLASH_SR_EOP)){};
-				FLASH->SR = FLASH_SR_EOP;
+					counter = Dimmer_4&0xFF;
+					counter <<=8;
+					counter |=Dimmer_3&0xff;
+					*addr16++ = counter;
+					while (!(FLASH->SR & FLASH_SR_EOP)){};
+					FLASH->SR = FLASH_SR_EOP;
 
-				counter = Dimmer_6&0xFF;
-				counter <<=8;
-				counter |=Dimmer_5&0xff;
-				*addr16++ = counter;
-				while (!(FLASH->SR & FLASH_SR_EOP)){};
-				FLASH->SR = FLASH_SR_EOP;
+					counter = Dimmer_6&0xFF;
+					counter <<=8;
+					counter |=Dimmer_5&0xff;
+					*addr16++ = counter;
+					while (!(FLASH->SR & FLASH_SR_EOP)){};
+					FLASH->SR = FLASH_SR_EOP;
 
-				counter = Dimmer_8&0xFF;
-				counter <<=8;
-				counter |=Dimmer_7&0xff;
-				*addr16 = counter;
-				while (!(FLASH->SR & FLASH_SR_EOP)){};
-				FLASH->SR = FLASH_SR_EOP;
-				FLASH->CR &= ~(FLASH_CR_PG);
+					counter = Dimmer_8&0xFF;
+					counter <<=8;
+					counter |=Dimmer_7&0xff;
+					*addr16 = counter;
+					while (!(FLASH->SR & FLASH_SR_EOP)){};
+					FLASH->SR = FLASH_SR_EOP;
+					FLASH->CR &= ~(FLASH_CR_PG);
 
-			    FLASH->CR |= FLASH_CR_LOCK;
+					FLASH->CR |= FLASH_CR_LOCK;
 
-				cmd = 0x60;
-				dlc = 4;
-				error = 0;
-				data = 0;
+					cmd = 0x60;
+					dlc = 4;
+					error = 0;
+					data = 0;
 			break;
 
 		case 0x1011: // load default
@@ -303,30 +333,9 @@ void SDO_object(){
 			if(cmd !=0x23) break;
 			if(subindex != 1)break;
 			if(data != 0x64616f6c)break;
-			addr16 = (volatile uint16_t*)ADDR_SAVE_FLASH;
-			counter = *addr16++;
-			if(counter == 0xFFFF){
 
-				Dimmer_1 = 0;
-				Dimmer_2 = 0;
-				Dimmer_3 = 0;
-				Dimmer_4 = 0;
-				Dimmer_5 = 0;
-				Dimmer_6 = 0;
-				Dimmer_7 = 0;
-				Dimmer_8 = 0;
+			Load_default_dimmers();
 
-			}else{
-				addr8 = (uint8_t*)addr16;
-				Dimmer_1 = *addr8++;
-				Dimmer_2 = *addr8++;
-				Dimmer_3 = *addr8++;
-				Dimmer_4 = *addr8++;
-				Dimmer_5 = *addr8++;
-				Dimmer_6 = *addr8++;
-				Dimmer_7 = *addr8++;
-				Dimmer_8 = *addr8;
-			};
 			cmd = 0x60;
 			dlc = 4;
 			error = 0;
@@ -342,7 +351,9 @@ void SDO_object(){
 	   tx_mailbox.TDTR = dlc;// n на_отправку
 	   tx_mailbox.TDLR = (subindex<<24)|index<<8|cmd;// d0-d3
 	   tx_mailbox.TDHR = data;// d4-d7
+	   CAN_transmit(&tx_mailbox);
 
+sdo_exit:SET_BIT(CAN->RF1R, CAN_RF1R_RFOM1);
 };
 
 
@@ -809,8 +820,8 @@ void init_controller_STM32F042(void){
 
 	CAN->sFilterRegister[0].FR1 = (id_rxPDO1<< 16 | id_rxPDO2 ) << 5;
 	CAN->sFilterRegister[0].FR2 = 0;
-	CAN->sFilterRegister[1].FR1 = (id_rxSDO<<16 | heartbroken)<< 5;//0x02 test rtr bit for heartbroken
-	CAN->sFilterRegister[1].FR2 = (0x80 << 16 | 0x100 << 16)<< 5;
+	CAN->sFilterRegister[1].FR1 = (id_rxSDO << 16 | heartbroken)<< 5;//0x02 test rtr bit for heartbroken
+	CAN->sFilterRegister[1].FR2 = (0x80 << 16 | 0x100)<< 5;
 
 	CAN->FMR &=~ CAN_FMR_FINIT; /* Leave filter init */
 	CAN->IER |= CAN_IER_FMPIE0; /* Set FIFO0 message pending IT enable */
