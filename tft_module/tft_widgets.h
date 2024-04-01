@@ -58,7 +58,7 @@ struct tft_window Screen1_win={
 
 };
 
-/* Widget Matrix */
+/*------------------------------- Widget Matrix -------------------------------------*/
 const static
 uint8_t Matrix_code_block[]={
 		fSET_font18pt,
@@ -89,7 +89,7 @@ w_matrix={
 	.func = NULL,
 };
 #define MATRIX_ON 1
-uint8_t matrix_on[]={fSET_cursorXY(14,4),0x32,0x30,0x30,0,0};
+uint8_t matrix_on[]={fSET_cursorXY(13,4),0x20,0x32,0x30,0x30,0,0};
 struct tft_widget
 w_matrix_on={
 	.status = 0x00,
@@ -100,7 +100,7 @@ w_matrix_on={
 	.func = NULL,
 };
 #define MATRIX_OFF 2
-uint8_t matrix_off[]={fSET_cursorXY(14,5),0x32,0x30,0x35,0,0};
+uint8_t matrix_off[]={fSET_cursorXY(13,5),0x20,0x32,0x30,0x33,0,0};
 struct tft_widget
 w_matrix_off={
 	.status = 0x00,
@@ -146,7 +146,7 @@ w_matrix_temp={
 
 
 
-/* Widget Punch */
+/*--------------------------------- Widget Punch ------------------------------------------------*/
 
 const static uint8_t
 Punch_code_block[]={
@@ -177,7 +177,7 @@ w_punch={
 	.func = NULL,
 };
 #define PUNCH_ON 5
-uint8_t punch_on[]={fSET_cursorXY(14,11),0x32,0x30,0x33,0,0};
+uint8_t punch_on[]={fSET_cursorXY(13,11),0x20,0x32,0x30,30,0,0};
 struct tft_widget
 w_punch_on={
 	.status = 0x001,
@@ -188,7 +188,7 @@ w_punch_on={
 	.func = NULL,
 };
 #define PUNCH_OFF 6
-uint8_t punch_off[]={fSET_cursorXY(14,12),0x32,0x30,0x38,0,0};
+uint8_t punch_off[]={fSET_cursorXY(13,12),0x20,0x32,0x30,0x034,0,0};
 struct tft_widget
 w_punch_off={
 	.status = 0x00,
@@ -234,7 +234,8 @@ w_punch_temp={
 };
 
 
-/*--  Widget COUNTER --*/
+/*-------------------------------------  Widget COUNTER ------------------------------------------------*/
+
 const static uint8_t
 Pr_Counter_code_block[]={
 		//1
@@ -294,7 +295,7 @@ w_counter_data ={
 };
 
 
-/*--------------- Widget Info---------------------*/
+/*--------------------------------- Widget Info ------------------------------------------------*/
 
 
 const static uint8_t info_code_block[]={
@@ -354,7 +355,7 @@ w_widget_menu0={
 	.func = NULL,
 };
 
-//--------------------- Cylinder_block -------------------//
+//---------------------------------- Cylinder_block --------------------------------------//
 
 struct tft_sprite cylinder_off={
 	.x = 48,
@@ -376,8 +377,7 @@ const struct tft_sprite* cylindr_image[2]={
 };
 
 #define CYLINDR_BUILD 12
-static uint8_t
-screen1_cylindr_code[]={fIMAGE_RGB565(0),0,0};
+static uint8_t screen1_cylindr_code[]={fIMAGE_RGB565(0),0,0};
 
 struct animation_image
 w_cylindr_animation={
@@ -401,7 +401,11 @@ w_cylindr ={
 	.func = widget_sprite_on_off,
 
 };
-//--------------------- 220V_block -------------------//
+
+//------------------------------------ 220V_block -------------------------------//
+
+#define V230_BUILD 13
+
 struct tft_window V_230_win={
 
 	.image_x0 = 48,
@@ -410,13 +414,13 @@ struct tft_window V_230_win={
 	.image_y1 = 0x1dF,
 	.cursor_x = 0,
 	.cursor_y = 0,
-	.color_font = color_YELLOW,
+	.color_font = color_GRAY,
 	.color_background = color_BLACK,
 	.font = number32pt,
 
 };
 static uint8_t
-screen1_V230v2_code[]={fSET_cursorXY(0,0),0x3A,fSET_cursorXY(0,1),0x3B,fSET_cursorXY(0,2),0x3D,0,0};
+screen1_V230v2_code[]={fSET_cursorXY(0,0),0x3A,0,0};
 struct tft_widget
 W_V230v2={
 	.status = 0x01,
@@ -428,9 +432,139 @@ W_V230v2={
 
 };
 
+//------------------------------------ Button  -------------------------------//
+
+#define BUTTON 14
+
+struct tft_window Knopka_win={
+
+	.image_x0 = 48,
+	.image_y0 = 210,
+	.image_x1 = 0x13F,
+	.image_y1 = 0x1dF,
+	.cursor_x = 0,
+	.cursor_y = 0,
+	.color_font = color_GRAY,
+	.color_background = color_BLACK,
+	.font = number32pt,
+
+};
+static uint8_t
+screen1_Knopka_code[]={fSET_cursorXY(0,0),0x3B,0,0};
+struct tft_widget
+W_button={
+	.status = 0x01,
+	.window = &Knopka_win,
+	.text_block = NULL,
+	.code_block = screen1_Knopka_code,
+	.data = NULL,
+	.func = NULL,
+};
+
+//------------------------------------ Sensors  -------------------------------//
+
+#define SENSOR 15
+
+struct tft_window Sensor_win={
+
+	.image_x0 = 48,
+	.image_y0 = 205,
+	.image_x1 = 0x13F,
+	.image_y1 = 0x1dF,
+	.cursor_x = 0,
+	.cursor_y = 0,
+	.color_font = color_GRAY,
+	.color_background = color_BLACK,
+	.font = number32pt,
+
+};
+static uint8_t
+screen1_Sensor_code[]={fSET_cursorXY(0,0),0x3D,0,0};
+struct tft_widget
+W_Sensor={
+	.status = 0x01,
+	.window = &Knopka_win,
+	.text_block = NULL,
+	.code_block = screen1_Knopka_code,
+	.data = NULL,
+	.func = NULL,
+};
 
 
 
+//-------------------------- Block_Object ----------------------------//
+
+const static
+struct tft_widget* Screen_1_widgets[]={
+
+		&w_matrix,			// MATRIX_BUILD 0
+		&w_matrix_on,   	// MATRIX_ON 1
+		&w_matrix_off,  	// MATRIX_OFF 2
+		&w_matrix_temp, 	// MATRIX_TEMPERATURE 3
+
+		&w_punch,       	// PUNCH_BUILD 4
+		&w_punch_on,		// PUNCH_ON 5
+		&w_punch_off,		// PUNCH_OFF 6
+		&w_punch_temp,		// PUNCH_TEMPERATURE 7
+
+		&w_product_counter, // COUNTER_BUILD 8
+		&w_counter_data,    // COUNTER_DATA 9
+
+		&w_info_block,      // INFO_BUILD 10
+		&w_widget_menu0,	// MENU_BUILD 11
+		&w_cylindr,  		// CYLINDR_BUILD 12
+		&W_V230v2,			// 13 220V
+		&W_button,			// BUTTON 14
+		&W_Sensor			// SENSOR 15
+};
+
+uint8_t screen1_build[]={0,3,4,7,8,9,10,11,12,13,14,15};
+uint8_t screen1_dynamic[]={3,7,9,12,1,2,5,6};
+
+const struct tft_screen
+Screen1={
+
+	    .widgets = Screen_1_widgets,
+		.n_widgets = sizeof(Screen_1_widgets),
+	    .build_widgets = screen1_build,			 // number
+	    .n_build_widgets = sizeof(screen1_build),
+	    .dynamic_widgets = screen1_dynamic, 		 // number widgets
+	    .n_dynamic_widgets =sizeof(screen1_dynamic),
+
+	    .next = &Screen2,
+	    .prev = NULL,
+
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////// SCREEN 2 /////////////////////////////////////////////
+
+
+
+
+
+
+////////////////////////////////////////// SCREEN 3 /////////////////////////////////////////////
+
+
+
+
+/*
 
 const
 struct tft_sprite V230off={
@@ -478,97 +612,6 @@ w_V230 ={
 	.func = widget_sprite_on_off,
 
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const static
-struct tft_widget* Screen_1_widgets[]={
-
-		&w_matrix,			// MATRIX_BUILD 0
-		&w_matrix_on,   	// MATRIX_ON 1
-		&w_matrix_off,  	// MATRIX_OFF 2
-		&w_matrix_temp, 	// MATRIX_TEMPERATURE 3
-
-		&w_punch,       	// PUNCH_BUILD 4
-		&w_punch_on,		// PUNCH_ON 5
-		&w_punch_off,		// PUNCH_OFF 6
-		&w_punch_temp,		// PUNCH_TEMPERATURE 7
-
-		&w_product_counter, // COUNTER_BUILD 8
-		&w_counter_data,    // COUNTER_DATA 9
-
-		&w_info_block,      // INFO_BUILD 10
-		&w_widget_menu0,	// MENU_BUILD 11
-		&w_cylindr,  		// CYLINDR_BUILD 12
-		&W_V230v2
-//		&w_V230,			// V230_BUILD
-};
-
-uint8_t screen1_build[]={0,3,4,7,8,9,10,11,12,13};
-uint8_t screen1_dynamic[]={3,7,9,12,1,2,5,6};
-
-const struct tft_screen
-Screen1={
-
-	    .widgets = Screen_1_widgets,
-		.n_widgets = sizeof(Screen_1_widgets),
-	    .build_widgets = screen1_build,			 // number
-	    .n_build_widgets = sizeof(screen1_build),
-	    .dynamic_widgets = screen1_dynamic, 		 // number widgets
-	    .n_dynamic_widgets =sizeof(screen1_dynamic),
-
-	    .next = &Screen2,
-	    .prev = NULL,
-
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-////////////////////////////////////////// SCREEN 2 /////////////////////////////////////////////
-
-
-
-
-
-
-////////////////////////////////////////// SCREEN 3 /////////////////////////////////////////////
-
-
-
-
-
+ */
 
 #endif /* INC_TFT_WIDGETS_H_ */

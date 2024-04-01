@@ -1010,6 +1010,28 @@ void widget_sprite_on_off(void* sprite){
 	tft_print_widget(img->panel,img->num_widget);
 };
 
+struct change_char{
+
+	struct
+	TFT_panel*	panel;
+	uint16_t 	on_bcolor;
+	uint16_t 	off_bcolor;
+	uint8_t  	num_widget;
+	uint8_t  	status;
+	uint8_t  	data;
+	uint8_t  	on_char;
+	uint8_t  	off_char;
+};
+
+
+
+
+
+
+
+
+
+
 
 void dynamic_build_widgets(struct TFT_panel* panel){
 
