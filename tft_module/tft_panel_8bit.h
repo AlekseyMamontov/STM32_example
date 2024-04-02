@@ -942,6 +942,8 @@ void tft_print_widget(struct TFT_panel* panel, uint8_t num){
 	};
 };
 
+/*---------- This procedure is used when the widget is first displayed. ---*/
+
 void tft_build_widgets(struct TFT_panel* panel){
 
 	const uint8_t* num_widget = panel->screens->build_widgets;
@@ -952,6 +954,9 @@ void tft_build_widgets(struct TFT_panel* panel){
 		if(num < max_number){tft_print_widget(panel,num);};
 	};
 };
+
+
+/*-------------- This widget displays constantly changing data -------------*/
 
 
 struct
@@ -985,6 +990,7 @@ void widget_print_data(void* str){
 
 };
 
+/*----------- The widget displays changing sprites depending on data ------ */
 
 struct
 animation_image{
@@ -1010,20 +1016,33 @@ void widget_sprite_on_off(void* sprite){
 	tft_print_widget(img->panel,img->num_widget);
 };
 
-struct change_char{
+
+/*------- The widget changes text, background, etc. depending on the data --*/
+
+struct change_txt{
 
 	struct
 	TFT_panel*	panel;
-	uint16_t 	on_bcolor;
-	uint16_t 	off_bcolor;
+	uint32_t	data;
+	uint8_t** 	txt_block;
+	uint8_t 	n_txt_block;
 	uint8_t  	num_widget;
-	uint8_t  	status;
-	uint8_t  	data;
-	uint8_t  	on_char;
-	uint8_t  	off_char;
+
 };
 
+void widget_txt_change(void* txt){
 
+	if(!txt) return;
+	struct change_txt* w_txt = (struct change_txt *)txt;
+	if(w_txt->data >= w_txt->n_txt_block)return;
+	if(w_txt->panel->screens->n_widgets < w_txt->num_widget) return;
+
+	struct tft_widget* widget = *(w_txt->panel->screens->widgets + (w_txt->num_widget));
+	if(!widget || !(w_txt->txt_block) || *((w_txt->txt_block)+ w_txt->data) == NULL)return;
+
+	widget->code_block = *((w_txt->txt_block)+ w_txt->data);
+	tft_print_widget(w_txt->panel,w_txt->num_widget);
+};
 
 
 

@@ -403,10 +403,9 @@ w_cylindr ={
 };
 
 //------------------------------------ 220V_block -------------------------------//
+#define STATUS_220V 13
 
-#define V230_BUILD 13
-
-struct tft_window V_230_win={
+struct tft_window win_V220={
 
 	.image_x0 = 48,
 	.image_y0 = 120,
@@ -417,26 +416,35 @@ struct tft_window V_230_win={
 	.color_font = color_GRAY,
 	.color_background = color_BLACK,
 	.font = number32pt,
-
 };
 static uint8_t
-screen1_V230v2_code[]={fSET_cursorXY(0,0),0x3A,0,0};
-struct tft_widget
-W_V230v2={
-	.status = 0x01,
-	.window = &V_230_win,
-	.text_block = NULL,
-	.code_block = screen1_V230v2_code,
-	.data = NULL,
-	.func = NULL,
+screen1_220v_off[]={fSET_cursorXY(0,0),fSET_background(0x84,0x10),0x3A,0,0},
+screen1_220V_on[]= {fSET_cursorXY(0,0),fSET_background(0xFF,0xE0),0x3A,0,0};
+uint8_t* screen1_220V_animation[]={screen1_220v_off,screen1_220V_on};
 
+struct change_txt txt_220V ={
+		.panel = &TFT_CAN_module,
+		.data = 0,
+		.txt_block = screen1_220V_animation,
+		.n_txt_block = sizeof(screen1_220V_animation),
+		.num_widget = STATUS_220V,
+};
+
+struct tft_widget
+w_V220={
+	.status = 0x01,
+	.window = &win_V220,
+	.text_block = NULL,
+	.code_block = screen1_220v_off,
+	.data = (void*) &txt_220V,
+	.func = widget_txt_change,
 };
 
 //------------------------------------ Button  -------------------------------//
 
 #define BUTTON 14
 
-struct tft_window Knopka_win={
+struct tft_window Button_win={
 
 	.image_x0 = 48,
 	.image_y0 = 210,
@@ -447,18 +455,29 @@ struct tft_window Knopka_win={
 	.color_font = color_GRAY,
 	.color_background = color_BLACK,
 	.font = number32pt,
-
 };
+
 static uint8_t
-screen1_Knopka_code[]={fSET_cursorXY(0,0),0x3B,0,0};
+screen1_button_off[]={fSET_cursorXY(0,0),fSET_background(0x84,0x10),0x3B,0,0},
+screen1_button_on[]= {fSET_cursorXY(0,0),fSET_background(0xFF,0xE0),0x3C,0,0};
+uint8_t* screen1_button_animation[]={screen1_button_off,screen1_button_on};
+
+struct change_txt txt_button ={
+		.panel = &TFT_CAN_module,
+		.data = 0,
+		.txt_block = screen1_button_animation,
+		.n_txt_block = sizeof(screen1_button_animation),
+		.num_widget = BUTTON,
+};
+
 struct tft_widget
-W_button={
+w_button={
 	.status = 0x01,
-	.window = &Knopka_win,
+	.window = &Button_win,
 	.text_block = NULL,
-	.code_block = screen1_Knopka_code,
-	.data = NULL,
-	.func = NULL,
+	.code_block = screen1_button_off,
+	.data = (void*) &txt_button,
+	.func = widget_txt_change,
 };
 
 //------------------------------------ Sensors  -------------------------------//
@@ -483,9 +502,9 @@ screen1_Sensor_code[]={fSET_cursorXY(0,0),0x3D,0,0};
 struct tft_widget
 W_Sensor={
 	.status = 0x01,
-	.window = &Knopka_win,
+	.window = &Sensor_win,
 	.text_block = NULL,
-	.code_block = screen1_Knopka_code,
+	.code_block = screen1_Sensor_code,
 	.data = NULL,
 	.func = NULL,
 };
@@ -513,8 +532,8 @@ struct tft_widget* Screen_1_widgets[]={
 		&w_info_block,      // INFO_BUILD 10
 		&w_widget_menu0,	// MENU_BUILD 11
 		&w_cylindr,  		// CYLINDR_BUILD 12
-		&W_V230v2,			// 13 220V
-		&W_button,			// BUTTON 14
+		&w_V220,			// 13 220V
+		&w_button,			// BUTTON 14
 		&W_Sensor			// SENSOR 15
 };
 

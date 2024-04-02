@@ -445,11 +445,11 @@ int main(void){
 			// \_
 			if((input_old & BUTTON) == 1 && (input_new & BUTTON) == 0){
 				*(msg_button.data_msg) = 1;
-				W_button.status ++;
+				w_button.status ++;
 			// _/
 			}else if((input_old & BUTTON) == 0 && (input_new & BUTTON) == 1){
 				*(msg_button.data_msg) = 0;
-				W_button.status ++;
+				w_button.status ++;
 			};
 
 			input_old &=~BUTTON;
