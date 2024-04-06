@@ -6,104 +6,39 @@
 #include "tft_screens.h"
 #include "tft_widgets.h"
 
-
-
-#define n_Sync_Object 1
-
-struct Ram_to_Flash_block{
-
-	// counter_cycles_write_flash
-
-	uint32_t counter_wr_flash;
-
-	// thermostat matrix
-	uint32_t matrix_on_temp;
-	uint32_t matrix_off_temp;
-	CAN_TxMailBox_TypeDef msg_matrix_on;
-	CAN_TxMailBox_TypeDef msg_matrix_off;
-
-	// thermostat punch
-	uint32_t punch_on_temp;
-	uint32_t punch_off_temp;
-	CAN_TxMailBox_TypeDef msg_punch_on;
-	CAN_TxMailBox_TypeDef msg_punch_off;
-
-	// rele_delay;
-	uint32_t time_ms;
-	CAN_TxMailBox_TypeDef msg_delay_on;
-	CAN_TxMailBox_TypeDef msg_delay_off;
-
-	uint16_t stat_matrix;
-	uint16_t stat_punch;
-    uint16_t stat_delay;
-
-    // id_msg_object
-    uint32_t id_matrix;
-    uint32_t matrix_mask[2];
-
-    uint32_t id_punch;
-    uint32_t punch_mask[2];
-
-    uint32_t id_counter;
-    uint32_t counter_mask[2];
-
-    uint32_t id_cylindr;
-    uint32_t cylindr_mask[2];
-
-    uint32_t id_button;
-    uint32_t button_mask[2];
-
-    uint8_t  bit_offset[8];
-    uint8_t  status_object[8];
-
-};
 struct Ram_to_Flash_block Stanok;
+struct CAN_frame  RAM_can_frames[MAX_BUFFER_CAN];
+struct CAN_buffer TFT_can_buffer ={
 
-#define THERMO_ON_OFF     0x01
-#define THERMO_HOT_COOL 0x8000
-#define THERMO_DISABLED 0x4000 // 1-disabled
+		.rdata = RAM_can_frames,
+		.wdata = RAM_can_frames,
+		.begin_frame = RAM_can_frames,
+		.end_frame = RAM_can_frames + MAX_BUFFER_CAN,
 
-struct Block_Thermostat{
-
-	uint32_t *current_temp;
-	uint32_t *on_temp;
-	uint32_t *off_temp;
-	CAN_TxMailBox_TypeDef* msg_on;
-	CAN_TxMailBox_TypeDef* msg_off;
-	uint16_t *stat;
-	uint8_t* text_on;
-	uint8_t* text_off;
-	const
-	uint8_t  n_symvol;
 };
+struct TFT_panel TFT_CAN_module={
 
-struct Rele_Delay{
-
-	uint32_t *time_ms;
-	CAN_TxMailBox_TypeDef* msg_on;
-	CAN_TxMailBox_TypeDef* msg_off;
-	uint16_t* stat;
+	.init_tft = init_r61581,
+	.screens = 	&Screen1,
+    .window = 	&Panel_win,
 
 };
 
-struct Data_can_msg{
+// Input block
 
-	uint32_t* data_msg;
-	uint32_t* id_msg;
-	uint32_t* data_frame;
-	uint32_t* mask_frame;
-	uint8_t*  bit_offset;
-	uint8_t*  status;
+#define PRODUCT_COUNTER 1
+#define CYLINDR 		2
+#define KNOPKA 			4
 
-};
+uint16_t input_old = PRODUCT_COUNTER|CYLINDR|KNOPKA;
+uint16_t input_new = PRODUCT_COUNTER|CYLINDR|KNOPKA;
 
-void init_controller_STM32F072(void);
-uint8_t CAN_transmit (CAN_TxMailBox_TypeDef *tx);
-void Processing_SDO_Object(CAN_FIFOMailBox_TypeDef*);
-void Thermostat_processing(struct Block_Thermostat* temp);
-void thermostat_init(struct Block_Thermostat* temp);
-void rele_delay_start(struct Rele_Delay*);
-void default_load_rаm(uint8_t* ram, uint8_t* flash,uint32_t size);
+
+
+
+
+
+
 
 // Keys b0 - down b1 - OK  b2 - up
 uint16_t tft_keys[3] = {0};
@@ -119,14 +54,7 @@ uint32_t rx_t1 = 0, rx_t2 = 0;
 
 uint16_t ms_pause = 0;
 
-// Input
 
-#define PRODUCT_COUNTER 1
-#define CYLINDR 2
-#define BUTTON 4
-
-uint16_t input_old = PRODUCT_COUNTER|CYLINDR|BUTTON;
-uint16_t input_new = PRODUCT_COUNTER|CYLINDR|BUTTON;
 
 // CanOpen block
 
@@ -157,7 +85,7 @@ msg_matrix={
 		.data_frame = matrix_data_frame,
         .mask_frame = Stanok.matrix_mask,
 		.bit_offset = &Stanok.bit_offset[0],
-		.status = &status_obj[0],
+		.status = &w_matrix_temp.status,
 },
 msg_punch={
 
@@ -166,7 +94,7 @@ msg_punch={
 		.data_frame = punch_data_frame,
         .mask_frame = Stanok.punch_mask,
 		.bit_offset = &Stanok.bit_offset[1],
-		.status = &status_obj[1],
+		.status = &w_punch_temp.status,
 },
 msg_counter={
 
@@ -175,7 +103,7 @@ msg_counter={
 		.data_frame = counter_data_frame,
         .mask_frame = Stanok.counter_mask,
 		.bit_offset = &Stanok.bit_offset[2],
-		.status = &status_obj[2]
+		.status = &w_counter_data.status,
 },
 msg_cylindr={
 
@@ -188,7 +116,7 @@ msg_cylindr={
 },
 msg_button={
 
-		.data_msg = 0,// &button_data.data,
+		.data_msg = &txt_button.data,// &button_data.data,
 		.id_msg = 	&Stanok.id_button,
 		.data_frame = button_data_frame,
         .mask_frame = Stanok.button_mask,
@@ -234,13 +162,7 @@ push_pnewmocylindr ={
 
 };
 
-struct TFT_panel TFT_CAN_module={
 
-	.init_tft = init_r61581,
-	.screens = &Screen1,
-    .window = &Panel_win,
-
-};
 const struct Ram_to_Flash_block defStanok={
 
 		.counter_wr_flash = 0,
@@ -309,9 +231,9 @@ const struct Ram_to_Flash_block defStanok={
 	    .cylindr_mask ={0x01,0},
 
 	    .id_button = txPDO1+0x03,
-	    .button_mask ={0x04,0},
+	    .button_mask ={0x02,0},
 
-	    .bit_offset = {0,16,0,0,2},//matrix,punch,counter,cylindr,button
+	    .bit_offset = {16,16,0,0,2},//matrix,punch,counter,cylindr,button
 	    .status_object = {0},
 
 };
@@ -349,11 +271,66 @@ int main(void){
 	thermostat_init(&punch_thermostat);
 
 
+	struct   CAN_frame can_msg;
+	uint64_t can_msg_data,can_msg_data2,*can_mask;
+
 
   while (1)
   {
 
- 	  if(sendTxPDO1){
+	  // обробка повідомлень
+	  if(!read_can_buffer(&TFT_can_buffer,&can_msg)){
+
+		  can_msg_data = can_msg.msg[1];
+		  can_msg_data <<=32;
+		  can_msg_data |=can_msg.msg[0];
+
+		  // matrix
+		  if(can_msg.id == *(msg_matrix.id_msg)){
+			  if(can_msg.dlc > 3){
+				  can_mask = (uint64_t*)msg_matrix.mask_frame;
+				  *(msg_matrix.data_msg) = (can_msg_data&(*can_mask)) >> *(msg_matrix.bit_offset);
+				  *(msg_matrix.status) = 1; // visible block matrix
+			   };
+		  };
+		  // punch
+		  if(can_msg.id == *(msg_punch.id_msg)){
+			  if(can_msg.dlc > 3){
+				  can_mask = (uint64_t*)msg_punch.mask_frame;
+				  *(msg_punch.data_msg) = (can_msg_data&(*can_mask)) >> *(msg_punch.bit_offset);
+				  *(msg_punch.status) = 1; // visible block punch
+			   };
+		  };
+		  // counter
+		  if(can_msg.id == *(msg_counter.id_msg)){
+			  if(can_msg.dlc > 1){
+				  can_mask = (uint64_t*)msg_counter.mask_frame;
+				 // *(msg_counter.data_msg) = (can_msg_data&(*can_mask)) >> *(msg_counter.bit_offset);
+					input_new &=~PRODUCT_COUNTER;
+					input_new |=(can_msg_data&(*can_mask))?PRODUCT_COUNTER:0;
+					// \_
+					if((input_old & PRODUCT_COUNTER) == 1 &&
+					   (input_new & PRODUCT_COUNTER) == 0){
+						*(msg_counter.data_msg) += 1;
+						if(*(msg_counter.data_msg) == 1000000000) *(msg_counter.data_msg) = 0;
+						*(msg_counter.status) = 1; // visible block
+					};
+						input_old &=~PRODUCT_COUNTER;
+						input_old |=(input_new&PRODUCT_COUNTER);
+			   };
+     	  };
+
+
+
+
+
+
+
+
+	  };
+
+/*
+	  if(sendTxPDO1){
 
 	  	 	sendTxPDO1 = 0;
 	  	 	keys_status = 0;
@@ -377,10 +354,9 @@ int main(void){
 		temp >>=*(msg_matrix.bit_offset);
 		*(msg_matrix.data_msg)= temp;
 		(*(msg_matrix.status))--; // can_frame _ok
-		Thermostat_processing(&matrix_thermostat);
 		w_matrix_temp.status ++; // display visible
-
 	  };
+
 
 	  if(msg_punch.status){
 	    temp = msg_punch.data_frame[1]&msg_punch.mask_frame[1];
@@ -389,9 +365,7 @@ int main(void){
 		temp >>=*(msg_punch.bit_offset);
 		*(msg_punch.data_msg)= temp;
 		(*(msg_punch.status))--;
-		Thermostat_processing(&punch_thermostat);
 		w_punch_temp.status ++;
-
 	  };
 
 	  if(msg_counter.status){
@@ -399,7 +373,7 @@ int main(void){
 		temp = msg_counter.data_frame[1]&msg_counter.mask_frame[1];
 	    temp <<=32;
 	    temp |= (msg_counter.data_frame[0]&msg_counter.mask_frame[0]);
-		temp >>=*(msg_counter.bit_offset);
+		//temp >>=*(msg_counter.bit_offset);
 		input_new &=~PRODUCT_COUNTER;
 		input_new |=temp?PRODUCT_COUNTER:0;
 		// \_
@@ -419,7 +393,7 @@ int main(void){
 		temp = msg_cylindr.data_frame[1]&msg_cylindr.mask_frame[1];
 		temp <<=32;
 		temp |= (msg_cylindr.data_frame[0]&msg_cylindr.mask_frame[0]);
-	    temp >>=*(msg_cylindr.bit_offset);
+	    //temp >>=*(msg_cylindr.bit_offset);
 		input_new &=~CYLINDR;
 		input_new |=temp?CYLINDR:0;
 		// \_
@@ -443,29 +417,28 @@ int main(void){
 			input_new |=temp?BUTTON:0;
 
 			// \_
-			if((input_old & BUTTON) == 1 && (input_new & BUTTON) == 0){
-				*(msg_button.data_msg) = 1;
-				w_button.status ++;
+			if ((input_old & BUTTON) && !(input_new & BUTTON)) {
+			    *(msg_button.data_msg) = 1;
+			    w_button.status++;
 			// _/
-			}else if((input_old & BUTTON) == 0 && (input_new & BUTTON) == 1){
-				*(msg_button.data_msg) = 0;
-				w_button.status ++;
-			};
+			} else if (!(input_old & BUTTON) && (input_new & BUTTON)) {
+			    *(msg_button.data_msg) = 0;
+			    w_button.status++;
+
+
+
+			}
 
 			input_old &=~BUTTON;
-			input_old |=(input_new&BUTTON);
+			input_old |=(input_new & BUTTON);
 			(*msg_button.status)--;
 
 	  };
 
-
-
-
-
+	  Thermostat_processing(&matrix_thermostat);
+	  Thermostat_processing(&punch_thermostat);
 	  dynamic_build_widgets(&TFT_CAN_module);
-
-
-
+*/
   }
 
 
@@ -559,6 +532,58 @@ void TIM14_IRQHandler(){
 	TIM14->SR &= ~TIM_SR_UIF;
 };
 
+/*------------------------- CAN buffer --------------------*/
+
+void init_buffer(struct CAN_buffer* buf,struct CAN_frame *frame){
+
+	buf->rdata = frame;
+	buf->wdata = frame;
+	buf->begin_frame = frame;
+	buf->end_frame = frame + MAX_BUFFER_CAN;
+
+};
+uint8_t read_can_buffer(struct CAN_buffer* buf,struct CAN_frame *frame){
+
+	if(buf == NULL) return 1;
+	if(buf->rdata == buf->wdata) return 1;
+	frame->id = buf->rdata->id;
+	frame->msg[0] = buf->rdata->msg[0];
+	frame->msg[1] = buf->rdata->msg[1];
+	frame->dlc = buf->rdata->dlc;
+	buf->rdata ++;
+	if(buf->rdata >= buf->end_frame) buf->rdata = buf->begin_frame;
+	return 0;
+};
+struct CAN_frame* read_can_buffer2(struct CAN_buffer* buf){
+
+	struct CAN_frame *frame ;
+	if(buf == NULL) return NULL;
+	if(buf->rdata == buf->wdata) return NULL;
+	frame = buf->rdata ++;
+	if(buf->rdata >= buf->end_frame) buf->rdata = buf->begin_frame;
+	return frame;
+};
+
+uint8_t write_can_buffer (struct CAN_buffer* buf, struct CAN_frame *frame){
+
+	if(buf == NULL) return 1;
+	struct CAN_frame *fr =  buf->wdata;
+	buf->wdata->id = frame->id;
+	buf->wdata->msg[0] = frame->msg[0];
+	buf->wdata->msg[1] = frame->msg[1];
+	buf->wdata->dlc = frame->dlc;
+	buf->wdata++;
+	if(buf->wdata >= buf->end_frame) buf->wdata = buf->begin_frame;
+
+	if(buf->rdata == buf->wdata) {buf->wdata = fr;return 1;}
+	return 0;
+};
+
+
+
+/*-------------------CAN interrput ----------------*/
+
+struct CAN_frame can_f0;
 
 void CEC_CAN_IRQHandler(void){
 
@@ -570,6 +595,7 @@ void CEC_CAN_IRQHandler(void){
 	// индефикатор = тип сообщения ? extd : std
 	id = CAN->sFIFOMailBox[0].RIR&0b0100?CAN->sFIFOMailBox[0].RIR >> 3:CAN->sFIFOMailBox[0].RIR >> 21;
 	dlc = CAN->sFIFOMailBox[0].RDTR &0b01111;// получение из регистра длины кадра
+
 	if((CAN->sFIFOMailBox[0].RIR & 0b010) == 0 && dlc != 0){// тип сообщения 0 - data / 1- rtr
 
 	//dlc = dlc>8? 8:dlc;
@@ -579,60 +605,27 @@ void CEC_CAN_IRQHandler(void){
 
 		case 0:
 		if(dlc < 2) break;
-		if(data0 == 0 || data0 == can_id ){
-		NMT_command  = (CAN->sFIFOMailBox[0].RDLR&0xff00) >>8;
-		switch(NMT_command){
-			case NMT_start : NMT_status = NMT_status_Operational;break;
-			case NMT_pre_operational: NMT_status = NMT_status_Pre_Operational;break;
-			case NMT_stop: NMT_status = NMT_status_Stopped;break;
-			default:break;}
-		};
+			if(data0 == 0 || data0 == can_id ){
+				NMT_command  = (CAN->sFIFOMailBox[0].RDLR&0xff00) >>8;
+					switch(NMT_command){
+					case NMT_start : NMT_status = NMT_status_Operational;break;
+					case NMT_pre_operational: NMT_status = NMT_status_Pre_Operational;break;
+					case NMT_stop: NMT_status = NMT_status_Stopped;break;
+					default:
+						break;}
+			};
 		break;
 
 		default:
-			if(id == idRxPDO1){
-				if(NMT_status != NMT_status_Operational) break;
 
-					break;
-			}
-			if( id == *msg_matrix.id_msg ){
-				if(dlc>=2){
-				msg_matrix.data_frame[0] =CAN->sFIFOMailBox[0].RDLR;
-				msg_matrix.data_frame[1] =CAN->sFIFOMailBox[0].RDHR;
-				(*msg_matrix.status) ++;
-				};
-			}
-			if(id == *msg_punch.id_msg){
-				if(dlc>=4){
-				msg_punch.data_frame[0] =CAN->sFIFOMailBox[0].RDLR;
-				msg_punch.data_frame[1] =CAN->sFIFOMailBox[0].RDHR;
-				(*msg_punch.status) ++;
-				};
-			}
-			if(id == *msg_counter.id_msg){
-				if(dlc>=2){
-				msg_counter.data_frame[0] =CAN->sFIFOMailBox[0].RDLR;
-				msg_counter.data_frame[1] =CAN->sFIFOMailBox[0].RDHR;
-				(*msg_counter.status) ++;
-				};
-			}
-			if(id == *msg_cylindr.id_msg){
-				if(dlc>=2){
-				msg_cylindr.data_frame[0] =CAN->sFIFOMailBox[0].RDLR;
-				msg_cylindr.data_frame[1] =CAN->sFIFOMailBox[0].RDHR;
-				(*msg_cylindr.status) ++;
-				};
-			}
-			if(id == *msg_button.id_msg){
-				if(dlc>=2){
-				msg_button.data_frame[0] =CAN->sFIFOMailBox[0].RDLR;
-				msg_button.data_frame[1] =CAN->sFIFOMailBox[0].RDHR;
-				(*msg_button.status) ++;
-				};
-			}
-			break;
-				};
-			};
+			can_f0.id = id;
+			can_f0.dlc = dlc;
+			can_f0.msg[0] = CAN->sFIFOMailBox[0].RDLR;
+			can_f0.msg[1] = CAN->sFIFOMailBox[0].RDHR;
+
+		break;
+		}
+	};
 	exit:	SET_BIT(CAN->RF0R, CAN_RF0R_RFOM0);//CAN->RF0R |= 0b0100000;  сообщение прочитано.
 };
 
@@ -858,7 +851,7 @@ void init_controller_STM32F072(void){
 				1: selected trigger request occurred
 				This bit is set when the selected edge event arrives on the external interrupt line. This bit is
 				cleared by writing a 1 to the bit.
-
+ольцевой буфер со смещением на байт каждый раз
 
 
 
@@ -1113,7 +1106,46 @@ void default_load_rаm(uint8_t* ram, uint8_t* flash,uint32_t size){
 
 ///////////////////////////////////////////// OLD //////////////////////////////////////////////////
 
-/*
+/*	if(id == idRxPDO1){
+				if(NMT_status != NMT_status_Operational) break;
+
+				break;
+			}
+			if( id == *msg_matrix.id_msg ){
+				if(dlc>=2){
+				msg_matrix.data_frame[0] =CAN->sFIFOMailBox[0].RDLR;
+				msg_matrix.data_frame[1] =CAN->sFIFOMailBox[0].RDHR;
+				(*msg_matrix.status) ++;
+				};
+			}
+			if(id == *msg_punch.id_msg){
+				if(dlc>=4){
+				msg_punch.data_frame[0] =CAN->sFIFOMailBox[0].RDLR;
+				msg_punch.data_frame[1] =CAN->sFIFOMailBox[0].RDHR;
+				(*msg_punch.status) ++;
+				};
+			}
+			if(id == *msg_counter.id_msg){
+				if(dlc>=2){
+				msg_counter.data_frame[0] =CAN->sFIFOMailBox[0].RDLR;
+				msg_counter.data_frame[1] =CAN->sFIFOMailBox[0].RDHR;
+				(*msg_counter.status) ++;
+				};
+			}
+			if(id == *msg_cylindr.id_msg){
+				if(dlc>=2){
+				msg_cylindr.data_frame[0] =CAN->sFIFOMailBox[0].RDLR;
+				msg_cylindr.data_frame[1] =CAN->sFIFOMailBox[0].RDHR;
+				(*msg_cylindr.status) ++;
+				};
+			}
+			if(id == *msg_button.id_msg){
+				if(dlc>=2){
+				msg_button.data_frame[0] =CAN->sFIFOMailBox[0].RDLR;
+				msg_button.data_frame[1] =CAN->sFIFOMailBox[0].RDHR;
+				(*msg_button.status) ++;
+				};
+			}
 
  	  tft_pause_ms = 2000;
 	  while(tft_pause_ms){};

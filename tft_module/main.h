@@ -1,24 +1,12 @@
-/* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file           : main.h
-  * @brief          : Header for main.c file.
-  *                   This file contains the common defines of the application.
-  ******************************************************************************
-  * @attention
-  *
+/*
+ USER CODE BEGIN Header
+
   * Copyright (c) 2023 STMicroelectronics.
   * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
-/* USER CODE END Header */
 
-/* Define to prevent recursive inclusion -------------------------------------*/
+ USER CODE END Header */
+
+
 #ifndef __MAIN_H
 #define __MAIN_H
 
@@ -26,41 +14,137 @@
 extern "C" {
 #endif
 
-/* Includes ------------------------------------------------------------------*/
+
 #include "stm32f0xx_hal.h"
 
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
+struct Ram_to_Flash_block{
 
-/* USER CODE END Includes */
+	// counter_cycles_write_flash
 
-/* Exported types ------------------------------------------------------------*/
-/* USER CODE BEGIN ET */
+	uint32_t counter_wr_flash;
 
-/* USER CODE END ET */
+	// thermostat matrix
+	uint32_t matrix_on_temp;
+	uint32_t matrix_off_temp;
+	CAN_TxMailBox_TypeDef msg_matrix_on;
+	CAN_TxMailBox_TypeDef msg_matrix_off;
 
-/* Exported constants --------------------------------------------------------*/
-/* USER CODE BEGIN EC */
+	// thermostat punch
+	uint32_t punch_on_temp;
+	uint32_t punch_off_temp;
+	CAN_TxMailBox_TypeDef msg_punch_on;
+	CAN_TxMailBox_TypeDef msg_punch_off;
 
-/* USER CODE END EC */
+	// rele_delay;
+	uint32_t time_ms;
+	CAN_TxMailBox_TypeDef msg_delay_on;
+	CAN_TxMailBox_TypeDef msg_delay_off;
 
-/* Exported macro ------------------------------------------------------------*/
-/* USER CODE BEGIN EM */
+	uint16_t stat_matrix;
+	uint16_t stat_punch;
+    uint16_t stat_delay;
 
-/* USER CODE END EM */
+    // id_msg_object
+    uint32_t id_matrix;
+    uint32_t matrix_mask[2];
 
-/* Exported functions prototypes ---------------------------------------------*/
+    uint32_t id_punch;
+    uint32_t punch_mask[2];
+
+    uint32_t id_counter;
+    uint32_t counter_mask[2];
+
+    uint32_t id_cylindr;
+    uint32_t cylindr_mask[2];
+
+    uint32_t id_button;
+    uint32_t button_mask[2];
+
+    uint8_t  bit_offset[8];
+    uint8_t  status_object[8];
+
+};
+
+
+#define THERMO_ON_OFF     0x01
+#define THERMO_HOT_COOL 0x8000
+#define THERMO_DISABLED 0x4000 // 1-disabled
+
+struct Block_Thermostat{
+
+	uint32_t *current_temp;
+	uint32_t *on_temp;
+	uint32_t *off_temp;
+	CAN_TxMailBox_TypeDef* msg_on;
+	CAN_TxMailBox_TypeDef* msg_off;
+	uint16_t *stat;
+	uint8_t* text_on;
+	uint8_t* text_off;
+	const
+	uint8_t  n_symvol;
+};
+
+struct Rele_Delay{
+
+	uint32_t *time_ms;
+	CAN_TxMailBox_TypeDef* msg_on;
+	CAN_TxMailBox_TypeDef* msg_off;
+	uint16_t* stat;
+
+};
+
+struct Data_can_msg{
+
+	uint32_t* data_msg;
+	uint32_t* id_msg;
+	//uint32_t* dlc;
+	uint32_t* data_frame;
+	uint32_t* mask_frame;
+
+	uint8_t*  bit_offset;
+	uint8_t*  status;
+
+};
+struct CAN_frame{
+
+	uint32_t id;
+	uint32_t  dlc;
+	uint32_t msg[2];
+
+};
+#define MAX_BUFFER_CAN 128
+
+struct  CAN_buffer{
+
+	struct CAN_frame* rdata;
+	struct CAN_frame* wdata;
+	struct CAN_frame* begin_frame;
+	struct CAN_frame* end_frame;
+
+};
+
+
+
+void init_controller_STM32F072(void);
+uint8_t CAN_transmit (CAN_TxMailBox_TypeDef *tx);
+void Processing_SDO_Object(CAN_FIFOMailBox_TypeDef*);
+void Thermostat_processing(struct Block_Thermostat* temp);
+void thermostat_init(struct Block_Thermostat* temp);
+void rele_delay_start(struct Rele_Delay*);
+void default_load_rаm(uint8_t* ram, uint8_t* flash,uint32_t size);
+
+/*----------------- Buffer ------------------*/
+void init_buffer(struct CAN_buffer* buf,struct CAN_frame *frame);
+uint8_t read_can_buffer(struct CAN_buffer* buf,struct CAN_frame *frame);
+uint8_t write_can_buffer(struct CAN_buffer* buf,struct CAN_frame *frame);
+struct CAN_frame* read_can_buffer2(struct CAN_buffer* buf);
+
+
+
+
+
 void Error_Handler(void);
 
-/* USER CODE BEGIN EFP */
-
-/* USER CODE END EFP */
-
-/* Private defines -----------------------------------------------------------*/
-
-/* USER CODE BEGIN Private defines */
-
-/* USER CODE END Private defines */
 
 #ifdef __cplusplus
 }

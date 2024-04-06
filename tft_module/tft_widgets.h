@@ -498,15 +498,24 @@ struct tft_window Sensor_win={
 
 };
 static uint8_t
-screen1_Sensor_code[]={fSET_cursorXY(0,0),0x3D,0,0};
+screen1_Sensor_off[]={fSET_cursorXY(0,0),fSET_background(0x84,0x10),0x3D,0,0},
+screen1_Sensor_on[]={fSET_cursorXY(0,0),fSET_background(0xFF,0xE0),0x3D,0,0};
+
+struct simple_txt n1_sensor={
+
+		.panel = &TFT_CAN_module,
+		.num_widget = SENSOR,
+
+};
+
 struct tft_widget
 W_Sensor={
 	.status = 0x01,
 	.window = &Sensor_win,
 	.text_block = NULL,
-	.code_block = screen1_Sensor_code,
-	.data = NULL,
-	.func = NULL,
+	.code_block = screen1_Sensor_off,
+	.data = (void*)&n1_sensor,
+	.func = widget_txt_simple,
 };
 
 

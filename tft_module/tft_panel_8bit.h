@@ -154,9 +154,10 @@ struct TFT_panel {
 
 	// CAN
 
-	struct
-	data_in_can_message** data_can;
-	uint8_t 		    n_data_can;
+	uint32_t*   start_buffer_can;
+	uint32_t* 	ram_position_buffer_can;
+	uint8_t		n_position;
+	uint8_t		n_max_position;
 
 
 };
@@ -1045,12 +1046,25 @@ void widget_txt_change(void* txt){
 };
 
 
+/*----Simple display of text on the screen, for dynamic mode ---*/
+
+struct simple_txt{
+
+	struct
+	TFT_panel*	panel;
+	uint8_t  	num_widget;
+
+};
+void widget_txt_simple(void* txt){
+
+	if(!txt) return;
+	struct simple_txt* w_txt = (struct simple_txt *)txt;
+	if(w_txt->panel->screens->n_widgets < w_txt->num_widget) return;
+	tft_print_widget(w_txt->panel,w_txt->num_widget);
+};
 
 
-
-
-
-
+/*------------ Handling Dynamic Graphics Mode ------*/
 
 void dynamic_build_widgets(struct TFT_panel* panel){
 
