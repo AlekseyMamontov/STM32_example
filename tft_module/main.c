@@ -112,7 +112,7 @@ msg_cylindr={
 		.data_frame = cylindr_data_frame,
         .mask_frame = Stanok.cylindr_mask,
 		.bit_offset = &Stanok.bit_offset[3],
-		.status = &status_obj[3]
+		.status = &w_cylindr.status,
 },
 msg_button={
 
@@ -121,7 +121,7 @@ msg_button={
 		.data_frame = button_data_frame,
         .mask_frame = Stanok.button_mask,
 		.bit_offset = &Stanok.bit_offset[4],
-		.status = &status_obj[4]
+		.status = &w_button.status,
 };
 
 struct Block_Thermostat
@@ -275,8 +275,7 @@ int main(void){
 	uint64_t can_msg_data,can_msg_data2,*can_mask;
 
 
-  while (1)
-  {
+  while (1){
 
 	  // обробка повідомлень
 	  if(!read_can_buffer(&TFT_can_buffer,&can_msg)){
@@ -319,17 +318,46 @@ int main(void){
 						input_old |=(input_new&PRODUCT_COUNTER);
 			   };
      	  };
+		  // cylindr
+		  if(can_msg.id == *(msg_cylindr.id_msg)){
+			  if(can_msg.dlc > 1){
+				  can_mask = (uint64_t*)msg_cylindr.mask_frame;
+				 // *(msg_counter.data_msg) = (can_msg_data&(*can_mask)) >> *(msg_counter.bit_offset);
+					input_new &=~CYLINDR;
+					input_new |=(can_msg_data&(*can_mask))?CYLINDR:0;
+					// \_
+					if((input_old&CYLINDR) != (input_new&CYLINDR)){
+						*(msg_cylindr.data_msg) = input_new&CYLINDR?0:1;
+						*(msg_cylindr.status) = 1;
+					};
+						input_old &=~CYLINDR;
+						input_old |=(input_new&CYLINDR);
+			   };
+     	  };
 
+		  // button knopka
+		  if(can_msg.id == *(msg_button.id_msg)){
+			  if(can_msg.dlc > 1){
+				  can_mask = (uint64_t*)msg_button.mask_frame;
+				 // *(msg_counter.data_msg) = (can_msg_data&(*can_mask)) >> *(msg_counter.bit_offset);
+					input_new &=~KNOPKA;
+					input_new |=(can_msg_data&(*can_mask))?KNOPKA:0;
 
-
-
-
-
-
-
+					// \_
+					if ((input_old & KNOPKA) && !(input_new & KNOPKA)){
+						 *(msg_button.data_msg) = 1;
+						  msg_button.status = 1;
+					// _/
+				   }else if (!(input_old & KNOPKA) && (input_new & KNOPKA)){
+						 *(msg_button.data_msg) = 0;
+						  msg_button.status = 1;
+					}
+					input_old &=~KNOPKA;
+					input_old |=(input_new&KNOPKA);
+			   };
+     	  };
 	  };
 
-/*
 	  if(sendTxPDO1){
 
 	  	 	sendTxPDO1 = 0;
@@ -343,105 +371,13 @@ int main(void){
 
 	  	  };
 
-
-      // обробка значень терморегулятора матрици
-
-	  if(*(msg_matrix.status)){
-
-		temp = msg_matrix.data_frame[1]&msg_matrix.mask_frame[1];
-		temp <<=32;
-		temp |= (msg_matrix.data_frame[0]&msg_matrix.mask_frame[0]);
-		temp >>=*(msg_matrix.bit_offset);
-		*(msg_matrix.data_msg)= temp;
-		(*(msg_matrix.status))--; // can_frame _ok
-		w_matrix_temp.status ++; // display visible
-	  };
-
-
-	  if(msg_punch.status){
-	    temp = msg_punch.data_frame[1]&msg_punch.mask_frame[1];
-		temp <<=32;
-		temp |= (msg_punch.data_frame[0]&msg_punch.mask_frame[0]);
-		temp >>=*(msg_punch.bit_offset);
-		*(msg_punch.data_msg)= temp;
-		(*(msg_punch.status))--;
-		w_punch_temp.status ++;
-	  };
-
-	  if(msg_counter.status){
-
-		temp = msg_counter.data_frame[1]&msg_counter.mask_frame[1];
-	    temp <<=32;
-	    temp |= (msg_counter.data_frame[0]&msg_counter.mask_frame[0]);
-		//temp >>=*(msg_counter.bit_offset);
-		input_new &=~PRODUCT_COUNTER;
-		input_new |=temp?PRODUCT_COUNTER:0;
-		// \_
-		if((input_old & PRODUCT_COUNTER) == 1 &&
-		   (input_new & PRODUCT_COUNTER) == 0){
-			*(msg_counter.data_msg) += 1;
-			if(*(msg_counter.data_msg) == 1000000000) *(msg_counter.data_msg) = 0;
-			w_counter_data.status ++;
-		};
-			input_old &=~PRODUCT_COUNTER;
-			input_old |=(input_new&PRODUCT_COUNTER);
-			(*(msg_counter.status))--;
-	  };
-
-	  if(msg_cylindr.status){
-
-		temp = msg_cylindr.data_frame[1]&msg_cylindr.mask_frame[1];
-		temp <<=32;
-		temp |= (msg_cylindr.data_frame[0]&msg_cylindr.mask_frame[0]);
-	    //temp >>=*(msg_cylindr.bit_offset);
-		input_new &=~CYLINDR;
-		input_new |=temp?CYLINDR:0;
-		// \_
-		if((input_old&CYLINDR) != (input_new&CYLINDR)){
-			*(msg_cylindr.data_msg) = temp?0:1;
-			w_cylindr.status ++;
-		};
-			input_old &=~CYLINDR;
-			input_old |=(input_new&CYLINDR);
-			(*msg_cylindr.status)--;
-	  };
-
-	  // _/
-	  if(msg_button.status){
-
-			temp = msg_button.data_frame[1]&msg_button.mask_frame[1];
-			temp <<=32;
-			temp |= (msg_button.data_frame[0]&msg_button.mask_frame[0]);
-		    temp >>=*(msg_button.bit_offset);
-			input_new &=~BUTTON;
-			input_new |=temp?BUTTON:0;
-
-			// \_
-			if ((input_old & BUTTON) && !(input_new & BUTTON)) {
-			    *(msg_button.data_msg) = 1;
-			    w_button.status++;
-			// _/
-			} else if (!(input_old & BUTTON) && (input_new & BUTTON)) {
-			    *(msg_button.data_msg) = 0;
-			    w_button.status++;
-
-
-
-			}
-
-			input_old &=~BUTTON;
-			input_old |=(input_new & BUTTON);
-			(*msg_button.status)--;
-
-	  };
-
 	  Thermostat_processing(&matrix_thermostat);
 	  Thermostat_processing(&punch_thermostat);
+
+
 	  dynamic_build_widgets(&TFT_CAN_module);
-*/
+
   }
-
-
 
 }
 
@@ -617,12 +553,11 @@ void CEC_CAN_IRQHandler(void){
 		break;
 
 		default:
-
 			can_f0.id = id;
 			can_f0.dlc = dlc;
 			can_f0.msg[0] = CAN->sFIFOMailBox[0].RDLR;
 			can_f0.msg[1] = CAN->sFIFOMailBox[0].RDHR;
-
+			write_can_buffer (&TFT_can_buffer,&can_f0);
 		break;
 		}
 	};
