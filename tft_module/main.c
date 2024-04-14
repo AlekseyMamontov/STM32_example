@@ -233,7 +233,7 @@ const struct Ram_to_Flash_block defStanok={
 	    .id_button = txPDO1+0x03,
 	    .button_mask ={0x02,0},
 
-	    .bit_offset = {16,16,0,0,2},//matrix,punch,counter,cylindr,button
+	    .bit_offset = {0,16,0,0,2},//matrix,punch,counter,cylindr,button
 	    .status_object = {0},
 
 };
@@ -244,9 +244,11 @@ int main(void){
 	CAN_TxMailBox_TypeDef 	tx_mailbox;
 	uint64_t temp;
 
+	default_load_rаm((void*)&Stanok,(void*)&defStanok,sizeof(Stanok));
+
 	init_controller_STM32F072();// Init RCC 48Mhz, GPIOx, bxCAN
 
-	default_load_rаm((void*)&Stanok,(void*)&defStanok,sizeof(Stanok));
+
 	thermostat_init(&matrix_thermostat);
 	thermostat_init(&punch_thermostat);
 
@@ -302,7 +304,7 @@ int main(void){
 		  };
 		  // counter
 		  if(can_msg.id == *(msg_counter.id_msg)){
-			  if(can_msg.dlc > 1){
+			  if(can_msg.dlc){
 				  can_mask = (uint64_t*)msg_counter.mask_frame;
 				 // *(msg_counter.data_msg) = (can_msg_data&(*can_mask)) >> *(msg_counter.bit_offset);
 					input_new &=~PRODUCT_COUNTER;
@@ -319,8 +321,9 @@ int main(void){
 			   };
      	  };
 		  // cylindr
+
 		  if(can_msg.id == *(msg_cylindr.id_msg)){
-			  if(can_msg.dlc > 1){
+			  if(can_msg.dlc){
 				  can_mask = (uint64_t*)msg_cylindr.mask_frame;
 				 // *(msg_counter.data_msg) = (can_msg_data&(*can_mask)) >> *(msg_counter.bit_offset);
 					input_new &=~CYLINDR;
@@ -337,7 +340,7 @@ int main(void){
 
 		  // button knopka
 		  if(can_msg.id == *(msg_button.id_msg)){
-			  if(can_msg.dlc > 1){
+			  if(can_msg.dlc){
 				  can_mask = (uint64_t*)msg_button.mask_frame;
 				 // *(msg_counter.data_msg) = (can_msg_data&(*can_mask)) >> *(msg_counter.bit_offset);
 					input_new &=~KNOPKA;
@@ -346,11 +349,11 @@ int main(void){
 					// \_
 					if ((input_old & KNOPKA) && !(input_new & KNOPKA)){
 						 *(msg_button.data_msg) = 1;
-						  msg_button.status = 1;
+						 *(msg_button.status) = 1;
 					// _/
 				   }else if (!(input_old & KNOPKA) && (input_new & KNOPKA)){
 						 *(msg_button.data_msg) = 0;
-						  msg_button.status = 1;
+						 *(msg_button.status) = 1;
 					}
 					input_old &=~KNOPKA;
 					input_old |=(input_new&KNOPKA);
@@ -397,7 +400,7 @@ void Thermostat_processing(struct Block_Thermostat* temp){
 
 		//heating mode
 		if(current < on ){
-			if(*(temp->stat) & THERMO_ON_OFF) return; // on? -ok
+			if((*(temp->stat)) & THERMO_ON_OFF) return; // on? -ok
 			if(CAN_transmit(temp->msg_on)) return; // no send message;
 			*(temp->stat)|= THERMO_ON_OFF;
 

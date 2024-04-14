@@ -408,7 +408,7 @@ w_cylindr ={
 struct tft_window win_V220={
 
 	.image_x0 = 48,
-	.image_y0 = 120,
+	.image_y0 = 190,
 	.image_x1 = 0x13F,
 	.image_y1 = 0x1dF,
 	.cursor_x = 0,
@@ -418,8 +418,8 @@ struct tft_window win_V220={
 	.font = number32pt,
 };
 static uint8_t
-screen1_220v_off[]={fSET_cursorXY(0,0),fSET_background(0x84,0x10),0x3A,0,0},
-screen1_220V_on[]= {fSET_cursorXY(0,0),fSET_background(0xFF,0xE0),0x3A,0,0};
+screen1_220v_off[]={fSET_cursorXY(0,0),fSET_font_color(0x84,0x10),0x3A,0,0},
+screen1_220V_on[]= {fSET_cursorXY(0,0),fSET_font_color(0xFF,0xE0),0x3A,0,0};
 uint8_t* screen1_220V_animation[]={screen1_220v_off,screen1_220V_on};
 
 struct change_txt txt_220V ={
@@ -447,7 +447,7 @@ w_V220={
 struct tft_window Button_win={
 
 	.image_x0 = 48,
-	.image_y0 = 210,
+	.image_y0 = 120,
 	.image_x1 = 0x13F,
 	.image_y1 = 0x1dF,
 	.cursor_x = 0,
@@ -458,8 +458,8 @@ struct tft_window Button_win={
 };
 
 static uint8_t
-screen1_button_off[]={fSET_cursorXY(0,0),fSET_background(0x84,0x10),0x3B,0,0},
-screen1_button_on[]= {fSET_cursorXY(0,0),fSET_background(0xFF,0xE0),0x3C,0,0};
+screen1_button_off[]={fSET_cursorXY(0,0),fSET_font_color(0x84,0x10),0x3B,0,0},
+screen1_button_on[]= {fSET_cursorXY(0,0),fSET_font_color(0xFF,0xE0),0x3C,0,0};
 uint8_t* screen1_button_animation[]={screen1_button_off,screen1_button_on};
 
 struct change_txt txt_button ={
@@ -482,12 +482,12 @@ w_button={
 
 //------------------------------------ Sensors  -------------------------------//
 
-#define SENSOR 15
+#define ERROR_TFT 15
 
 struct tft_window Sensor_win={
 
 	.image_x0 = 48,
-	.image_y0 = 205,
+	.image_y0 = 250,
 	.image_x1 = 0x13F,
 	.image_y1 = 0x1dF,
 	.cursor_x = 0,
@@ -498,22 +498,22 @@ struct tft_window Sensor_win={
 
 };
 static uint8_t
-screen1_Sensor_off[]={fSET_cursorXY(0,0),fSET_background(0x84,0x10),0x3D,0,0},
-screen1_Sensor_on[]={fSET_cursorXY(0,0),fSET_background(0xFF,0xE0),0x3D,0,0};
+screen1_ERR_off[]={fSET_cursorXY(0,0),fSET_font_color(0x84,0x10),0x3F,0,0},
+screen1_ERR_on[]={fSET_cursorXY(0,0),fSET_font_color(0xFF,0xE0),0x3F,0,0};
 
 struct simple_txt n1_sensor={
 
 		.panel = &TFT_CAN_module,
-		.num_widget = SENSOR,
+		.num_widget = ERROR_TFT,
 
 };
 
 struct tft_widget
-W_Sensor={
+W_ErrorTFT={
 	.status = 0x01,
 	.window = &Sensor_win,
 	.text_block = NULL,
-	.code_block = screen1_Sensor_off,
+	.code_block = screen1_ERR_off,
 	.data = (void*)&n1_sensor,
 	.func = widget_txt_simple,
 };
@@ -543,11 +543,11 @@ struct tft_widget* Screen_1_widgets[]={
 		&w_cylindr,  		// CYLINDR_BUILD 12
 		&w_V220,			// 13 220V
 		&w_button,			// BUTTON 14
-		&W_Sensor			// SENSOR 15
+		&W_ErrorTFT			// SENSOR 15
 };
 
 uint8_t screen1_build[]={0,3,4,7,8,9,10,11,12,13,14,15};
-uint8_t screen1_dynamic[]={3,7,9,12,1,2,5,6};
+uint8_t screen1_dynamic[]={3,7,9,12,1,2,5,6,14};
 
 const struct tft_screen
 Screen1={
