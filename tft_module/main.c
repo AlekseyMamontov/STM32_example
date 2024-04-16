@@ -74,8 +74,8 @@ matrix_data_frame [2]={0},
 punch_data_frame  [2]={0},
 counter_data_frame[2]={0},
 cylindr_data_frame[2]={0},
-button_data_frame [2]={0}
-;
+button_data_frame [2]={0},
+relay_delay = 0;
 
 struct Data_can_msg
 msg_matrix={
@@ -92,7 +92,7 @@ msg_punch={
 		.data_msg = &punch_data.data,
 		.id_msg = 	&Stanok.id_punch,
 		.data_frame = punch_data_frame,
-                .mask_frame = Stanok.punch_mask,
+        .mask_frame = Stanok.punch_mask,
 		.bit_offset = &Stanok.bit_offset[1],
 		.status = &w_punch_temp.status,
 },
@@ -101,7 +101,7 @@ msg_counter={
 		.data_msg = &counter_data.data,
 		.id_msg = 	&Stanok.id_counter,
 		.data_frame = counter_data_frame,
-       	        .mask_frame = Stanok.counter_mask,
+        .mask_frame = Stanok.counter_mask,
 		.bit_offset = &Stanok.bit_offset[2],
 		.status = &w_counter_data.status,
 },
@@ -110,7 +110,7 @@ msg_cylindr={
 		.data_msg = &w_cylindr_animation.data,
 		.id_msg = 	&Stanok.id_cylindr,
 		.data_frame = cylindr_data_frame,
-        	.mask_frame = Stanok.cylindr_mask,
+        .mask_frame = Stanok.cylindr_mask,
 		.bit_offset = &Stanok.bit_offset[3],
 		.status = &w_cylindr.status,
 },
@@ -119,7 +119,7 @@ msg_button={
 		.data_msg = &txt_button.data,// &button_data.data,
 		.id_msg = 	&Stanok.id_button,
 		.data_frame = button_data_frame,
-        	.mask_frame = Stanok.button_mask,
+        .mask_frame = Stanok.button_mask,
 		.bit_offset = &Stanok.bit_offset[4],
 		.status = &w_button.status,
 };
@@ -128,7 +128,7 @@ struct Block_Thermostat
 matrix_thermostat ={
 
 	  .current_temp = &matrix_data.data,
-      	  .on_temp = &Stanok.matrix_on_temp,
+      .on_temp = &Stanok.matrix_on_temp,
 	  .off_temp =&Stanok.matrix_off_temp,
 	  .msg_on = &Stanok.msg_matrix_on,
 	  .msg_off =&Stanok.msg_matrix_off,
@@ -199,7 +199,7 @@ const struct Ram_to_Flash_block defStanok={
 		},
 
 		// rele_delay;
-		.time_ms = 12000, //12sec.
+		.time_ms = 24, //24 /2 = 12s
 		.msg_delay_on = {
 				.TIR  = ((rxPDO1+3)<<21)| 0x01,
 				.TDTR = 2,
@@ -251,6 +251,8 @@ int main(void){
 
 	thermostat_init(&matrix_thermostat);
 	thermostat_init(&punch_thermostat);
+	Rele_delay_init(&push_pnevmocylindr);
+
 
 	init_tft_display(TFT_CAN_module.init_tft);
 	tft_fast_clear(TFT_CAN_module.window);
@@ -302,7 +304,7 @@ int main(void){
 		  if(can_msg.id == *(msg_punch.id_msg)){
 			  if(can_msg.dlc > 3){
 				  can_mask = (uint64_t*)msg_punch.mask_frame;
-				  data32b = (can_msg_data&(*can_mask)) >> *(msg_matrix.bit_offset);
+				  data32b = (can_msg_data&(*can_mask)) >> *(msg_punch.bit_offset);
 				  if(*(msg_punch.data_msg) != data32b){
 					  *(msg_punch.data_msg) = data32b;
 					  *(msg_punch.status) = 1; // visible block punch
@@ -361,7 +363,10 @@ int main(void){
 
 					// _/
 				   }else if (!(input_old & KNOPKA) && (input_new & KNOPKA)){
-					   if(*(msg_button.data_msg) == 1 ){ *(push_pnevmocylindr.stat) |= RELE_KEY;}
+					   // key_down?
+
+					   if(*(msg_button.data_msg) == 1 && (*(push_pnevmocylindr.stat)&RELE_ON) == 0)
+						   	   *(push_pnevmocylindr.stat) |= RELE_SEND_ON;
 						 *(msg_button.data_msg) = 0;
 						 *(msg_button.status) = 1;
 					}
@@ -383,7 +388,7 @@ int main(void){
 	  	 	if(CAN_transmit(&tx_mailbox))sendTxPDO1 = 1;
 
 	  	  };
-
+	  Rele_delay_processing(&push_pnevmocylindr);
 	  Thermostat_processing(&matrix_thermostat);
 	  Thermostat_processing(&punch_thermostat);
 
@@ -453,14 +458,47 @@ void thermostat_init(struct Block_Thermostat* temp){
 };
 /*---------------- Rele delays ---------------*/
 
-void Rele_processing(struct Rele_Delay* rele){
+void Rele_delay_processing(struct Rele_Delay* rele){
 
 	if(!rele) return;
 
+	if(*(rele->stat) & RELE_SEND_OFF){
+		if(CAN_transmit(rele->msg_off)) return ;
+		*(rele->stat) &= ~(RELE_SEND_OFF|RELE_ON);
+	};
 
+	if(*(rele->stat) & RELE_SEND_ON){
+		if(CAN_transmit(rele->msg_on)) return;
+		*(rele->stat) &= ~RELE_SEND_ON;
+		*(rele->stat) |=  RELE_ON;
+		relay_delay = *(rele->time_100ms); // timer7 ON
+	};
 }
+void Rele_delay_init(struct Rele_Delay* rele){
 
+	relay_delay = 0;
+	*(rele->stat) &= ~(RELE_ON | RELE_SEND_ON | RELE_SEND_OFF);
+	// TIM7
 
+	    RCC->APB1ENR |= RCC_APB1ENR_TIM7EN;
+		TIM7->PSC =  48000000/1000 - 1; //1 ms
+		TIM7->ARR = 500-1; //500 ms
+		TIM7->DIER |= TIM_DIER_UIE; 	  // enable perepolnenia TIM7
+		TIM7->CR1 |= TIM_CR1_CEN;		  // ON TIM7
+		NVIC_EnableIRQ(TIM7_IRQn);
+
+};
+
+void TIM7_IRQHandler(void){
+
+	if(relay_delay){
+		relay_delay--;
+		if(!relay_delay){
+			*(push_pnevmocylindr.stat) |= RELE_SEND_OFF;
+		};
+	};
+ TIM7->SR &= ~TIM_SR_UIF;
+};
 
 
 /*------------------ TIMERS -------------------*/
@@ -470,10 +508,7 @@ void SysTick_Handler(void){
 	if(tft_pause_ms)tft_pause_ms--;
 };
 // pause rele
-void TIM7_IRQHandler(void){
 
-
-};
 
 void TIM14_IRQHandler(){
 
@@ -844,13 +879,6 @@ void init_controller_STM32F072(void){
 	TIM14->CR1 |= TIM_CR1_CEN;		  // ON TIM14
 	TIM14->ARR = 4; //5 ms
 
-	/******************************  TIM7 **************************/
-
-	    RCC->APB1ENR |= RCC_APB1ENR_TIM7EN;
-		TIM7->PSC =  48000000/1000 - 1; //1 ms
-		TIM7->ARR = 500; //500 ms
-		TIM7->DIER |= TIM_DIER_UIE; 	  // enable perepolnenia TIM7
-		TIM7->CR1 |= TIM_CR1_CEN;		  // ON TIM7
 
 
 /***************************** CAN module ********************************
