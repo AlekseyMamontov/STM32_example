@@ -6,7 +6,9 @@
 #include "tft_screens.h"
 #include "tft_widgets.h"
 
+
 struct Ram_to_Flash_block Stanok;
+
 struct CAN_frame  RAM_can_frames[MAX_BUFFER_CAN];
 struct CAN_buffer TFT_can_buffer ={
 
@@ -24,7 +26,13 @@ struct TFT_panel TFT_CAN_module={
 
 };
 
-// Input block
+// input Keys
+uint16_t tft_keys[3] = {0};
+uint8_t buffer_keys[MAX_BUFFER_KEY];
+struct KEY_buffer tft_panel_keys;
+void Screen1_keys(struct tft_screen*,uint8_t);
+
+// Input CAN_GPIO
 
 #define PRODUCT_COUNTER 1
 #define CYLINDR 		2
@@ -32,28 +40,6 @@ struct TFT_panel TFT_CAN_module={
 
 uint16_t input_old = PRODUCT_COUNTER|CYLINDR|KNOPKA;
 uint16_t input_new = PRODUCT_COUNTER|CYLINDR|KNOPKA;
-
-
-
-
-
-
-
-
-// Keys b0 - down b1 - OK  b2 - up
-uint16_t tft_keys[3] = {0};
-uint16_t keys_status = 0;
-uint8_t  buffer_keys[8];
-uint32_t gpio_time_pin[3]={0};
-uint32_t gpio_time_ms[3]={5,5,5};
-uint32_t gpio_input = 0;
-
-uint8_t  test,rx_msg;
-uint16_t test_color;
-uint32_t rx_t1 = 0, rx_t2 = 0;
-
-//uint16_t ms_pause = 0;
-
 
 
 // CanOpen block
@@ -214,7 +200,9 @@ const struct Ram_to_Flash_block defStanok={
 		},
 
 		.stat_matrix = 0,
+		.correct_temp_matrix = 0,
 		.stat_punch = 0,
+		.correct_temp_punch = 0,
 	    .stat_delay = 0,
 
 	    // id_msg_object
@@ -248,11 +236,10 @@ int main(void){
 
 	init_controller_STM32F072();// Init RCC 48Mhz, GPIOx, bxCAN
 
-
 	thermostat_init(&matrix_thermostat);
 	thermostat_init(&punch_thermostat);
 	Rele_delay_init(&push_pnevmocylindr);
-
+	Keyboard_init(&tft_panel_keys,buffer_keys);
 
 	init_tft_display(TFT_CAN_module.init_tft);
 	tft_fast_clear(TFT_CAN_module.window);
@@ -267,12 +254,6 @@ int main(void){
 	CAN_transmit(&tx_mailbox);
 
 
-	// Init block
-
-
-
-	thermostat_init(&matrix_thermostat);
-	thermostat_init(&punch_thermostat);
 
 
 	struct   CAN_frame can_msg;
@@ -305,6 +286,7 @@ int main(void){
 			  if(can_msg.dlc > 3){
 				  can_mask = (uint64_t*)msg_punch.mask_frame;
 				  data32b = (can_msg_data&(*can_mask)) >> *(msg_punch.bit_offset);
+
 				  if(*(msg_punch.data_msg) != data32b){
 					  *(msg_punch.data_msg) = data32b;
 					  *(msg_punch.status) = 1; // visible block punch
@@ -379,10 +361,10 @@ int main(void){
 	  if(sendTxPDO1){
 
 	  	 	sendTxPDO1 = 0;
-	  	 	keys_status = 0;
+	  	 	//keys_status = 0;
 	  	 	tx_mailbox.TIR = (idTxPDO1 <<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
 	  	 	tx_mailbox.TDTR = 1;// n на_отправку
-	  	 	tx_mailbox.TDLR = keys_status;// d0-d3
+	  	 	tx_mailbox.TDLR = 0;// d0-d3
 	  	 	tx_mailbox.TDHR = 0;// d4-d7
 
 	  	 	if(CAN_transmit(&tx_mailbox))sendTxPDO1 = 1;
@@ -391,6 +373,7 @@ int main(void){
 	  Rele_delay_processing(&push_pnevmocylindr);
 	  Thermostat_processing(&matrix_thermostat);
 	  Thermostat_processing(&punch_thermostat);
+
 
 
 	  dynamic_build_widgets(&TFT_CAN_module);
@@ -457,7 +440,7 @@ void thermostat_init(struct Block_Thermostat* temp){
 	}else *(temp->stat)|=THERMO_DISABLED;
 };
 /*---------------- Rele delays ---------------*/
-
+// pause rele
 void Rele_delay_processing(struct Rele_Delay* rele){
 
 	if(!rele) return;
@@ -507,8 +490,47 @@ void SysTick_Handler(void){
 
 	if(tft_pause_ms)tft_pause_ms--;
 };
-// pause rele
 
+
+
+// ------------------- KEYS ----------------------//
+
+void Keyboard_init(struct KEY_buffer* key,uint8_t* buf){
+
+	key->r_keys = buf;
+	key->w_keys = buf;
+	key->begin_buf = buf;
+	key->end_buf = buf + MAX_BUFFER_KEY;
+
+    /******************************  TIM14 **************************/
+
+    RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
+	TIM14->PSC =  48000000/1000 - 1;
+	TIM14->DIER |= TIM_DIER_UIE; 	  // enable perepolnenia TIM14
+	TIM14->CR1 |= TIM_CR1_CEN;		  // ON TIM14
+	TIM14->ARR = 4; //5 ms
+	NVIC_EnableIRQ(TIM14_IRQn);
+
+};
+uint8_t read_keys_buffer(struct KEY_buffer* key){
+
+	uint8_t res = 0;
+	if(key == NULL) return 0;
+	if(key->r_keys == key->w_keys) return 0;
+	res = *(key->r_keys);
+	key->r_keys++;
+	if(key->r_keys >= key->end_buf) key->r_keys = key->begin_buf;
+	return res;
+
+};
+void write_keys_buffer(struct KEY_buffer* key,uint8_t data){
+
+	if(key == NULL || !data) return;
+	key->w_keys++;
+	if(key->w_keys >= key->end_buf) key->w_keys = key->begin_buf;
+	if(key->r_keys == key->w_keys) return;
+	*(key->w_keys) = data;
+};
 
 void TIM14_IRQHandler(){
 
@@ -526,11 +548,20 @@ void TIM14_IRQHandler(){
     tft_keys[pin_key_up] |=(gpio&tft_key_up)>>pin_key_up;
     if(tft_keys[pin_key_up] == 0x00ff) keys_status |= 0x04;;
 
-    if(keys_status ){
-    	sendTxPDO1++;
-    };
+    if(keys_status) write_keys_buffer(&tft_panel_keys,keys_status);
 	TIM14->SR &= ~TIM_SR_UIF;
+
 };
+
+void Screen1_keys(struct tft_screen* src, uint8_t data){
+
+
+
+
+};
+
+
+
 
 /*------------------------- CAN buffer --------------------*/
 
@@ -1054,8 +1085,7 @@ void init_controller_STM32F072(void){
 	    1: Interrupt generated when state of FMP[1:0] bits are not 00b.
 */
 	 NVIC_EnableIRQ(SysTick_IRQn);
-	 NVIC_EnableIRQ(TIM14_IRQn);
-	 NVIC_EnableIRQ(TIM7_IRQn);
+
     /* CAN interrupt Init */
 	NVIC_SetPriority(CEC_CAN_IRQn,1);
 	NVIC_EnableIRQ(CEC_CAN_IRQn);

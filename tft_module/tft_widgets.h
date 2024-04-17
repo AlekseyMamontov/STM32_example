@@ -565,81 +565,68 @@ Screen1={
 };
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ////////////////////////////////////////// SCREEN 2 /////////////////////////////////////////////
 
+struct tft_window Screen2_win={
+
+	.image_x0 = 0,
+	.image_y0 = 0,
+	.image_x1 = 0x13F,
+	.image_y1 = 0x1dF,
+	.cursor_x = 0,
+	.cursor_y = 0,
+	.color_font = color_WHITE,
+	.color_background = color_BLACK,
+	.font = console18pt,
+
+};
+
+/*------------------------------- Widget MENU -------------------------------------*/
+const static
+uint8_t MENU_build[]={fSET_font18pt,fSET_cursorXY(0,0),fSET_background(0xF8,0x00),fCLEAR_TFT,0,0,0};
+
+const static uint8_t MENU_str0[]={fSET_cursorXY(0,1)};
+const static uint8_t MENU_str1[]={fSET_cursorXY(0,2)};
+const static uint8_t MENU_str2[]={fSET_cursorXY(0,3)};
+const static uint8_t MENU_str3[]={fSET_cursorXY(0,4)};
+const static uint8_t MENU_str4[]={fSET_cursorXY(0,5)};
+
+const static uint8_t MENU_str5[]={fSET_cursorXY(0,6)};
+const static uint8_t MENU_str6[]={fSET_cursorXY(0,7)};
+const static uint8_t MENU_str7[]={fSET_cursorXY(0,8)};
+const static uint8_t MENU_str8[]={fSET_cursorXY(0,9)};
+const static uint8_t MENU_str9[]={fSET_cursorXY(0,10)};
+
+const static uint8_t MENU_str10[]={fSET_cursorXY(0,11)};
+const static uint8_t MENU_str11[]={fSET_cursorXY(0,12)};
+const static uint8_t MENU_str12[]={fSET_cursorXY(0,13)};
+const static uint8_t MENU_str13[]={fSET_cursorXY(0,14)};
+const static uint8_t MENU_str14[]={fSET_cursorXY(0,15)};
 
 
+const static
+struct tft_widget* Screen_2_widgets[]={};
+uint8_t screen2_build[]={};
+uint8_t screen2_dynamic[]={};
 
+const struct tft_screen
+Screen2={
+
+	    .widgets = Screen_2_widgets,
+		.n_widgets = sizeof(Screen_2_widgets),
+	    .build_widgets = screen2_build,			 // number
+	    .n_build_widgets = sizeof(screen2_build),
+	    .dynamic_widgets = screen2_dynamic, 		 // number widgets
+	    .n_dynamic_widgets =sizeof(screen2_dynamic),
+
+	    .next = &Screen1,
+	    .prev = NULL,
+
+};
 
 
 ////////////////////////////////////////// SCREEN 3 /////////////////////////////////////////////
 
 
-
-
-/*
-
-const
-struct tft_sprite V230off={
-	.x = 48,
-	.y = 120,
-	.width = 32,
-	.height= 47,
-	.pixeldata = V230_off,
-};
-struct tft_sprite V230on={
-	.x = 48,
-	.y = 120,
-	.width = 32,
-	.height= 47,
-	.pixeldata = V230_on,
-};
-const struct tft_sprite* V230_image[2]={
-	&V230off,
-	&V230on,
-};
-
-#define V230_BUILD 13
-static uint8_t
-screen1_V230_code[]={fIMAGE_RGB565(0),0,0};
-
-struct animation_image
-w_V230_animation={
-	.status = 0x01,
-	.current_sprite = screen1_V230_code + 2,
-	.new_data = 0,
-	.old_data = 1,
-	.panel = &TFT_CAN_module,
-	.num_widget = V230_BUILD,
-};
-struct tft_widget
-w_V230 ={
-
-	.status = 0x01,
-	.window = &Screen1_win,
-	.image_block = V230_image,
-	.n_images = sizeof(V230_image),
-	.text_block = NULL,
-	.code_block = screen1_V230_code,
-	.data = (void*) &w_V230_animation,
-	.func = widget_sprite_on_off,
-
-};
- */
 
 #endif /* INC_TFT_WIDGETS_H_ */

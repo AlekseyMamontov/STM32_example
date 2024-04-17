@@ -14,8 +14,9 @@
 extern "C" {
 #endif
 
-
 #include "stm32f0xx_hal.h"
+
+
 
 struct Ram_to_Flash_block{
 
@@ -41,8 +42,11 @@ struct Ram_to_Flash_block{
 	CAN_TxMailBox_TypeDef msg_delay_off;
 
 	uint16_t stat_matrix;
+	uint16_t correct_temp_matrix;
 	uint16_t stat_punch;
+	uint16_t correct_temp_punch;
     uint16_t stat_delay;
+    uint16_t reserv;// ==
 
     // id_msg_object
     uint32_t id_matrix;
@@ -73,6 +77,7 @@ struct Ram_to_Flash_block{
 struct Block_Thermostat{
 
 	uint32_t *current_temp;
+	uint16_t *correct_temp;
 	uint32_t *on_temp;
 	uint32_t *off_temp;
 	CAN_TxMailBox_TypeDef* msg_on;
@@ -84,9 +89,15 @@ struct Block_Thermostat{
 	uint8_t  n_symvol;
 };
 
+// Rele_Delay 100ms
+#define RELE_ON  0x01
+#define RELE_SEND_OFF 0x02
+#define RELE_SEND_ON  0x04
+#define RELE_DELAY 0x08
+
 struct Rele_Delay{
 
-	uint32_t *time_ms;
+	uint32_t *time_100ms;
 	CAN_TxMailBox_TypeDef* msg_on;
 	CAN_TxMailBox_TypeDef* msg_off;
 	uint16_t* stat;
@@ -105,6 +116,20 @@ struct Data_can_msg{
 	uint8_t*  status;
 
 };
+
+
+
+void init_controller_STM32F072(void);
+uint8_t CAN_transmit (CAN_TxMailBox_TypeDef *tx);
+void Processing_SDO_Object(CAN_FIFOMailBox_TypeDef*);
+void Thermostat_processing(struct Block_Thermostat* temp);
+void thermostat_init(struct Block_Thermostat* temp);
+void Rele_delay_processing(struct Rele_Delay* rele);
+void Rele_delay_init(struct Rele_Delay* rele);
+void default_load_rаm(uint8_t* ram, uint8_t* flash,uint32_t size);
+
+/*----------------- CAN_Buffer ------------------*/
+
 struct CAN_frame{
 
 	uint32_t id;
@@ -123,24 +148,31 @@ struct  CAN_buffer{
 
 };
 
-
-
-void init_controller_STM32F072(void);
-uint8_t CAN_transmit (CAN_TxMailBox_TypeDef *tx);
-void Processing_SDO_Object(CAN_FIFOMailBox_TypeDef*);
-void Thermostat_processing(struct Block_Thermostat* temp);
-void thermostat_init(struct Block_Thermostat* temp);
-void rele_delay_start(struct Rele_Delay*);
-void default_load_rаm(uint8_t* ram, uint8_t* flash,uint32_t size);
-
-/*----------------- Buffer ------------------*/
 void init_buffer(struct CAN_buffer* buf,struct CAN_frame *frame);
 uint8_t read_can_buffer(struct CAN_buffer* buf,struct CAN_frame *frame);
 uint8_t write_can_buffer(struct CAN_buffer* buf,struct CAN_frame *frame);
 struct CAN_frame* read_can_buffer2(struct CAN_buffer* buf);
 
+/*---------------Keys -------------------*/
+
+#define MAX_BUFFER_KEY 20
+
+struct KEY_buffer{
+
+	uint8_t* r_keys;
+	uint8_t* w_keys;
+	uint8_t* begin_buf;
+	uint8_t* end_buf;
+
+};
+void Keyboard_init(struct KEY_buffer*,uint8_t *);
+uint8_t read_keys_buffer(struct KEY_buffer*);
+void write_keys_buffer(struct KEY_buffer* key,uint8_t data);
+// screens key_processing
 
 
+
+/* -----------------------------------------------------------*/
 
 
 void Error_Handler(void);

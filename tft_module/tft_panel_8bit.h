@@ -128,6 +128,8 @@ struct tft_screen{
     uint8_t*       dynamic_widgets; // number widgets
     uint8_t    	    n_dynamic_widgets;
 
+    void (*func_keys)(struct tft_screen*src,uint8_t data);
+
     struct tft_screen *next;
     struct tft_screen *prev;
 
@@ -842,6 +844,9 @@ void tft_sprite_RGB565(struct tft_window *window,struct tft_sprite *sprite){
 #define IMAGE_RGB565 0x1C
 #define fIMAGE_RGB565(a) FUNC,IMAGE_RGB565,a
 
+#define CLEAR_TFT 0x1D
+#define fCLEAR_TFT FUNC,CLEAR_TFT
+
 
 
 
@@ -930,6 +935,7 @@ void tft_print_widget(struct TFT_panel* panel, uint8_t num){
 						 	 	 	if(*text >= widget->n_images)break;
 									tft_sprite_RGB565(window,*(widget->image_block + (*text)));
 									break;
+					case CLEAR_TFT: text++;tft_fast_clear(window);break;
 
 
 
