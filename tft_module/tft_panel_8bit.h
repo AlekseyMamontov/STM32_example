@@ -71,7 +71,7 @@
 
 
  uint16_t tft_pause_ms = 0;
-
+ struct TFT_panel;
 // --------------- Struct tft_display -----------//
 
 struct tft_window {
@@ -128,38 +128,66 @@ struct tft_screen{
     uint8_t*       dynamic_widgets; // number widgets
     uint8_t    	    n_dynamic_widgets;
 
-    void (*func_keys)(struct tft_screen*src,uint8_t data);
+    void (*func_keys)(struct TFT_panel*);
 
     struct tft_screen *next;
     struct tft_screen *prev;
 
 };
 
+/*------------------------- keys buffers ------------------------*/
+
+#define MAX_BUFFER_KEY 20
+
+
+
+struct KEY_buffer{
+
+	uint8_t* r_keys;
+	uint8_t* w_keys;
+	uint8_t* begin_buf;
+	uint8_t* end_buf;
+
+};
+uint8_t read_keys_buffer(struct KEY_buffer* key){
+
+	uint8_t res = 0;
+	if(key == NULL) return res;
+	if(key->r_keys == key->w_keys) return res;
+	res = *(key->r_keys);
+	(key->r_keys)++;
+	if(key->r_keys >= key->end_buf) key->r_keys = key->begin_buf;
+	return res;
+
+};
+uint8_t write_keys_buffer(struct KEY_buffer* key,uint8_t data){
+
+	if(key == NULL || !data) return 1;
+	uint8_t* wr = key->w_keys;
+	*(key->w_keys) = data;
+	  key->w_keys++;
+	if(key->w_keys >= key->end_buf) key->w_keys = key->begin_buf;
+	if(key->r_keys == key->w_keys){ key->w_keys = wr; return 1;};
+
+	return 0;
+};
+
+void Keyboard_init(struct KEY_buffer*,uint8_t* ,uint8_t size);
+
+/*---------------------------------------------------------------*/
+
 struct TFT_panel {
 
 	// Init
-
 	const uint8_t* init_tft;
-
-	// Screens
+	// Window
 	struct tft_window* window;
-	const struct
-	tft_screen* screens;
-
-	// Keys
-
-	uint16_t pin_input;
-	uint16_t pin_reg_shift[MAX_KEYS];
-	uint16_t wait_keys_action_ms;
-	uint8_t  buffer_keys;
-	uint8_t  n_buffer;
-
+	// Screen
+	struct tft_screen* screens;
 	// CAN
-
-	uint32_t*   start_buffer_can;
-	uint32_t* 	ram_position_buffer_can;
-	uint8_t		n_position;
-	uint8_t		n_max_position;
+	struct CAN_buffer* msg_can_buffer;
+	// Keys
+	struct KEY_buffer* keys_buffer;
 
 
 };

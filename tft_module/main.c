@@ -1,36 +1,35 @@
 
 #include "main.h"
 /* USER CODE BEGIN Includes */
-#include "CANOpen.h"
-#include "tft_panel_8bit.h"
-#include "tft_screens.h"
-#include "tft_widgets.h"
 
 
+
+// Init block
 struct Ram_to_Flash_block Stanok;
 
+// CAN object
 struct CAN_frame  RAM_can_frames[MAX_BUFFER_CAN];
-struct CAN_buffer TFT_can_buffer ={
+struct CAN_buffer TFT_can_buffer;
 
-		.rdata = RAM_can_frames,
-		.wdata = RAM_can_frames,
-		.begin_frame = RAM_can_frames,
-		.end_frame = RAM_can_frames + MAX_BUFFER_CAN,
+// Input Keys
+uint16_t tft_keys[3] = {0xffff,0xffff,0xffff}; // shift reg
+uint8_t buffer_keys[MAX_BUFFER_KEY];
+struct KEY_buffer TFT_panel_keys;
 
-};
+
 struct TFT_panel TFT_CAN_module={
 
 	.init_tft = init_r61581,
 	.screens = 	&Screen1,
     .window = 	&Panel_win,
+	.msg_can_buffer = &TFT_can_buffer,
+	.keys_buffer = 	  &TFT_panel_keys,
 
 };
 
-// input Keys
-uint16_t tft_keys[3] = {0};
-uint8_t buffer_keys[MAX_BUFFER_KEY];
-struct KEY_buffer tft_panel_keys;
-void Screen1_keys(struct tft_screen*,uint8_t);
+
+
+
 
 // Input CAN_GPIO
 
@@ -81,6 +80,7 @@ msg_punch={
         .mask_frame = Stanok.punch_mask,
 		.bit_offset = &Stanok.bit_offset[1],
 		.status = &w_punch_temp.status,
+
 },
 msg_counter={
 
@@ -99,6 +99,7 @@ msg_cylindr={
         .mask_frame = Stanok.cylindr_mask,
 		.bit_offset = &Stanok.bit_offset[3],
 		.status = &w_cylindr.status,
+
 },
 msg_button={
 
@@ -108,6 +109,7 @@ msg_button={
         .mask_frame = Stanok.button_mask,
 		.bit_offset = &Stanok.bit_offset[4],
 		.status = &w_button.status,
+
 };
 
 struct Block_Thermostat
@@ -228,21 +230,23 @@ const struct Ram_to_Flash_block defStanok={
 
 int main(void){
 
-	CAN_FIFOMailBox_TypeDef rx_mailbox;
+	// CAN_FIFOMailBox_TypeDef rx_mailbox;
 	CAN_TxMailBox_TypeDef 	tx_mailbox;
-	uint64_t temp;
+	//uint64_t temp;
 
 	default_load_rаm((void*)&Stanok,(void*)&defStanok,sizeof(Stanok));
+	init_can_buffer(TFT_CAN_module.msg_can_buffer,RAM_can_frames,MAX_BUFFER_CAN);
 
 	init_controller_STM32F072();// Init RCC 48Mhz, GPIOx, bxCAN
 
 	thermostat_init(&matrix_thermostat);
 	thermostat_init(&punch_thermostat);
-	Rele_delay_init(&push_pnevmocylindr);
-	Keyboard_init(&tft_panel_keys,buffer_keys);
 
-	init_tft_display(TFT_CAN_module.init_tft);
-	tft_fast_clear(TFT_CAN_module.window);
+	Rele_delay_init(&push_pnevmocylindr);
+	Keyboard_init(TFT_CAN_module.keys_buffer,buffer_keys,sizeof(buffer_keys));
+
+	init_tft_display (TFT_CAN_module.init_tft);
+	tft_fast_clear (TFT_CAN_module.window);
 	tft_build_widgets(&TFT_CAN_module);
 
 
@@ -264,7 +268,7 @@ int main(void){
   while (1){
 
 	  // обробка повідомлень
-	  if(!read_can_buffer(&TFT_can_buffer,&can_msg)){
+	  if(!read_can_buffer(TFT_CAN_module.msg_can_buffer,&can_msg)){
 
 		  can_msg_data = can_msg.msg[1];
 		  can_msg_data <<=32;
@@ -370,12 +374,11 @@ int main(void){
 	  	 	if(CAN_transmit(&tx_mailbox))sendTxPDO1 = 1;
 
 	  	  };
+
 	  Rele_delay_processing(&push_pnevmocylindr);
 	  Thermostat_processing(&matrix_thermostat);
 	  Thermostat_processing(&punch_thermostat);
-
-
-
+	  TFT_CAN_module.screens->func_keys(&TFT_CAN_module);
 	  dynamic_build_widgets(&TFT_CAN_module);
 
   }
@@ -495,12 +498,16 @@ void SysTick_Handler(void){
 
 // ------------------- KEYS ----------------------//
 
-void Keyboard_init(struct KEY_buffer* key,uint8_t* buf){
+#define KEY_DOWN 0x01
+#define KEY_OK	 0x02
+#define KEY_UP	 0x04
+
+void Keyboard_init(struct KEY_buffer* key,uint8_t* buf,uint8_t size){
 
 	key->r_keys = buf;
 	key->w_keys = buf;
 	key->begin_buf = buf;
-	key->end_buf = buf + MAX_BUFFER_KEY;
+	key->end_buf = buf + size;
 
     /******************************  TIM14 **************************/
 
@@ -508,29 +515,11 @@ void Keyboard_init(struct KEY_buffer* key,uint8_t* buf){
 	TIM14->PSC =  48000000/1000 - 1;
 	TIM14->DIER |= TIM_DIER_UIE; 	  // enable perepolnenia TIM14
 	TIM14->CR1 |= TIM_CR1_CEN;		  // ON TIM14
-	TIM14->ARR = 4; //5 ms
+	TIM14->ARR = 2; //5 ms
 	NVIC_EnableIRQ(TIM14_IRQn);
 
 };
-uint8_t read_keys_buffer(struct KEY_buffer* key){
 
-	uint8_t res = 0;
-	if(key == NULL) return 0;
-	if(key->r_keys == key->w_keys) return 0;
-	res = *(key->r_keys);
-	key->r_keys++;
-	if(key->r_keys >= key->end_buf) key->r_keys = key->begin_buf;
-	return res;
-
-};
-void write_keys_buffer(struct KEY_buffer* key,uint8_t data){
-
-	if(key == NULL || !data) return;
-	key->w_keys++;
-	if(key->w_keys >= key->end_buf) key->w_keys = key->begin_buf;
-	if(key->r_keys == key->w_keys) return;
-	*(key->w_keys) = data;
-};
 
 void TIM14_IRQHandler(){
 
@@ -538,77 +527,56 @@ void TIM14_IRQHandler(){
 	uint8_t keys_status = 0;
 	tft_keys[pin_key_down] <<= 1;
     tft_keys[pin_key_down] |=(gpio&tft_key_down)>>pin_key_down;
-    if(tft_keys[pin_key_down] == 0x00ff) keys_status |= 0x01;
+    if(tft_keys[pin_key_down] == 0x00ff) keys_status |= KEY_DOWN;
 
     tft_keys[pin_key_ok] <<= 1;
     tft_keys[pin_key_ok] |=(gpio&tft_key_ok)>>pin_key_ok;
-    if(tft_keys[pin_key_ok] == 0x00ff) keys_status |= 0x02;
+    if(tft_keys[pin_key_ok] == 0x00ff) keys_status |= KEY_OK;
 
     tft_keys[pin_key_up] <<= 1;
     tft_keys[pin_key_up] |=(gpio&tft_key_up)>>pin_key_up;
-    if(tft_keys[pin_key_up] == 0x00ff) keys_status |= 0x04;;
+    if(tft_keys[pin_key_up] == 0x00ff) keys_status |= KEY_UP;
 
-    if(keys_status) write_keys_buffer(&tft_panel_keys,keys_status);
+    if(keys_status) write_keys_buffer(TFT_CAN_module.keys_buffer,keys_status);
 	TIM14->SR &= ~TIM_SR_UIF;
 
 };
 
-void Screen1_keys(struct tft_screen* src, uint8_t data){
+void Screen1_keys(struct TFT_panel* tft){
+
+	uint8_t key = read_keys_buffer(tft->keys_buffer);
+	if(!key)return;//0 - null/ key;
+
+	if(key&KEY_OK){
+
+		tft->screens = tft->screens->next;
+		TFT_CAN_module.window = &Screen2_win;
+		tft_fast_clear (TFT_CAN_module.window);
+		tft_build_widgets(&TFT_CAN_module);
+
+	};
 
 
+};
+
+void Screen2_keys(struct TFT_panel* tft){
+
+	uint8_t key = read_keys_buffer(tft->keys_buffer);
+	if(!key)return;//0 - null/ key;
+
+	if(key&KEY_OK){
+
+		tft->screens = tft->screens->next;
+		TFT_CAN_module.window = &Screen1_win;
+		tft_fast_clear (TFT_CAN_module.window);
+		tft_build_widgets(&TFT_CAN_module);
+
+	};
 
 
 };
 
 
-
-
-/*------------------------- CAN buffer --------------------*/
-
-void init_buffer(struct CAN_buffer* buf,struct CAN_frame *frame){
-
-	buf->rdata = frame;
-	buf->wdata = frame;
-	buf->begin_frame = frame;
-	buf->end_frame = frame + MAX_BUFFER_CAN;
-
-};
-uint8_t read_can_buffer(struct CAN_buffer* buf,struct CAN_frame *frame){
-
-	if(buf == NULL) return 1;
-	if(buf->rdata == buf->wdata) return 1;
-	frame->id = buf->rdata->id;
-	frame->msg[0] = buf->rdata->msg[0];
-	frame->msg[1] = buf->rdata->msg[1];
-	frame->dlc = buf->rdata->dlc;
-	buf->rdata ++;
-	if(buf->rdata >= buf->end_frame) buf->rdata = buf->begin_frame;
-	return 0;
-};
-struct CAN_frame* read_can_buffer2(struct CAN_buffer* buf){
-
-	struct CAN_frame *frame ;
-	if(buf == NULL) return NULL;
-	if(buf->rdata == buf->wdata) return NULL;
-	frame = buf->rdata ++;
-	if(buf->rdata >= buf->end_frame) buf->rdata = buf->begin_frame;
-	return frame;
-};
-
-uint8_t write_can_buffer (struct CAN_buffer* buf, struct CAN_frame *frame){
-
-	if(buf == NULL) return 1;
-	struct CAN_frame *fr =  buf->wdata;
-	buf->wdata->id = frame->id;
-	buf->wdata->msg[0] = frame->msg[0];
-	buf->wdata->msg[1] = frame->msg[1];
-	buf->wdata->dlc = frame->dlc;
-	buf->wdata++;
-	if(buf->wdata >= buf->end_frame) buf->wdata = buf->begin_frame;
-
-	if(buf->rdata == buf->wdata) {buf->wdata = fr;return 1;}
-	return 0;
-};
 
 
 
@@ -652,7 +620,7 @@ void CEC_CAN_IRQHandler(void){
 			can_f0.dlc = dlc;
 			can_f0.msg[0] = CAN->sFIFOMailBox[0].RDLR;
 			can_f0.msg[1] = CAN->sFIFOMailBox[0].RDHR;
-			write_can_buffer (&TFT_can_buffer,&can_f0);
+			write_can_buffer (TFT_CAN_module.msg_can_buffer,&can_f0);
 		break;
 		}
 	};

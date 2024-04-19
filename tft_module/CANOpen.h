@@ -254,6 +254,77 @@ multiplexor
 #define flag_Size_byte    				0x01
 
 
+
+/*----------------------------- CAN buffer -------------------------*/
+
+#define MAX_BUFFER_CAN 128
+
+struct CAN_frame{
+
+	uint32_t id;
+	uint32_t  dlc;
+	uint32_t msg[2];
+
+};
+
+struct  CAN_buffer{
+
+	struct CAN_frame* rdata;
+	struct CAN_frame* wdata;
+	struct CAN_frame* begin_frame;
+	struct CAN_frame* end_frame;
+
+};
+
+void init_can_buffer(struct CAN_buffer* buf,struct CAN_frame *frame,uint16_t size){
+
+	buf->rdata = frame;
+	buf->wdata = frame;
+	buf->begin_frame = frame;
+	buf->end_frame = frame + size;
+
+};
+uint8_t read_can_buffer(struct CAN_buffer* buf,struct CAN_frame *frame){
+
+	if(buf == NULL) return 1;
+	if(buf->rdata == buf->wdata) return 1;
+	frame->id = buf->rdata->id;
+	frame->msg[0] = buf->rdata->msg[0];
+	frame->msg[1] = buf->rdata->msg[1];
+	frame->dlc = buf->rdata->dlc;
+	buf->rdata ++;
+	if(buf->rdata >= buf->end_frame) buf->rdata = buf->begin_frame;
+	return 0;
+};
+
+struct CAN_frame* read_can_buffer2(struct CAN_buffer* buf){
+
+	struct CAN_frame *frame ;
+	if(buf == NULL) return NULL;
+	if(buf->rdata == buf->wdata) return NULL;
+	frame = buf->rdata ++;
+	if(buf->rdata >= buf->end_frame) buf->rdata = buf->begin_frame;
+	return frame;
+};
+
+uint8_t write_can_buffer (struct CAN_buffer* buf, struct CAN_frame *frame){
+
+	if(buf == NULL) return 1;
+	struct CAN_frame *fr =  buf->wdata;
+	buf->wdata->id = frame->id;
+	buf->wdata->msg[0] = frame->msg[0];
+	buf->wdata->msg[1] = frame->msg[1];
+	buf->wdata->dlc = frame->dlc;
+	buf->wdata++;
+	if(buf->wdata >= buf->end_frame) buf->wdata = buf->begin_frame;
+
+	if(buf->rdata == buf->wdata) {buf->wdata = fr;return 1;}
+	return 0;
+};
+
+/*---------------------------------------------------------------------*/
+
+
 struct Data_Object{
 
     uint8_t     request_type;
@@ -396,7 +467,6 @@ struct CANopen{
 
 
 };
-
 
 
 

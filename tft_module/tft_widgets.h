@@ -549,20 +549,24 @@ struct tft_widget* Screen_1_widgets[]={
 uint8_t screen1_build[]={0,3,4,7,8,9,10,11,12,13,14,15};
 uint8_t screen1_dynamic[]={3,7,9,12,1,2,5,6,14};
 
+void Screen1_keys(struct TFT_panel* tft);
+
 const struct tft_screen
 Screen1={
 
 	    .widgets = Screen_1_widgets,
-		.n_widgets = sizeof(Screen_1_widgets),
+		.n_widgets = sizeof(Screen_1_widgets)/sizeof(Screen_1_widgets[0]),
 	    .build_widgets = screen1_build,			 // number
 	    .n_build_widgets = sizeof(screen1_build),
 	    .dynamic_widgets = screen1_dynamic, 		 // number widgets
 	    .n_dynamic_widgets =sizeof(screen1_dynamic),
-
+		.func_keys = Screen1_keys,
 	    .next = &Screen2,
 	    .prev = NULL,
 
 };
+
+
 
 
 ////////////////////////////////////////// SCREEN 2 /////////////////////////////////////////////
@@ -576,49 +580,190 @@ struct tft_window Screen2_win={
 	.cursor_x = 0,
 	.cursor_y = 0,
 	.color_font = color_WHITE,
-	.color_background = color_BLACK,
+	.color_background = 0x000A,
 	.font = console18pt,
 
 };
 
 /*------------------------------- Widget MENU -------------------------------------*/
 const static
-uint8_t MENU_build[]={fSET_font18pt,fSET_cursorXY(0,0),fSET_background(0xF8,0x00),fCLEAR_TFT,0,0,0};
+uint8_t MENU_build[]={
+		fSET_font18pt,fSAVE_background,fSET_background(0x04,0x00),
 
-const static uint8_t MENU_str0[]={fSET_cursorXY(0,1)};
-const static uint8_t MENU_str1[]={fSET_cursorXY(0,2)};
-const static uint8_t MENU_str2[]={fSET_cursorXY(0,3)};
-const static uint8_t MENU_str3[]={fSET_cursorXY(0,4)};
-const static uint8_t MENU_str4[]={fSET_cursorXY(0,5)};
+		fSET_cursorXY(0,0),' ','P','r','o','g','r','a','m','m',' ','P','r','e','s','s',' ',' ',' ',' ',' ',
+		fSET_cursorXY(0,6),' ','T','e','m','p','e','r','a','t','u','r','e',' ','M','a','t','r','i','x',' ',
+		fSET_cursorXY(0,9),' ','T','e','m','p','e','r','a','t','u','r','e',' ','P','u','n','c','h',' ',' ',
 
-const static uint8_t MENU_str5[]={fSET_cursorXY(0,6)};
-const static uint8_t MENU_str6[]={fSET_cursorXY(0,7)};
-const static uint8_t MENU_str7[]={fSET_cursorXY(0,8)};
-const static uint8_t MENU_str8[]={fSET_cursorXY(0,9)};
-const static uint8_t MENU_str9[]={fSET_cursorXY(0,10)};
+		fSET_cursorXY(0,12),' ','R','e','l','e',' ','D','e','l','a','y',' ',' ',' ',' ',' ',' ',' ',' ',' ', // Manual
+		fLOAD_background,
+		0,0,0};
 
-const static uint8_t MENU_str10[]={fSET_cursorXY(0,11)};
-const static uint8_t MENU_str11[]={fSET_cursorXY(0,12)};
-const static uint8_t MENU_str12[]={fSET_cursorXY(0,13)};
-const static uint8_t MENU_str13[]={fSET_cursorXY(0,14)};
-const static uint8_t MENU_str14[]={fSET_cursorXY(0,15)};
+#define INFO_MENU 0
+struct tft_widget
+w_menu_build={
+	.status = 0x01,
+	.window = &Screen2_win,
+	.text_block = NULL,
+	.code_block = MENU_build,
+	.data = NULL,
+	.func = NULL,
+};
+#define MENU_STR0 1
+const static uint8_t MENU_str0[]={fSET_cursorXY(0,1),' ','1','2','0','x','1','6','0','/','2','0','0','x','1','4','0',' ',' ',' ',' ',0,0};// Plate 120x160/200x140;
+struct tft_widget w_str0={
+	.status = 0x01,
+	.window = &Screen2_win,
+	.text_block = NULL,
+	.code_block = MENU_str0,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+
+#define MENU_STR1 2
+const static uint8_t MENU_str1[]={fSET_cursorXY(0,2),' ','D','2','7','5','/','D','3','0','0',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',0,0};// Plate D300 / D275
+struct tft_widget w_str1={
+	.status = 0x01,
+	.window = &Screen2_win,
+	.text_block = NULL,
+	.code_block = MENU_str1,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+
+#define MENU_STR2 3
+const static uint8_t MENU_str2[]={fSET_cursorXY(0,3),' ','D','3','7','0',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',0,0};// Plate D370
+struct tft_widget w_str2={
+	.status = 0x01,
+	.window = &Screen2_win,
+	.text_block = NULL,
+	.code_block = MENU_str2,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+
+#define MENU_STR3 4
+const static uint8_t MENU_str3[]={fSET_cursorXY(0,4),' ','R','2','2','0','/','R','1','4','4',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',0,0};// Plate R220/R144
+struct tft_widget w_str3={
+	.status = 0x01,
+	.window = &Screen2_win,
+	.text_block = NULL,
+	.code_block = MENU_str3,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+
+#define MENU_STR4 5
+const static uint8_t MENU_str4[]={fSET_cursorXY(0,5),' ','M','a','n','u','a','l',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',0,0};// Manual
+struct tft_widget w_str4={
+	.status = 0x01,
+	.window = &Screen2_win,
+	.text_block = NULL,
+	.code_block = MENU_str4,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+
+#define MENU_STR5 6
+const static uint8_t MENU_str5[]={fSET_cursorXY(0,7),'O','N',':',' ',' ',' ',' ','O','F','F',':',' ',' ',' ',' ','C',':',' ',' ',' ',0,0};
+struct tft_widget w_str5={
+	.status = 0x01,
+	.window = &Screen2_win,
+	.text_block = NULL,
+	.code_block = MENU_str5,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+
+#define MENU_STR6 7
+const static uint8_t MENU_str6[]={fSET_cursorXY(0,8),'I','D',':',' ',' ',' ',' ',' ',' ','M','A','S','K',':',' ',' ',' ',' ',' ',' ',0,0};
+struct tft_widget w_str6={
+	.status = 0x01,
+	.window = &Screen2_win,
+	.text_block = NULL,
+	.code_block = MENU_str6,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+
+#define MENU_STR7 8
+const static uint8_t MENU_str7[]={fSET_cursorXY(0,10),'O','N',':',' ',' ',' ',' ','O','F','F',':',' ',' ',' ',' ','C',':',' ',' ',' ',0,0};
+struct tft_widget w_str7={
+	.status = 0x01,
+	.window = &Screen2_win,
+	.text_block = NULL,
+	.code_block = MENU_str7,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+
+
+#define MENU_STR8 9
+const static uint8_t MENU_str8[]={fSET_cursorXY(0,11),'I','D',':',' ',' ',' ',' ',' ',' ','M','A','S','K',':',' ',' ',' ',' ',' ',' ',0,0};
+struct tft_widget w_str8={
+	.status = 0x01,
+	.window = &Screen2_win,
+	.text_block = NULL,
+	.code_block = MENU_str8,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+
+#define MENU_STR9 10
+const static uint8_t MENU_str9[]={fSET_cursorXY (0,13),'T','i','m','e',' ','d','e','l','a','y',':',' ',' ',' ',' ',' ',' ','m','s',' ',0,0};
+struct tft_widget w_str9={
+	.status = 0x01,
+	.window = &Screen2_win,
+	.text_block = NULL,
+	.code_block = MENU_str9,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+
+
+#define MENU_STR10 11
+const static uint8_t MENU_str10[]={fSET_cursorXY(0,14),'I','D',':',' ',' ',' ',' ',' ',' ','M','A','S','K',':',' ',' ',' ',' ',' ',' ',0,0};
+struct tft_widget w_str10={
+	.status = 0x01,
+	.window = &Screen2_win,
+	.text_block = NULL,
+	.code_block = MENU_str10,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+
+
 
 
 const static
-struct tft_widget* Screen_2_widgets[]={};
-uint8_t screen2_build[]={};
-uint8_t screen2_dynamic[]={};
+struct tft_widget* Screen_2_widgets[]={
 
+		&w_menu_build,
+		&w_str0,
+		&w_str1,
+		&w_str2,
+		&w_str3,
+		&w_str4,
+		&w_str5,
+		&w_str6,
+		&w_str7,
+		&w_str8,
+		&w_str9,
+		&w_str10,
+
+};
+uint8_t screen2_build[]={0,1,2,3,4,5,6,7,8,9,10,11};
+uint8_t screen2_dynamic[]={1};
+void Screen2_keys(struct TFT_panel* tft);
 const struct tft_screen
 Screen2={
 
 	    .widgets = Screen_2_widgets,
-		.n_widgets = sizeof(Screen_2_widgets),
+		.n_widgets = sizeof(Screen_2_widgets)/sizeof(Screen_2_widgets[0]),
 	    .build_widgets = screen2_build,			 // number
 	    .n_build_widgets = sizeof(screen2_build),
 	    .dynamic_widgets = screen2_dynamic, 		 // number widgets
 	    .n_dynamic_widgets =sizeof(screen2_dynamic),
-
+		.func_keys = Screen2_keys,
 	    .next = &Screen1,
 	    .prev = NULL,
 

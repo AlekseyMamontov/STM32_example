@@ -14,7 +14,13 @@
 extern "C" {
 #endif
 
-#include "stm32f0xx_hal.h"
+#include "stm32f0xx.h"
+#include <stddef.h>
+#include "CANOpen.h"
+#include "tft_panel_8bit.h"
+#include "tft_screens.h"
+#include "tft_widgets.h"
+
 
 
 
@@ -128,51 +134,8 @@ void Rele_delay_processing(struct Rele_Delay* rele);
 void Rele_delay_init(struct Rele_Delay* rele);
 void default_load_rаm(uint8_t* ram, uint8_t* flash,uint32_t size);
 
-/*----------------- CAN_Buffer ------------------*/
-
-struct CAN_frame{
-
-	uint32_t id;
-	uint32_t  dlc;
-	uint32_t msg[2];
-
-};
-#define MAX_BUFFER_CAN 128
-
-struct  CAN_buffer{
-
-	struct CAN_frame* rdata;
-	struct CAN_frame* wdata;
-	struct CAN_frame* begin_frame;
-	struct CAN_frame* end_frame;
-
-};
-
-void init_buffer(struct CAN_buffer* buf,struct CAN_frame *frame);
-uint8_t read_can_buffer(struct CAN_buffer* buf,struct CAN_frame *frame);
-uint8_t write_can_buffer(struct CAN_buffer* buf,struct CAN_frame *frame);
-struct CAN_frame* read_can_buffer2(struct CAN_buffer* buf);
-
-/*---------------Keys -------------------*/
-
-#define MAX_BUFFER_KEY 20
-
-struct KEY_buffer{
-
-	uint8_t* r_keys;
-	uint8_t* w_keys;
-	uint8_t* begin_buf;
-	uint8_t* end_buf;
-
-};
-void Keyboard_init(struct KEY_buffer*,uint8_t *);
-uint8_t read_keys_buffer(struct KEY_buffer*);
-void write_keys_buffer(struct KEY_buffer* key,uint8_t data);
-// screens key_processing
 
 
-
-/* -----------------------------------------------------------*/
 
 
 void Error_Handler(void);
