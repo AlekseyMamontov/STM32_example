@@ -39,6 +39,7 @@ struct tft_window Panel_win={
 uint8_t text[]={0};
 struct TFT_panel TFT_CAN_module;
 const struct tft_screen Screen1;
+const struct tft_screen Screen_gm;
 const struct tft_screen Screen2;
 const struct tft_screen Screen3;
 
@@ -64,7 +65,7 @@ uint8_t Matrix_code_block[]={
 		fSET_font18pt,
 		//0
 		fSET_cursorXY(8,0),fSET_SYMVOL(0xF8,0x00,0xA3),
-		fSAVE_background,fSET_background(0xF8,0x00),0x20,0x20,0xCC,0xE0,0xF2,0xF0,0xE8,0xF6,0xE0,0x20,fLOAD_background,
+		fSAVE_background,fSET_background(0xF8,0x00),0x20,0x20,М,а,т,р,и,ц,я,0x20,fLOAD_background,
 		fSET_SYMVOL(0xF8,0x00,0xA4),
 		// 1-3
 		fSET_cursorXY(8,1),fSET_SYMVOL(0xF8,0x00,0xA6),fSET_cursorX(19),fSET_SYMVOL(0xF8,0x00,0xA5),
@@ -152,7 +153,7 @@ const static uint8_t
 Punch_code_block[]={
 		//0
 		fSET_cursorXY(8,7),fSET_SYMVOL(0x04,0x00,0xA3),
-		fSAVE_background,fSET_background(0x04,0x00),0x20,0x20,0xCF,0xF3,0xE0,0xED,0xF1,0xEE,0xED,0x20,fLOAD_background,
+		fSAVE_background,fSET_background(0x04,0x00),0x20,0x20,П,у,а,н,с,о,н,0x20,fLOAD_background,
 		fSET_SYMVOL(0x04,0x00,0xA4),
 		// 1-3
 		fSET_cursorXY(8,8),fSET_SYMVOL(0x04,0x00,0xA6),fSET_cursorX(19),fSET_SYMVOL(0x04,0x00,0xA5),
@@ -240,7 +241,7 @@ const static uint8_t
 Pr_Counter_code_block[]={
 		//1
 		fSET_cursorXY(0,14),fSET_SYMVOL(0x00,0x1F,0xA3),
-		fSAVE_background,fSET_background(0x00,0x1F),0x20,0x20,0x20,0x20,0x20,0xC8,0xe7,0xe4,0xe5,0xeb,0xe8,0xe9,0x20,0x20,0x20,0x20,0x20,0x20,fLOAD_background,
+		fSAVE_background,fSET_background(0x00,0x1F),0x20,0x20,0x20,0x20,0x20,В,и,р,о,б,'i',в,0x20,0x20,0x20,0x20,0x20,0x20,fLOAD_background,
 		fSET_SYMVOL(0x00,0x1f,0xA4),
 		//2
 		fSET_cursorXY(0,15),fSET_SYMVOL(0x00,0x1f,0xA6),fSET_cursorX(19),fSET_SYMVOL(0x00,0x1f,0xA5),
@@ -302,7 +303,7 @@ const static uint8_t info_code_block[]={
 
 		//0
 		fSET_cursorXY(1,0),fSET_SYMVOL(0xEB,0xC0,0xA3),
-		fSAVE_background,fSET_background(0xEB,0xC0),'i','n','f','o',fLOAD_background,
+		fSAVE_background,fSET_background(0xEB,0xC0),'I',н,ф,о,fLOAD_background,
 		fSET_SYMVOL(0xEB,0xC0,0xA4),
 		// 1-3
 		fSET_cursorXY(1,1),fSET_SYMVOL(0xEB,0xC0,0xA6),fSET_cursorX(6),fSET_SYMVOL(0xEB,0xC0,0xA5),
@@ -341,7 +342,7 @@ const static uint8_t
 screen1_menu_code[]={
 		//1
 		fSET_cursorXY(0,19),fSAVE_background,fSET_background(0x01,0x28),
-		0x20,0xA9,'m','e','n','u',0x20,'o','k',0x20,0x98,'u','p',0x20,0x20,'d','o','w','n',0x20,fLOAD_background,
+		0x20,0xA9,М,е,н,ю,0x20,'o','k',0x20,0x98,'u','p',0x20,0x20,'d','o','w','n',0x20,fLOAD_background,
 		0,0,0
 };
 #define MENU_BUILD 11
@@ -561,7 +562,7 @@ Screen1={
 	    .dynamic_widgets = screen1_dynamic, 		 // number widgets
 	    .n_dynamic_widgets =sizeof(screen1_dynamic),
 		.func_keys = Screen1_keys,
-	    .next = &Screen2,
+	    .next = &Screen_gm,
 	    .prev = NULL,
 
 };
@@ -571,7 +572,7 @@ Screen1={
 
 ////////////////////////////////////////// SCREEN 2 /////////////////////////////////////////////
 
-struct tft_window Screen2_win={
+struct tft_window Screen_gwin={
 
 	.image_x0 = 0,
 	.image_y0 = 0,
@@ -585,8 +586,248 @@ struct tft_window Screen2_win={
 
 };
 
-/*------------------------------- Widget MENU_1-------------------------------------*/
+/*-------------------------- Widget General MENU ----------------------------------*/
 
+const static
+uint8_t MENU_general[]={
+		fSET_font18pt,fSAVE_background,fSET_background(0x04,0x00),
+		fSET_cursorXY(0,0) ,' ',П,р,о,г,р,а,м,а,' ',в,е,р,с,т,а,т,а,' ',
+		fSET_cursorXY(0,10),' ',Н,а,л,а,ш,т,у,в,а,н,н,я,' ',' ',' ',' ',' ',' ',' ',
+		fLOAD_background,
+		0,0,0};
+
+#define INFO_MENU 0
+struct tft_widget
+w_gmenu={
+	.status = 0x01,
+	.window = &Screen_gwin,
+	.text_block = NULL,
+	.code_block = MENU_general,
+	.data = NULL,
+	.func = NULL,
+};
+
+// Activated program menu
+
+#define MENU_D200 1
+const static uint8_t MENU_strD200[]={fSET_cursorXY(0,2),' ',Т,а,р,'i',л,к,а,' ','D','2','0','0',' ',' ',' ',' ',' ',' ',' ',0,0};// Plate D200
+struct tft_widget w_strD200={
+	.status = 0x01,
+	.window = &Screen_gwin,
+	.text_block = NULL,
+	.code_block = MENU_strD200,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+
+#define MENU_D275 2
+const static uint8_t MENU_strD275[]={fSET_cursorXY(0,3),' ',Т,а,р,'i',л,к,а,' ','D','2','7','5',' ',' ',' ',' ',' ',' ',' ',0,0};// Plate D200
+struct tft_widget w_strD275={
+	.status = 0x01,
+	.window = &Screen_gwin,
+	.text_block = NULL,
+	.code_block = MENU_strD275,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+#define MENU_D300 3
+const static uint8_t MENU_strD300[]={fSET_cursorXY(0,4),' ',Т,а,р,'i',л,к,а,' ','D','3','0','0',' ',' ',' ',' ',' ',' ',' ',0,0};// Plate D200
+struct tft_widget w_strD300={
+	.status = 0x01,
+	.window = &Screen_gwin,
+	.text_block = NULL,
+	.code_block = MENU_strD300,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+
+#define MENU_D370 4
+const static uint8_t MENU_strD370[]={fSET_cursorXY(0,5),' ',Т,а,р,'i',л,к,а,' ','D','3','7','0',' ',' ',' ',' ',' ',' ',' ',0,0};// Plate D200
+struct tft_widget w_strD370={
+	.status = 0x01,
+	.window = &Screen_gwin,
+	.text_block = NULL,
+	.code_block = MENU_strD370,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+
+#define MENU_R220 5
+const static uint8_t MENU_strR220[]={fSET_cursorXY(0,6),' ',Т,а,р,'i',л,к,а,' ','R','2','2','0','|','R','1','4','4',' ',' ',0,0};// Plate D200
+struct tft_widget w_strR220={
+	.status = 0x01,
+	.window = &Screen_gwin,
+	.text_block = NULL,
+	.code_block = MENU_strR220,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+#define MENU_L200x140 6
+const static uint8_t MENU_str200X140[]={fSET_cursorXY(0,7),' ',Т,а,р,'i',л,к,а,' ','2','0','0','x','1','4','0',' ',' ',' ',' ',0,0};// 200x140
+struct tft_widget w_str200x140={
+	.status = 0x01,
+	.window = &Screen_gwin,
+	.text_block = NULL,
+	.code_block = MENU_str200X140,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+
+#define MENU_MANUAL 7
+const static uint8_t MENU_manual[]={fSET_cursorXY(0,8),' ',Н,а,л,а,ш,т,о,в,а,н,и,й,' ',' ',' ',' ',' ',' ',' ',0,0};// Налаштований
+struct tft_widget w_strManual={
+	.status = 0x01,
+	.window = &Screen_gwin,
+	.text_block = NULL,
+	.code_block = MENU_manual,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+
+
+#define MENU_TEMP_Matrix 8
+const static uint8_t MENU_temp_matrix[]={fSET_cursorXY(0,12),' ',Т,'-',р,е,г,у,л,я,т,о,р,' ',м,а,т,р,и,ц,я,0,0};//Т-регулятор матриця
+struct tft_widget w_temp_matrix={
+	.status = 0x01,
+	.window = &Screen_gwin,
+	.text_block = NULL,
+	.code_block = MENU_temp_matrix,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+
+#define MENU_TEMP_punch 9
+const static uint8_t MENU_temp_punch[]={fSET_cursorXY(0,13),' ',Т,'-',р,е,г,у,л,я,т,о,р,' ',п,у,а,н,с,о,н,0,0};//Т-регулятор матриця
+struct tft_widget w_temp_punch={
+	.status = 0x01,
+	.window = &Screen_gwin,
+	.text_block = NULL,
+	.code_block = MENU_temp_punch,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+
+#define MENU_RELE_delay 10
+const static uint8_t MENU_releD[]={fSET_cursorXY(0,14),' ',Р,е,л,е,' ',з,а,т,р,и,м,к,и,' ',' ',' ',' ',' ',' ',0,0};//Т-регулятор матриця
+struct tft_widget w_releD={
+	.status = 0x01,
+	.window = &Screen_gwin,
+	.text_block = NULL,
+	.code_block = MENU_releD,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+
+
+#define MENU_COUNT 11
+const static uint8_t MENU_count[]={fSET_cursorXY(0,15),' ',Л,'i',ч,'i',л,ь,н,и,к,' ',п,р,о,д,у,к,ц,'i',ї,0,0};//Лічильник продукції
+struct tft_widget w_count={
+	.status = 0x01,
+	.window = &Screen_gwin,
+	.text_block = NULL,
+	.code_block = MENU_count,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+#define MENU_PNEVMO 12
+const static uint8_t MENU_pnevmo[]={fSET_cursorXY(0,16),' ',П,н,е,в,м,о,ц,и,л,'i',н,д,р,' ',' ',' ',' ',' ',' ',0,0};//Лічильник продукції
+struct tft_widget w_pnevmo={
+	.status = 0x01,
+	.window = &Screen_gwin,
+	.text_block = NULL,
+	.code_block = MENU_pnevmo,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+#define MENU_230Volt 13
+const static uint8_t MENU_230volt[]={fSET_cursorXY(0,17),' ',Н,а,п,р,у,г,а,' ','2','3','0',В,' ',' ',' ',' ',' ',' ',' ',0,0};//Лічильник продукції
+struct tft_widget w_230volt={
+	.status = 0x01,
+	.window = &Screen_gwin,
+	.text_block = NULL,
+	.code_block = MENU_230volt,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+
+#define MENU_SAVE_EXIT 14
+const static uint8_t MENU_save_exit[]={fSET_cursorXY(0,18),' ',З,б,е,р,е,г,т,и,' ',т,а,' ',в,и,й,т,и,' ',' ',0,0};//Зберегти та вийти
+struct tft_widget w_save_exit={
+	.status = 0x01,
+	.window = &Screen_gwin,
+	.text_block = NULL,
+	.code_block = MENU_save_exit,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+#define MENU_EXIT 15
+const static uint8_t MENU_exit[]={fSET_cursorXY(0,19),' ',В,и,й,т,и,' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',0,0};//Вийти
+struct tft_widget w_exit={
+	.status = 0x01,
+	.window = &Screen_gwin,
+	.text_block = NULL,
+	.code_block = MENU_exit,
+	.data = NULL,
+	.func = widget_txt_simple,
+};
+
+const static
+struct tft_widget* Screen_gwidgets[]={
+
+		&w_gmenu,
+		&w_strD200,
+		&w_strD275,
+		&w_strD300,
+		&w_strD370,
+		&w_strR220,
+		&w_str200x140,
+		&w_strManual,
+		&w_temp_matrix,
+		&w_temp_punch,
+		&w_releD,
+		&w_count,
+		&w_pnevmo,
+		&w_230volt,
+		&w_save_exit,
+		&w_exit,
+
+};
+
+uint8_t screen_gbuild[]={0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
+uint8_t screen_gdynamic[]={1};
+void Screen_gkeys(struct TFT_panel* tft);
+const struct tft_screen
+Screen_gm={
+
+	    .widgets = Screen_gwidgets,
+		.n_widgets = sizeof(Screen_gwidgets)/sizeof(Screen_gwidgets[0]),
+	    .build_widgets = screen_gbuild,			 // number
+	    .n_build_widgets = sizeof(screen_gbuild),
+	    .dynamic_widgets = screen_gdynamic, 		 // number widgets
+	    .n_dynamic_widgets =sizeof(screen_gdynamic),
+		.func_keys = Screen_gkeys,
+	    .next = &Screen1,
+	    .prev = NULL,
+
+};
+
+
+
+
+/*------------------------------- Widget MENU_1-------------------------------------*/
+struct tft_window Screen2_win={
+
+	.image_x0 = 0,
+	.image_y0 = 0,
+	.image_x1 = 0x13F,
+	.image_y1 = 0x1dF,
+	.cursor_x = 0,
+	.cursor_y = 0,
+	.color_font = color_WHITE,
+	.color_background = 0x0003,
+	.font = console18pt,
+
+};
 const static
 uint8_t MENU1_build[]={
 		fSET_font18pt,fSAVE_background,fSET_background(0x04,0x00),
@@ -635,9 +876,9 @@ struct tft_widget w_strD275_D300={
 	.func = widget_txt_simple,
 };
 
-#define MENU_D370 3
-const static uint8_t MENU_strD370[]={fSET_cursorXY(0,3),' ','D','3','7','0',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',0,0};// Plate D370
-struct tft_widget w_strD370={
+#define MENU_hD370 3
+const static uint8_t MENU_hstrD370[]={fSET_cursorXY(0,3),' ','D','3','7','0',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',0,0};// Plate D370
+struct tft_widget w_strhD370={
 	.status = 0x01,
 	.window = &Screen2_win,
 	.text_block = NULL,
@@ -646,8 +887,8 @@ struct tft_widget w_strD370={
 	.func = widget_txt_simple,
 };
 
-#define MENU_R220 4
-const static uint8_t MENU_strR220[]={fSET_cursorXY(0,4),' ','R','2','2','0','|','R','1','4','4',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',0,0};// Plate R220/R144
+#define MENU_hR220 4
+const static uint8_t MENU_hstrR220[]={fSET_cursorXY(0,4),' ','R','2','2','0','|','R','1','4','4',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',0,0};// Plate R220/R144
 struct tft_widget w_R220={
 	.status = 0x01,
 	.window = &Screen2_win,
@@ -657,7 +898,7 @@ struct tft_widget w_R220={
 	.func = widget_txt_simple,
 };
 
-#define MENU_MANUAL 5
+#define MENU_hMANUAL 5
 const static uint8_t MENU_strManual[]={fSET_cursorXY(0,5),' ','M','a','n','u','a','l',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',0,0};// Manual
 struct tft_widget w_Manual={
 	.status = 0x01,

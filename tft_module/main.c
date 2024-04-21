@@ -550,12 +550,29 @@ void Screen1_keys(struct TFT_panel* tft){
 	if(key&KEY_OK){
 
 		tft->screens = tft->screens->next;
-		TFT_CAN_module.window = &Screen2_win;
+		TFT_CAN_module.window = &Screen_gwin;
 		tft_fast_clear (TFT_CAN_module.window);
 		tft_build_widgets(&TFT_CAN_module);
 
 	};
 
+
+};
+
+
+void Screen_gkeys(struct TFT_panel* tft){
+
+	uint8_t key = read_keys_buffer(tft->keys_buffer);
+	if(!key)return;//0 - null/ key;
+
+	if(key&KEY_OK){
+
+		tft->screens = tft->screens->next;
+		TFT_CAN_module.window = &Screen1_win;
+		tft_fast_clear (TFT_CAN_module.window);
+		tft_build_widgets(&TFT_CAN_module);
+
+	};
 
 };
 
@@ -575,8 +592,6 @@ void Screen2_keys(struct TFT_panel* tft){
 
 
 };
-
-
 
 
 
