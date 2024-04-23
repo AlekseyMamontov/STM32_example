@@ -560,20 +560,36 @@ void Screen1_keys(struct TFT_panel* tft){
 };
 
 
-void Screen_gkeys(struct TFT_panel* tft){
+void Screen_gkeys(struct TFT_panel* panel){
 
-	uint8_t key = read_keys_buffer(tft->keys_buffer);
+	uint8_t key = read_keys_buffer(panel->keys_buffer);
 	if(!key)return;//0 - null/ key;
+	key &=0b111;
 
-	if(key&KEY_OK){
+	switch (key){
 
-		tft->screens = tft->screens->next;
+	case KEY_OK:
+		panel->screens = panel->screens->next;
 		TFT_CAN_module.window = &Screen1_win;
 		tft_fast_clear (TFT_CAN_module.window);
 		tft_build_widgets(&TFT_CAN_module);
+		break;
 
+	case KEY_UP:
+		if(Menu_gcursor.current_widget > 1){
+			Menu_gcursor.new_widget = Menu_gcursor.current_widget-1l;
+			w_gmenu.status = 1;};
+		break;
+
+	case KEY_DOWN:
+		if( Menu_gcursor.current_widget < (panel->screens->n_widgets -1)){
+			Menu_gcursor.new_widget = Menu_gcursor.current_widget+1l;
+			w_gmenu.status = 1;};
+		break;
+
+	default:
+		break;
 	};
-
 };
 
 void Screen2_keys(struct TFT_panel* tft){

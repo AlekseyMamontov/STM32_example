@@ -1117,10 +1117,46 @@ void dynamic_build_widgets(struct TFT_panel* panel){
 
 };
 
+/*----------------------- Menu widget -----------------*/
+
+struct Menu_block{
+
+	struct
+	TFT_panel*	 panel;
+	struct tft_window*     off_block;
+	struct tft_window*     on_block;
+	uint8_t 		current_widget;
+	uint8_t 	 	new_widget;
 
 
+};
+
+void widget_menu_type1(void* m){
+
+	if(!m) return;
+	struct Menu_block* menu = (struct Menu_block *)m;
+
+	if(menu->panel->screens->n_widgets < menu->current_widget ||
+	   menu->panel->screens->n_widgets	< menu->new_widget) return;
+
+	struct tft_widget* curr_widget = *(menu->panel->screens->widgets + (menu->current_widget));
+	struct tft_widget* new_widget = *(menu->panel->screens->widgets + (menu->new_widget));
+
+		if(curr_widget == NULL || new_widget == NULL);
+
+		if(menu->current_widget != menu->new_widget){
+
+			curr_widget->window = menu->off_block;
+			tft_print_widget(menu->panel,menu->current_widget);
+			menu->current_widget = menu->new_widget;
+
+		};
+
+	new_widget->window = menu->on_block;
+	tft_print_widget(menu->panel,menu->new_widget);
 
 
+};
 
 
 

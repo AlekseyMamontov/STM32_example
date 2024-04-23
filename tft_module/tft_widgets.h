@@ -585,16 +585,43 @@ struct tft_window Screen_gwin={
 	.font = console18pt,
 
 };
+struct tft_window Screen_gwin_activ={
 
+	.image_x0 = 0,
+	.image_y0 = 0,
+	.image_x1 = 0x13F,
+	.image_y1 = 0x1dF,
+	.cursor_x = 0,
+	.cursor_y = 0,
+	.color_font = color_WHITE,
+	.color_background = color_BLUE,
+	.font = console18pt,
+
+};
 /*-------------------------- Widget General MENU ----------------------------------*/
 
 const static
+
 uint8_t MENU_general[]={
+
 		fSET_font18pt,fSAVE_background,fSET_background(0x04,0x00),
-		fSET_cursorXY(0,0) ,' ',П,р,о,г,р,а,м,а,' ',в,е,р,с,т,а,т,а,' ',
+		fSET_cursorXY(0,0) ,' ',П,р,о,г,р,а,м,а,' ',в,е,р,с,т,а,т,а,' ',' ',
 		fSET_cursorXY(0,10),' ',Н,а,л,а,ш,т,у,в,а,н,н,я,' ',' ',' ',' ',' ',' ',' ',
 		fLOAD_background,
-		0,0,0};
+		0,0,0
+};
+
+struct Menu_block Menu_gcursor={
+
+		.panel =     &TFT_CAN_module,
+		.off_block = &Screen_gwin,
+		.on_block =  &Screen_gwin_activ,
+		.current_widget = 1,
+		.new_widget = 1,
+
+};
+
+
 
 #define INFO_MENU 0
 struct tft_widget
@@ -603,9 +630,14 @@ w_gmenu={
 	.window = &Screen_gwin,
 	.text_block = NULL,
 	.code_block = MENU_general,
-	.data = NULL,
-	.func = NULL,
+	.data = &Menu_gcursor,
+	.func = widget_menu_type1,
 };
+
+
+
+
+
 
 // Activated program menu
 
@@ -794,7 +826,7 @@ struct tft_widget* Screen_gwidgets[]={
 };
 
 uint8_t screen_gbuild[]={0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
-uint8_t screen_gdynamic[]={1};
+uint8_t screen_gdynamic[]={0};
 void Screen_gkeys(struct TFT_panel* tft);
 const struct tft_screen
 Screen_gm={

@@ -76,7 +76,7 @@ struct Ram_to_Flash_block{
 };
 
 
-#define THERMO_ON_OFF     0x01
+#define THERMO_ON_OFF   0x01
 #define THERMO_HOT_COOL 0x8000
 #define THERMO_DISABLED 0x4000 // 1-disabled
 
