@@ -125,6 +125,8 @@ struct Data_can_msg{
 
 
 
+
+
 void init_controller_STM32F072(void);
 uint8_t CAN_transmit (CAN_TxMailBox_TypeDef *tx);
 void Processing_SDO_Object(CAN_FIFOMailBox_TypeDef*);

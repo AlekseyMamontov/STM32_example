@@ -124,8 +124,8 @@ win_matrix_temp={
 	.font = number32pt,
 };
 #define MATRIX_TEMPERATURE 3
-uint8_t matrix_temp[]={fSET_cursorXY(0,0),0x20,0x31,0x30,0,0};
-uint8_t matrix_temp_old[]={0x20,0x31,0x30,0,0};
+uint8_t matrix_temp[]={fSET_cursorXY(0,0),0x20,0x20,0x30,0,0};
+uint8_t matrix_temp_old[]={0x20,0x20,0x30,0,0};
 struct
 w_data_to_char matrix_data={
 	.data = 0,
@@ -212,8 +212,8 @@ Win_punch_temp={
 	.font = number32pt,
 };
 #define PUNCH_TEMPERATURE 7
-uint8_t punch_temp[]={fSET_cursorXY(0,0),0x20,0x31,0x30,0,0};
-uint8_t punch_temp_old[]={0x20,0x31,0x30,0,0};
+uint8_t punch_temp[]={fSET_cursorXY(0,0),0x20,0x20,0x30,0,0};
+uint8_t punch_temp_old[]={0x20,0x20,0x30,0,0};
 struct w_data_to_char
 punch_data={
 	.status = 0,
@@ -846,8 +846,9 @@ Screen_gm={
 
 
 
-/*------------------------------- Widget MENU_1-------------------------------------*/
-struct tft_window Screen2_win={
+/*-------------------------------- Widget configure MATRIX -------------------------------------*/
+
+struct tft_window Screen_Config_Matrix={
 
 	.image_x0 = 0,
 	.image_y0 = 0,
@@ -860,276 +861,10 @@ struct tft_window Screen2_win={
 	.font = console18pt,
 
 };
-const static
-uint8_t MENU1_build[]={
-		fSET_font18pt,fSAVE_background,fSET_background(0x04,0x00),
 
-		fSET_cursorXY(0,0) ,' ','P','r','o','g','r','a','m','s',' ','P','r','e','s','s',' ',' ',' ',' ',' ',
-		fSET_cursorXY(0,6) ,' ','R','e','l','a','y',' ','D','e','l','a','y',' ',' ',' ',' ',' ',' ',' ',' ',
-		fSET_cursorXY(0,9),'o','n','_','R','e','l','a','y',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',
-		fSET_cursorXY(0,12),'o','f','f','_','R','e','l','a','y',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',
-		fSET_cursorXY(0,15),' ','C','o','u','n','t','e','r',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',
-		fLOAD_background,
-		0,0,0};
+/*-------------------------------- Widget configure PUNCH -------------------------------------*/
 
-#define INFO_MENU 0
-struct tft_widget
-w_menu_build={
-	.status = 0x01,
-	.window = &Screen2_win,
-	.text_block = NULL,
-	.code_block = MENU1_build,
-	.data = NULL,
-	.func = NULL,
-};
-
-
-// Activated program menu
-
-#define MENU_120x160 1
-const static uint8_t MENU_str120x160[]={fSET_cursorXY(0,1),' ','1','2','0','x','1','6','0','|','2','0','0','x','1','4','0',' ',' ',' ',' ',0,0};// Plate 120x160/200x140;
-struct tft_widget w_120x160={
-	.status = 0x01,
-	.window = &Screen2_win,
-	.text_block = NULL,
-	.code_block = MENU_str120x160,
-	.data = NULL,
-	.func = widget_txt_simple,
-};
-
-#define MENU_D275_D300 2
-const static uint8_t MENU_strD275_D300[]={fSET_cursorXY(0,2),' ','D','2','7','5','|','D','3','0','0',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',0,0};// Plate D300 / D275
-struct tft_widget w_strD275_D300={
-	.status = 0x01,
-	.window = &Screen2_win,
-	.text_block = NULL,
-	.code_block = MENU_strD275_D300,
-	.data = NULL,
-	.func = widget_txt_simple,
-};
-
-#define MENU_hD370 3
-const static uint8_t MENU_hstrD370[]={fSET_cursorXY(0,3),' ','D','3','7','0',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',0,0};// Plate D370
-struct tft_widget w_strhD370={
-	.status = 0x01,
-	.window = &Screen2_win,
-	.text_block = NULL,
-	.code_block = MENU_strD370,
-	.data = NULL,
-	.func = widget_txt_simple,
-};
-
-#define MENU_hR220 4
-const static uint8_t MENU_hstrR220[]={fSET_cursorXY(0,4),' ','R','2','2','0','|','R','1','4','4',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',0,0};// Plate R220/R144
-struct tft_widget w_R220={
-	.status = 0x01,
-	.window = &Screen2_win,
-	.text_block = NULL,
-	.code_block = MENU_strR220,
-	.data = NULL,
-	.func = widget_txt_simple,
-};
-
-#define MENU_hMANUAL 5
-const static uint8_t MENU_strManual[]={fSET_cursorXY(0,5),' ','M','a','n','u','a','l',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',0,0};// Manual
-struct tft_widget w_Manual={
-	.status = 0x01,
-	.window = &Screen2_win,
-	.text_block = NULL,
-	.code_block = MENU_strManual,
-	.data = NULL,
-	.func = widget_txt_simple,
-};
-
-// end menu program --------------------
-
-// Relay Delay configuration
-
-#define MENU_RELE_time 6
-const static uint8_t MENU_Rele_txt_time[]={fSET_cursorXY (0,7),'T','i','m','e',' ','d','e','l','a','y',':',' ',' ',' ',' ',' ',' ','m','s',' ',0,0};
-struct tft_widget w_Rele_time={
-	.status = 0x01,
-	.window = &Screen2_win,
-	.text_block = NULL,
-	.code_block =  MENU_Rele_txt_time,
-	.data = NULL,
-	.func = widget_txt_simple,
-};
-#define MENU_RELE_id 7
-const static uint8_t MENU_Rele_txt_id[]={fSET_cursorXY(0,8),'I','D',':',' ',' ',' ',' ',' ',' ',0,0};
-struct tft_widget w_Rele_id={
-	.status = 0x01,
-	.window = &Screen2_win,
-	.text_block = NULL,
-	.code_block = MENU_Rele_txt_id,
-	.data = NULL,
-	.func = widget_txt_simple,
-};
-#define MENU_RELE_mask 8
-const static uint8_t MENU_Rele_txt_mask[]={fSET_cursorXY(9,8),'M','A','S','K',':',' ',' ',' ',' ',' ',' ',0,0};
-struct tft_widget w_Rele_mask={
-	.status = 0x01,
-	.window = &Screen2_win,
-	.text_block = NULL,
-	.code_block = MENU_Rele_txt_mask,
-	.data = NULL,
-	.func = widget_txt_simple,
-};
-
-// ON_Rele_msg
-
-#define MENU_RELE_ON_id 9
-const static uint8_t MENU_Rele_txt_id_on[]={fSET_cursorXY(0,10),'I','D',':',' ',' ',' ',' ',' ',' ',' ',' ',0,0};
-struct tft_widget w_Rele_on_id={
-	.status = 0x01,
-	.window = &Screen2_win,
-	.text_block = NULL,
-	.code_block =  MENU_Rele_txt_id_on,
-	.data = NULL,
-	.func = widget_txt_simple,
-};
-
-#define MENU_RELE_ON_dlc 10
-const static uint8_t MENU_Rele_txt_dlc_on[]={fSET_cursorXY(15,10),'D','L','C',':',' ',' ',0,0};
-struct tft_widget w_Rele_on_dlc={
-	.status = 0x01,
-	.window = &Screen2_win,
-	.text_block = NULL,
-	.code_block = MENU_Rele_txt_dlc_on,
-	.data = NULL,
-	.func = widget_txt_simple,
-};
-
-#define MENU_RELE_ON_msg 11
-const static uint8_t MENU_Rele_txt_msg_on[]={fSET_cursorXY(0,11),'M','S','G',':','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0',0,0};
-struct tft_widget w_Rele_on_msg={
-	.status = 0x01,
-	.window = &Screen2_win,
-	.text_block = NULL,
-	.code_block = MENU_Rele_txt_msg_on,
-	.data = NULL,
-	.func = widget_txt_simple,
-};
-
-// OFF_Rele_msg
-
-#define MENU_RELE_OFF_id 12
-const static uint8_t MENU_Rele_txt_id_off[]={fSET_cursorXY(0,13),'I','D',':',' ',' ',' ',' ',' ',' ',' ',' ',0,0};
-struct tft_widget w_Rele_off_id={
-	.status = 0x01,
-	.window = &Screen2_win,
-	.text_block = NULL,
-	.code_block =  MENU_Rele_txt_id_off,
-	.data = NULL,
-	.func = widget_txt_simple,
-};
-#define MENU_RELE_OFF_dlc 13
-const static uint8_t MENU_Rele_txt_dlc_off[]={fSET_cursorXY(15,13),'D','L','C',':',' ',' ',0,0};
-struct tft_widget w_Rele_off_dlc={
-	.status = 0x01,
-	.window = &Screen2_win,
-	.text_block = NULL,
-	.code_block = MENU_Rele_txt_dlc_off,
-	.data = NULL,
-	.func = widget_txt_simple,
-};
-#define MENU_RELE_OFF_msg 14
-const static uint8_t MENU_Rele_txt_msg_off[]={fSET_cursorXY(0,14),'M','S','G',':','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0',0,0};
-struct tft_widget w_Rele_off_msg={
-	.status = 0x01,
-	.window = &Screen2_win,
-	.text_block = NULL,
-	.code_block = MENU_Rele_txt_msg_off,
-	.data = NULL,
-	.func = widget_txt_simple,
-};
-
-// COUNTER ___
-#define MENU_COUNTER_front 15
-const static uint8_t MENU_Counter_txt_front[]={fSET_cursorXY (0,16),'F','r','o','n','t',' ','p','i','n',':',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',0,0};
-struct tft_widget w_Counter_front={
-	.status = 0x01,
-	.window = &Screen2_win,
-	.text_block = NULL,
-	.code_block =  MENU_Counter_txt_front,
-	.data = NULL,
-	.func = widget_txt_simple,
-};
-#define MENU_COUNTER_id 16
-const static uint8_t MENU_Counter_txt_id[]={fSET_cursorXY(0,17),'I','D',':',' ',' ',' ',' ',' ',' ',0,0};
-struct tft_widget w_Counter_id={
-	.status = 0x01,
-	.window = &Screen2_win,
-	.text_block = NULL,
-	.code_block = MENU_Counter_txt_id,
-	.data = NULL,
-	.func = widget_txt_simple,
-};
-#define MENU_COUNTER_mask 17
-const static uint8_t MENU_Counter_txt_mask[]={fSET_cursorXY(9,17),'M','A','S','K',':',' ',' ',' ',' ',' ',' ',0,0};
-struct tft_widget w_Counter_mask={
-	.status = 0x01,
-	.window = &Screen2_win,
-	.text_block = NULL,
-	.code_block = MENU_Counter_txt_mask,
-	.data = NULL,
-	.func = widget_txt_simple,
-};
-
-
-const static
-struct tft_widget* Screen_2_widgets[]={
-
-		&w_menu_build,
-		&w_120x160,
-		&w_strD275_D300,
-		&w_strD370,
-		&w_R220,
-		&w_Manual ,
-
-		&w_Rele_time,
-		&w_Rele_id,
-		&w_Rele_mask,
-
-		&w_Rele_on_id,
-		&w_Rele_on_dlc,
-		&w_Rele_on_msg,
-
-		&w_Rele_off_id,
-		&w_Rele_off_dlc,
-		&w_Rele_off_msg,
-
-		&w_Counter_front,
-		&w_Counter_id,
-		&w_Counter_mask
-
-
-
-
-};
-uint8_t screen2_build[]={0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17};
-uint8_t screen2_dynamic[]={1};
-void Screen2_keys(struct TFT_panel* tft);
-const struct tft_screen
-Screen2={
-
-	    .widgets = Screen_2_widgets,
-		.n_widgets = sizeof(Screen_2_widgets)/sizeof(Screen_2_widgets[0]),
-	    .build_widgets = screen2_build,			 // number
-	    .n_build_widgets = sizeof(screen2_build),
-	    .dynamic_widgets = screen2_dynamic, 		 // number widgets
-	    .n_dynamic_widgets =sizeof(screen2_dynamic),
-		.func_keys = Screen2_keys,
-	    .next = &Screen1,
-	    .prev = NULL,
-
-};
-
-
-////////////////////////////////////////// SCREEN 3 /////////////////////////////////////////////
-
-
-struct tft_window Screen3_win={
+struct tft_window Screen_Config_Punch={
 
 	.image_x0 = 0,
 	.image_y0 = 0,
@@ -1138,61 +873,72 @@ struct tft_window Screen3_win={
 	.cursor_x = 0,
 	.cursor_y = 0,
 	.color_font = color_WHITE,
-	.color_background = 0x0007,
+	.color_background = 0x0003,
 	.font = console18pt,
 
 };
-const static
-uint8_t MENU2_build[]={
-		fSET_font18pt,fSAVE_background,fSET_background(0x04,0x00),
-		fSET_cursorXY(0,8) ,' ','T','e','m','p','e','r','a','t','u','r','e',' ','M','a','t','r','i','x',' ',
-		fSET_cursorXY(0,11),' ','T','e','m','p','e','r','a','t','u','r','e',' ','P','u','n','c','h',' ',' ', // Manual
-		fLOAD_background,
-		0,0,0};
 
-#define MENU_STR5 6
-const static uint8_t MENU_str5[]={fSET_cursorXY(0,10),'O','N',':',' ',' ',' ',' ','O','F','F',':',' ',' ',' ',' ','C',':',' ',' ',' ',0,0};
-struct tft_widget w_str5={
-	.status = 0x01,
-	.window = &Screen2_win,
-	.text_block = NULL,
-	.code_block = MENU_str5,
-	.data = NULL,
-	.func = widget_txt_simple,
+/*-------------------------------- Widget configure Rele delay -------------------------------------*/
+
+struct tft_window Screen_Config_Rdelay={
+
+	.image_x0 = 0,
+	.image_y0 = 0,
+	.image_x1 = 0x13F,
+	.image_y1 = 0x1dF,
+	.cursor_x = 0,
+	.cursor_y = 0,
+	.color_font = color_WHITE,
+	.color_background = 0x0003,
+	.font = console18pt,
+
 };
 
-#define MENU_STR6 7
-const static uint8_t MENU_str6[]={fSET_cursorXY(0,9),'I','D',':',' ',' ',' ',' ',' ',' ','M','A','S','K',':',' ',' ',' ',' ',' ',' ',0,0};
-struct tft_widget w_str6={
-	.status = 0x01,
-	.window = &Screen2_win,
-	.text_block = NULL,
-	.code_block = MENU_str6,
-	.data = NULL,
-	.func = widget_txt_simple,
+/*-------------------------------- Widget configure Counter -------------------------------------*/
+
+struct tft_window Screen_Config_Counter={
+
+	.image_x0 = 0,
+	.image_y0 = 0,
+	.image_x1 = 0x13F,
+	.image_y1 = 0x1dF,
+	.cursor_x = 0,
+	.cursor_y = 0,
+	.color_font = color_WHITE,
+	.color_background = 0x0003,
+	.font = console18pt,
+
+};
+/*-------------------------------- Widget configure Pnevmo -------------------------------------*/
+
+struct tft_window Screen_Config_Pnevmo={
+
+	.image_x0 = 0,
+	.image_y0 = 0,
+	.image_x1 = 0x13F,
+	.image_y1 = 0x1dF,
+	.cursor_x = 0,
+	.cursor_y = 0,
+	.color_font = color_WHITE,
+	.color_background = 0x0003,
+	.font = console18pt,
+
 };
 
-#define MENU_STR7 8
-const static uint8_t MENU_str7[]={fSET_cursorXY(0,11),'O','N',':',' ',' ',' ',' ','O','F','F',':',' ',' ',' ',' ','C',':',' ',' ',' ',0,0};
-struct tft_widget w_str7={
-	.status = 0x01,
-	.window = &Screen2_win,
-	.text_block = NULL,
-	.code_block = MENU_str7,
-	.data = NULL,
-	.func = widget_txt_simple,
-};
+/*-------------------------------- Widget configure 230V -------------------------------------*/
 
+struct tft_window Screen_Config_230V={
 
-#define MENU_STR8 9
-const static uint8_t MENU_str8[]={fSET_cursorXY(0,12),'I','D',':',' ',' ',' ',' ',' ',' ','M','A','S','K',':',' ',' ',' ',' ',' ',' ',0,0};
-struct tft_widget w_str8={
-	.status = 0x01,
-	.window = &Screen2_win,
-	.text_block = NULL,
-	.code_block = MENU_str8,
-	.data = NULL,
-	.func = widget_txt_simple,
+	.image_x0 = 0,
+	.image_y0 = 0,
+	.image_x1 = 0x13F,
+	.image_y1 = 0x1dF,
+	.cursor_x = 0,
+	.cursor_y = 0,
+	.color_font = color_WHITE,
+	.color_background = 0x0003,
+	.font = console18pt,
+
 };
 
 #endif /* INC_TFT_WIDGETS_H_ */

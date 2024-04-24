@@ -376,9 +376,9 @@ int main(void){
 	  	  };
 
 	  Rele_delay_processing(&push_pnevmocylindr);
+	  TFT_CAN_module.screens->func_keys(&TFT_CAN_module);
 	  Thermostat_processing(&matrix_thermostat);
 	  Thermostat_processing(&punch_thermostat);
-	  TFT_CAN_module.screens->func_keys(&TFT_CAN_module);
 	  dynamic_build_widgets(&TFT_CAN_module);
 
   }
@@ -559,29 +559,128 @@ void Screen1_keys(struct TFT_panel* tft){
 
 };
 
+// Test code programm MENU
+
+#define INIT_TEMP 1
 
 void Screen_gkeys(struct TFT_panel* panel){
 
 	uint8_t key = read_keys_buffer(panel->keys_buffer);
+	uint8_t stat = 0;
 	if(!key)return;//0 - null/ key;
 	key &=0b111;
 
 	switch (key){
 
 	case KEY_OK:
-		panel->screens = panel->screens->next;
-		TFT_CAN_module.window = &Screen1_win;
-		tft_fast_clear (TFT_CAN_module.window);
-		tft_build_widgets(&TFT_CAN_module);
+
+  		panel->screens = panel->screens->next;
+  		TFT_CAN_module.window = &Screen1_win;
+
+		  switch (Menu_gcursor.current_widget){
+
+		  	  case MENU_D200 :
+
+		  		*matrix_thermostat.on_temp = 200;
+		  		*matrix_thermostat.off_temp = 205;
+		  		*punch_thermostat.on_temp = 200;
+		  		*punch_thermostat.off_temp = 205;
+		  		*push_pnevmocylindr.time_100ms = 16;
+		  		stat |= INIT_TEMP;
+		  		break;
+
+		  	  case MENU_D275 :
+
+			  	*matrix_thermostat.on_temp = 200;
+			  	*matrix_thermostat.off_temp = 205;
+			  	*punch_thermostat.on_temp = 200;
+			  	*punch_thermostat.off_temp = 205;
+			  	*push_pnevmocylindr.time_100ms = 20;
+			  	stat |= INIT_TEMP;
+			  break;
+
+		  	  case MENU_D300 :
+
+				*matrix_thermostat.on_temp = 200;
+				*matrix_thermostat.off_temp = 205;
+				*punch_thermostat.on_temp = 200;
+				*punch_thermostat.off_temp = 205;
+				*push_pnevmocylindr.time_100ms = 20;
+				stat |= INIT_TEMP;
+
+		  		  break;
+
+		  	  case MENU_D370 :
+				  *matrix_thermostat.on_temp = 200;
+				  *matrix_thermostat.off_temp = 205;
+				  *punch_thermostat.on_temp = 200;
+				  *punch_thermostat.off_temp = 205;
+				  *push_pnevmocylindr.time_100ms = 22;
+				  stat |= INIT_TEMP;
+		  		  break;
+
+		  	  case MENU_R220 :
+
+				  *matrix_thermostat.on_temp = 200;
+				  *matrix_thermostat.off_temp = 205;
+				  *punch_thermostat.on_temp = 200;
+				  *punch_thermostat.off_temp = 205;
+				  *push_pnevmocylindr.time_100ms = 10;
+				  stat |= INIT_TEMP;
+
+		  		  break;
+		  	  case MENU_L200x140 :
+
+		  		  *matrix_thermostat.on_temp = 190;
+				  *matrix_thermostat.off_temp = 200;
+				  *punch_thermostat.on_temp = 190;
+				  *punch_thermostat.off_temp = 200;
+				  *push_pnevmocylindr.time_100ms = 8;
+				  stat |= INIT_TEMP;
+
+				  break;
+		  	  case MENU_MANUAL:
+		  		  break;
+		  	  case MENU_TEMP_Matrix :
+		  		  break;
+		  	  case MENU_TEMP_punch :
+		  		  break;
+		  	  case MENU_RELE_delay :
+		  		  break;
+		  	  case MENU_COUNT:
+		  		  break;
+		  	  case MENU_PNEVMO :
+		  		  break;
+		  	  case MENU_230Volt :
+		  		  break;
+		  	  case MENU_SAVE_EXIT:
+		  	 //break;
+		  	 //case MENU_EXIT:break;
+		  	 default:
+		  		 break;
+		  };
+
+		  if( stat&INIT_TEMP){
+			  thermostat_init(&matrix_thermostat);
+		  	  thermostat_init(&punch_thermostat);
+		  	  *msg_counter.data_msg = 0;
+		  	  tft_convert_data_to_char(counter_data.new_char,counter_data.data,counter_data.len);}
+
+			tft_fast_clear (TFT_CAN_module.window);
+			tft_build_widgets(&TFT_CAN_module);
+
 		break;
 
 	case KEY_UP:
+
 		if(Menu_gcursor.current_widget > 1){
 			Menu_gcursor.new_widget = Menu_gcursor.current_widget-1l;
 			w_gmenu.status = 1;};
+
 		break;
 
 	case KEY_DOWN:
+
 		if( Menu_gcursor.current_widget < (panel->screens->n_widgets -1)){
 			Menu_gcursor.new_widget = Menu_gcursor.current_widget+1l;
 			w_gmenu.status = 1;};
