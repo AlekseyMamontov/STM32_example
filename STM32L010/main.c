@@ -62,7 +62,7 @@ void cmsis_init_stm32L010(void){
 	RCC->APB1ENR |= RCC_APB1ENR_PWREN;	  // управление питанием
 
 
-    // Установка тактовой частоты SysTick на HSI16/2 = 8 МГц
+    // Установка тактовой частоты SysTick на HSI16/2 = 8 МГц. 1ms
 
     SysTick->LOAD  = (uint32_t)(8000U - 1UL);                         /* set reload register */
      /* set Priority for Systick Interrupt */
@@ -82,6 +82,16 @@ void cmsis_init_stm32L010(void){
 
 	RCC->IOPENR |= RCC_IOPENR_GPIOAEN;// включить порт GPIOA
 	//---------------  	151413121110 9 8 7 6 5 4 3 2 1 0
+
+	/*
+	GPIO port mode register (GPIOx_MODER)
+	(x =A to E and H)
+	Address offset:0x00
+	Reset value: 0xEBFF FCFF for port A // SWD -enabled
+	Reset value: 0xFFFF FFFF for the other ports
+	 * */
+
+
 	GPIOA->MODER   &= 0b11111111110000110000000011111111;
 	GPIOA->MODER   |= 0b00000000001010000001010100000000; // General purpose output mode
 
