@@ -72,6 +72,11 @@ void CAN_Config(void) {
     // Включение тактирования для CAN
     RCC->APB1ENR1 |= RCC_APB1ENR1_FDCANEN;
 
+    RCC->CCIPR &= ~RCC_CCIPR_FDCANSEL;
+    // Установить PLL "Q" как источник тактирования для FDCAN
+    RCC->CCIPR |= (0x1 << RCC_CCIPR_FDCANSEL_Pos); // Установить PLL "Q"
+
+
     // Настройка CAN
     FDCAN_GlobalTypeDef *CAN = FDCAN1;
 
@@ -98,6 +103,10 @@ void CAN_Config(void) {
 				   (11 << FDCAN_NBTP_NTSEG2_Pos);
 
    //CAN->NBTP = 0x08617; //500
+
+
+   // FDCAN1->CCCR &= ~(FDCAN_CCCR_FDOE);
+
 
     // Настройка режима работы (нормальный режим)
     CAN->CCCR &= ~FDCAN_CCCR_INIT; // Выход из режима инициализации
