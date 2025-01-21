@@ -94,6 +94,7 @@ void GPIO_INIT(void){
 // Настройка CAN
 
 void CAN_Config(void) {
+
     // Включение тактирования для CAN
     RCC->APB1ENR1 |= RCC_APB1ENR1_FDCANEN;
 
@@ -116,7 +117,7 @@ void CAN_Config(void) {
     Baudrate	NSJW	NBRP	NTSEG1	NTSEG2	FDCAN_NBTP (uint32)
     125000		1		640		543		95		0x21F5F
     250000		1		320		271		47		0x10F2F
-    500000		1		160		135		23		0x08617
+    500000		2		160		67		12		0x08617
     800000		1		100		84		14		0x0540E
     1000000		1		80		67		11		0x0430B
 */
@@ -132,11 +133,47 @@ void CAN_Config(void) {
 
    // FDCAN1->CCCR &= ~(FDCAN_CCCR_FDOE);
 
+    // Включить прерывания в FDCAN FIFO
+
+    CAN->IE |= 0b011 ;// FDCAN_IE_RF0NE_| RF0FE
+    CAN->ILS |= 1;  // RXFIFO0: RX FIFO bit grouping the following interruption
+    CAN->ILE |= 1;  // Enable IT0
+
 
     // Настройка режима работы (нормальный режим)
     CAN->CCCR &= ~FDCAN_CCCR_INIT; // Выход из режима инициализации
     while (CAN->CCCR & FDCAN_CCCR_INIT);
+
+    NVIC_EnableIRQ(FDCAN1_IT0_IRQn);
+ // NVIC_EnableIRQ(FDCAN1_IT1_IRQn);
+
 }
+
+
+void FDCAN1_IT0_IRQHandler(void){
+
+	uint32_t index_rxfifo = 0, rxHeader0,rxHeader1,id,dlc;
+	uint32_t* RxBuffer;
+
+    // Проверить, было ли прерывание из FIFO 0
+	if (FDCAN1->IR & 1 || FDCAN1->IR & 2) {
+
+		index_rxfifo = (FDCAN1->RXF0S & FDCAN_RXF0S_F0GI) >> FDCAN_RXF0S_F0GI_Pos;
+		RxBuffer = (uint32_t *)(RAMBaseFDCAN1 + RamFIFO0RX + (index_rxfifo * 18 *4));
+		rxHeader0 = *RxBuffer ++;
+		rxHeader1 = *RxBuffer ++;
+		id = (rxHeader0&XTDbit)? rxHeader0 & 0x1FFFFFFF : (rxHeader0 & 0x1FFFFFFF)>>18;
+		dlc = (rxHeader1 >> 16) & 0xF;
+
+
+
+		FDCAN1->RXF0A = index_rxfifo;
+
+		FDCAN1->IR |= (1 << FDCAN_IR_RF0N_Pos); // Сбросить флаг нового сообщения
+
+    }
+}
+
 
 
 
