@@ -13,11 +13,12 @@ int main(void) {
     CAN_Config();
 
     // Сообщение для отправки
-    uint8_t data[8] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
-    uint32_t data32[18]={0};
-    uint32_t id = 0x123;  // Стандартный идентификатор CAN
-
-
+    uint8_t   data[16] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
+    					  0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00};
+    uint32_t  data32[18]={0};
+    uint32_t  id = 0x123;  // Стандартный идентификатор CAN
+    uint32_t* RAM = (uint32_t*)RAMBaseFDCAN1;//RAMBaseFDCAN1;
+    uint32_t  counterRAM = 0;
 
     while (1) {
 
@@ -33,9 +34,9 @@ int main(void) {
         //uint8_t SendCANframe(uint32_t* msg)
 
 
-
-
-        CAN_SendMessage(id, data, 8);
+        CAN_SendMessage(id, (uint8_t*)RAM + counterRAM*4, 4);
+        counterRAM++;
+        if(counterRAM >= 28) counterRAM = 0;
 
     }
 
@@ -140,11 +141,114 @@ void CAN_Config(void) {
     CAN->ILE |= 1;  // Enable IT0
 
 
+    /*
+     FDCAN global filter configuration register (FDCAN_RXGFC)
+     *
+    Bits 31:28: Reserved, must be kept at reset value.
+Bits 27:24: LSE[3:0]: Number of extended filter elements in the list
+  - 0: No extended message ID filter
+  - 1 to 8: Number of extended message ID filter elements
+  - > 8: Values greater than 8 are interpreted as 8.
+  - This bitfield is write-protected (P), which means that write access is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
+
+Bits 23:21: Reserved, must be kept at reset value.
+
+Bits 20:16: LSS[4:0]: Number of standard filter elements in the list
+  - 0: No standard message ID filter
+  - 1 to 28: Number of standard message ID filter elements
+  - > 28: Values greater than 28 are interpreted as 28.
+  - This bitfield is write-protected (P), which means that write access by the bits is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
+
+Bits 15:10: Reserved, must be kept at reset value.
+
+Bit 9: F0OM: FIFO 0 operation mode (overwrite or blocking)
+  - This bit is write-protected (P), which means that write access is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
+
+Bit 8: F1OM: FIFO 1 operation mode (overwrite or blocking)
+  - This bit is write-protected (P), which means that write access is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
+
+Bits 7:6: Reserved, must be kept at reset value.
+
+Bits 5:4: ANFS[1:0]: Accept Non-matching frames standard
+  - Defines how received messages with 11-bit IDs that do not match any element of the filter list are treated.
+  - 00: Accept in Rx FIFO 0
+  - 01: Accept in Rx FIFO 1
+  - 10: Reject
+  - 11: Reject
+  - This bitfield is write-protected (P), which means write access is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
+
+Bits 3:2: ANFE[1:0]: Accept non-matching frames extended
+  - Defines how received messages with 29-bit IDs that do not match any element of the filter list are treated.
+  - 00: Accept in Rx FIFO 0
+  - 01: Accept in Rx FIFO 1
+  - 10: Reject
+  - 11: Reject
+  - This bitfield is write-protected (P), which means that write access is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
+
+Bit 1: RRFS: Reject remote frames standard
+  - 0: Filter remote frames with 11-bit standard IDs
+  - 1: Reject all remote frames with 11-bit standard IDs
+  - This bit is write-protected (P), which means that write access is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
+
+Bit 0: RRFE: Reject remote frames extended
+  - 0: Filter remote frames with 29-bit standard IDs
+  - 1: Reject all remote frames with 29-bit standard IDs
+  - This bit is write-protected (P), which means that write access is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
+
+     *
+     *
+     * */
+
+    // 2 standart filters
+    FDCAN1->RXGFC = (2 << FDCAN_RXGFC_LSS_Pos) | (0 << FDCAN_RXGFC_LSE_Pos) |
+    		        // Отклонять все сообщения, которые не соответствуют элементам фильтра
+                    (2 << FDCAN_RXGFC_ANFS_Pos) | (2 << FDCAN_RXGFC_ANFE_Pos);
+
+       // Настраиваем фильтры на прием сообщений с идентификаторами 100 и 80
+       uint32_t filterConfig[2];
+
+     /*FDCAN standard message ID filter element
+      *
+ 	 	 Таблица 412. Описание полей элемента фильтра стандартного идентификатора
+		Поле	Описание
+			Bit 31:30	SFT[1:0] (Тип стандартного фильтра)
+				– 00: Фильтр диапазона от SFID1 до SFID2
+				– 01: Двойной фильтр идентификаторов для SFID1 или SFID2
+				– 10: Классический фильтр: SFID1 = фильтр, SFID2 = маска
+				– 11: Элемент фильтра отключен
+			Bit 29:27	SFEC[2:0] (Конфигурация стандартного элемента фильтра)
+		Все включенные элементы фильтра используются для фильтрации стандартных кадров.
+		Фильтрация прекращается при первом совпадении с включенным элементом фильтра или при достижении конца списка фильтров. Если SFEC[2:0] = 100, 101 или 110, совпадение устанавливает флаг прерывания IR.HPM и, если включено, генерируется прерывание. В этом случае регистр HPMS обновляется со статусом приоритетного совпадения.
+				– 000: Отключить элемент фильтра
+				– 001: Сохранить в Rx FIFO 0, если фильтр совпадает
+				– 010: Сохранить в Rx FIFO 1, если фильтр совпадает
+				– 011: Отклонить ID, если фильтр совпадает
+				– 100: Установить приоритет, если фильтр совпадает
+				– 101: Установить приоритет и сохранить в FIFO 0, если фильтр совпадает
+				– 110: Установить приоритет и сохранить в FIFO 1, если фильтр совпадает
+				– 111: Не используется
+			Bits 26:16	SFID1[10:0] (Первый ID элемента фильтра стандартного идентификатора)
+			Bits 10:0	SFID2[10:0] (Второй ID элемента фильтра стандартного идентификатора)
+ */
+
+
+
+       // Фильтр для сообщения с идентификатором 100 and 80
+       filterConfig[0] = (100 << 16) | (1 << 30)| 80 |(STDfilterRxFIFO0); // ID = 100, Standard ID, Store in FIFO0
+
+
+       // Записываем фильтры в Message RAM
+       uint32_t *filterRAM = (uint32_t *)RAMBaseFDCAN1; // Примерный адрес Message RAM, проверьте в вашей документации
+       filterRAM[0] = filterConfig[0];
+       filterRAM[1] = filterConfig[1];
+
+
+
     // Настройка режима работы (нормальный режим)
     CAN->CCCR &= ~FDCAN_CCCR_INIT; // Выход из режима инициализации
     while (CAN->CCCR & FDCAN_CCCR_INIT);
 
-    NVIC_EnableIRQ(FDCAN1_IT0_IRQn);
+ //   NVIC_EnableIRQ(FDCAN1_IT0_IRQn);
  // NVIC_EnableIRQ(FDCAN1_IT1_IRQn);
 
 }

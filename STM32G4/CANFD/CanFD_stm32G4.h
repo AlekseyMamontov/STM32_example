@@ -47,6 +47,12 @@ FDCAN_GlobalTypeDef *FDCAN = FDCAN1;
 #define DLC_msk_pos 16	  // 9 - 15: Classic CAN: received frame has 8 data bytes
 						  // 9 - 15: CAN FD: received frame has 12/16/20/24/32/48/64 data bytes
 
+#define STDfilterRxFIFO0 1 << 27
+#define STDfilterRxFIFO1 2 << 27
+
+
+
+
 /*
  *
 
