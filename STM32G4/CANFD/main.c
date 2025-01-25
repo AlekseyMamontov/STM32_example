@@ -3,7 +3,8 @@
 #include "CanFD_stm32G4.h"
 
 
-
+uint8_t test = 1, trigger = 0;
+uint32_t pause = 500;
 
 int main(void) {
     // Настройка системного тактирования
@@ -11,32 +12,62 @@ int main(void) {
     SystemClock_Config();
     GPIO_INIT();
     CAN_Config();
-
+    __enable_irq();
     // Сообщение для отправки
     uint8_t   data[16] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
     					  0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00};
     uint32_t  data32[18]={0};
-    uint32_t  id = 0x123;  // Стандартный идентификатор CAN
-    uint32_t* RAM = (uint32_t*)RAMBaseFDCAN1;//RAMBaseFDCAN1;
+    uint32_t  id = 0x222;  // Стандартный идентификатор CAN
+    uint32_t* RAM = (uint32_t*)data32;///RAMBaseFDCAN1;//RAMBaseFDCAN1;
     uint32_t  counterRAM = 0;
+    uint32_t getIndex;
 
     while (1) {
 
         // Включаем светодиод
-        GPIOA->BSRR = GPIO_BSRR_BS12; // Включаем светодиод
-        delay_ms(500); // Задержка 500 мс
+       // GPIOA->BSRR = GPIO_BSRR_BS12; // Включаем светодиод
+       // delay_ms(500); // Задержка 500 мс
 
         // Выключаем светодиод
-        GPIOA->BSRR = GPIO_BSRR_BR12; // Выключаем светодиод
-        delay_ms(500); // Задержка 500 мс
+        if(!pause){
+
+          GPIOA->BSRR = trigger? GPIO_BSRR_BS12:GPIO_BSRR_BR12;
+          trigger = trigger?0:1;
+          pause = 500;
+
+          };
+/*
+
+        if( FDCAN1->RXF0S & FDCAN_RXF0S_F0FL_Msk){
+
+            getIndex = (FDCAN1->RXF0S & FDCAN_RXF0S_F0GI_Msk) >> 8;
+        	test = 1;
+
+        	FDCAN1->RXF0A = getIndex;
+        }
+*/
 
 
-        //uint8_t SendCANframe(uint32_t* msg)
+
+        if(test){
 
 
-        CAN_SendMessage(id, (uint8_t*)RAM + counterRAM*4, 4);
-        counterRAM++;
-        if(counterRAM >= 28) counterRAM = 0;
+        	data32[0] = FDCAN1->IE;
+        	data32[1] = FDCAN1->ILE;
+        	CAN_SendMessage(id,data32, 8);//(uint8_t*)RAM + counterRAM*4
+
+
+         //counterRAM++;
+        //if(counterRAM >= 28) counterRAM = 0;
+        test = 0;
+        };
+
+
+
+
+
+
+
 
     }
 
@@ -51,6 +82,8 @@ int main(void) {
 
 
 
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
 void GPIO_INIT(void){
@@ -58,6 +91,21 @@ void GPIO_INIT(void){
 		// Включаем тактирование GPIOA
 
 		RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN | RCC_AHB2ENR_GPIOBEN;
+
+
+
+		//---------------  	151413121110 9 8 7 6 5 4 3 2 1 0
+	//	GPIOA->MODER   |= 0b00000000000000000101010101010101; // General purpose output mode
+	//	GPIOA->OSPEEDR |= 0b00000000000000001111111111111111; //0b11  high speed
+
+
+
+		//---------------  	151413121110 9 8 7 6 5 4 3 2 1 0
+	//	GPIOB->MODER   |= 0b00000000000000000101010101010101; // General purpose output mode
+    //	GPIOB->OSPEEDR |= 0b00000000000000001111111111111111; //0b11  high speed
+
+
+
 
 	    //LED////////////
 
@@ -86,6 +134,15 @@ void GPIO_INIT(void){
 	    GPIOA->OSPEEDR |= GPIO_OSPEEDR_OSPEED11;
 	    GPIOB->OSPEEDR |= GPIO_OSPEEDR_OSPEED9;
 
+
+	    // SPI2
+
+
+
+
+
+
+
 }
 
 
@@ -96,6 +153,10 @@ void GPIO_INIT(void){
 
 void CAN_Config(void) {
 
+	// Настройка CAN
+	FDCAN_GlobalTypeDef *CAN = FDCAN1;
+	uint32_t *filterRAM = (uint32_t *)RAMBaseFDCAN1;
+
     // Включение тактирования для CAN
     RCC->APB1ENR1 |= RCC_APB1ENR1_FDCANEN;
 
@@ -104,8 +165,6 @@ void CAN_Config(void) {
     RCC->CCIPR |= (0x1 << RCC_CCIPR_FDCANSEL_Pos); // Установить PLL "Q"
 
 
-    // Настройка CAN
-    FDCAN_GlobalTypeDef *CAN = FDCAN1;
 
     // Выключаем CAN перед настройкой
     CAN->CCCR |= FDCAN_CCCR_INIT;
@@ -124,140 +183,59 @@ void CAN_Config(void) {
 */
 
     // Set the nominal bit timing register
-    FDCAN1->NBTP = (1 << FDCAN_NBTP_NSJW_Pos) |
+    CAN->NBTP = (1 << FDCAN_NBTP_NSJW_Pos) |
     		       (1 << FDCAN_NBTP_NBRP_Pos) |
 				   (66 << FDCAN_NBTP_NTSEG1_Pos)|
 				   (11 << FDCAN_NBTP_NTSEG2_Pos);
 
-   //CAN->NBTP = 0x08617; //500
+    // Clear message RAM
+
+    for(uint8_t i=0;i< 212;i++){filterRAM[i] = 0;};
 
 
-   // FDCAN1->CCCR &= ~(FDCAN_CCCR_FDOE);
+      /*  FDCAN global filter configuration register (FDCAN_RXGFC)
+      	  Address offset: 0x0080
+     	  Reset value: 0x0000 0000
+     */
 
-    // Включить прерывания в FDCAN FIFO
+       CAN->RXGFC = STDfilter_n(2)|EXTfilter_n(0)|ANFS_Reject_rx|ANFE_Reject_rx;
 
-    CAN->IE |= 0b011 ;// FDCAN_IE_RF0NE_| RF0FE
-    CAN->ILS |= 1;  // RXFIFO0: RX FIFO bit grouping the following interruption
-    CAN->ILE |= 1;  // Enable IT0
+       // ID filters 100 and 80
 
-
-    /*
-     FDCAN global filter configuration register (FDCAN_RXGFC)
-     *
-    Bits 31:28: Reserved, must be kept at reset value.
-Bits 27:24: LSE[3:0]: Number of extended filter elements in the list
-  - 0: No extended message ID filter
-  - 1 to 8: Number of extended message ID filter elements
-  - > 8: Values greater than 8 are interpreted as 8.
-  - This bitfield is write-protected (P), which means that write access is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
-
-Bits 23:21: Reserved, must be kept at reset value.
-
-Bits 20:16: LSS[4:0]: Number of standard filter elements in the list
-  - 0: No standard message ID filter
-  - 1 to 28: Number of standard message ID filter elements
-  - > 28: Values greater than 28 are interpreted as 28.
-  - This bitfield is write-protected (P), which means that write access by the bits is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
-
-Bits 15:10: Reserved, must be kept at reset value.
-
-Bit 9: F0OM: FIFO 0 operation mode (overwrite or blocking)
-  - This bit is write-protected (P), which means that write access is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
-
-Bit 8: F1OM: FIFO 1 operation mode (overwrite or blocking)
-  - This bit is write-protected (P), which means that write access is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
-
-Bits 7:6: Reserved, must be kept at reset value.
-
-Bits 5:4: ANFS[1:0]: Accept Non-matching frames standard
-  - Defines how received messages with 11-bit IDs that do not match any element of the filter list are treated.
-  - 00: Accept in Rx FIFO 0
-  - 01: Accept in Rx FIFO 1
-  - 10: Reject
-  - 11: Reject
-  - This bitfield is write-protected (P), which means write access is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
-
-Bits 3:2: ANFE[1:0]: Accept non-matching frames extended
-  - Defines how received messages with 29-bit IDs that do not match any element of the filter list are treated.
-  - 00: Accept in Rx FIFO 0
-  - 01: Accept in Rx FIFO 1
-  - 10: Reject
-  - 11: Reject
-  - This bitfield is write-protected (P), which means that write access is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
-
-Bit 1: RRFS: Reject remote frames standard
-  - 0: Filter remote frames with 11-bit standard IDs
-  - 1: Reject all remote frames with 11-bit standard IDs
-  - This bit is write-protected (P), which means that write access is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
-
-Bit 0: RRFE: Reject remote frames extended
-  - 0: Filter remote frames with 29-bit standard IDs
-  - 1: Reject all remote frames with 29-bit standard IDs
-  - This bit is write-protected (P), which means that write access is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
-
-     *
-     *
-     * */
-
-    // 2 standart filters
-    FDCAN1->RXGFC = (2 << FDCAN_RXGFC_LSS_Pos) | (0 << FDCAN_RXGFC_LSE_Pos) |
-    		        // Отклонять все сообщения, которые не соответствуют элементам фильтра
-                    (2 << FDCAN_RXGFC_ANFS_Pos) | (2 << FDCAN_RXGFC_ANFE_Pos);
-
-       // Настраиваем фильтры на прием сообщений с идентификаторами 100 и 80
-       uint32_t filterConfig[2];
-
-     /*FDCAN standard message ID filter element
-      *
- 	 	 Таблица 412. Описание полей элемента фильтра стандартного идентификатора
-		Поле	Описание
-			Bit 31:30	SFT[1:0] (Тип стандартного фильтра)
-				– 00: Фильтр диапазона от SFID1 до SFID2
-				– 01: Двойной фильтр идентификаторов для SFID1 или SFID2
-				– 10: Классический фильтр: SFID1 = фильтр, SFID2 = маска
-				– 11: Элемент фильтра отключен
-			Bit 29:27	SFEC[2:0] (Конфигурация стандартного элемента фильтра)
-		Все включенные элементы фильтра используются для фильтрации стандартных кадров.
-		Фильтрация прекращается при первом совпадении с включенным элементом фильтра или при достижении конца списка фильтров. Если SFEC[2:0] = 100, 101 или 110, совпадение устанавливает флаг прерывания IR.HPM и, если включено, генерируется прерывание. В этом случае регистр HPMS обновляется со статусом приоритетного совпадения.
-				– 000: Отключить элемент фильтра
-				– 001: Сохранить в Rx FIFO 0, если фильтр совпадает
-				– 010: Сохранить в Rx FIFO 1, если фильтр совпадает
-				– 011: Отклонить ID, если фильтр совпадает
-				– 100: Установить приоритет, если фильтр совпадает
-				– 101: Установить приоритет и сохранить в FIFO 0, если фильтр совпадает
-				– 110: Установить приоритет и сохранить в FIFO 1, если фильтр совпадает
-				– 111: Не используется
-			Bits 26:16	SFID1[10:0] (Первый ID элемента фильтра стандартного идентификатора)
-			Bits 10:0	SFID2[10:0] (Второй ID элемента фильтра стандартного идентификатора)
- */
+       filterRAM[0] = STDfilterID_DUAL | STDfilterRxFIFO0 | STDfilterID1(0x100) | STDfilterID2(0x80); // ID = 100, Standard ID, Store in FIFO0
 
 
+       // Включить прерывания в FDCAN FIFO
 
-       // Фильтр для сообщения с идентификатором 100 and 80
-       filterConfig[0] = (100 << 16) | (1 << 30)| 80 |(STDfilterRxFIFO0); // ID = 100, Standard ID, Store in FIFO0
+         CAN->IE |=  3; // FDCAN_IE_RF0NE_| RF0FE
+         CAN->ILS |= 1;  // RXFIFO0: RX FIFO bit grouping the following interruption
+         CAN->ILE |= 2;  // Enable IT0
+
+         //FDCAN1->IE |= FDCAN_IE_RF0NE;
+
+       // Настройка режима работы (нормальный режим)
+       CAN->CCCR &= ~FDCAN_CCCR_INIT; // Выход из режима инициализации
+       while (CAN->CCCR & FDCAN_CCCR_INIT);
 
 
-       // Записываем фильтры в Message RAM
-       uint32_t *filterRAM = (uint32_t *)RAMBaseFDCAN1; // Примерный адрес Message RAM, проверьте в вашей документации
-       filterRAM[0] = filterConfig[0];
-       filterRAM[1] = filterConfig[1];
+        // включить блок syscfg
 
-
-
-    // Настройка режима работы (нормальный режим)
-    CAN->CCCR &= ~FDCAN_CCCR_INIT; // Выход из режима инициализации
-    while (CAN->CCCR & FDCAN_CCCR_INIT);
-
- //   NVIC_EnableIRQ(FDCAN1_IT0_IRQn);
- // NVIC_EnableIRQ(FDCAN1_IT1_IRQn);
+       //NVIC_SetPriority(FDCAN1_IT0_IRQn, 0); // Установить приоритет прерывания
+      //NVIC_EnableIRQ(FDCAN1_IT0_IRQn);;
+       NVIC_EnableIRQ(FDCAN1_IT1_IRQn);
+       // Включить прерывание
+ //   NVIC_EnableIRQ(FDCAN1_IT1_IRQn);
 
 }
 
+//void FDCAN1_IT0_IRQHandler(void){test = 1;};
 
-void FDCAN1_IT0_IRQHandler(void){
+void FDCAN1_IT1_IRQHandler(void){
 
 	uint32_t index_rxfifo = 0, rxHeader0,rxHeader1,id,dlc;
 	uint32_t* RxBuffer;
+
+	test = 1;
 
     // Проверить, было ли прерывание из FIFO 0
 	if (FDCAN1->IR & 1 || FDCAN1->IR & 2) {
@@ -270,12 +248,27 @@ void FDCAN1_IT0_IRQHandler(void){
 		dlc = (rxHeader1 >> 16) & 0xF;
 
 
+		switch(id){
+
+		case 100:
+
+			test = 1;
+
+		   break;
+
+		default:
+		break;
+
+		};
+
+
 
 		FDCAN1->RXF0A = index_rxfifo;
 
-		FDCAN1->IR |= (1 << FDCAN_IR_RF0N_Pos); // Сбросить флаг нового сообщения
-
+		FDCAN1->IR |= 1; // clearFifo
     }
+
+
 }
 
 
@@ -286,9 +279,6 @@ void SystemClock_Config(void) {
     // Включение HSI
     RCC->CR |= RCC_CR_HSION; // Включение HSI
     while (!(RCC->CR & RCC_CR_HSIRDY)); // Ожидание готовности HSI
-
-    // Настройка флеш-памяти для работы на высокой частоте
-    FLASH->ACR |= FLASH_ACR_LATENCY_4WS; // Установка латентности Flash (4 такта для 150 МГц)
 
     // Настройка PLL для генерации тактовой частоты 150 МГц
     RCC->PLLCFGR = 0; // Сброс конфигурации PLL
@@ -306,6 +296,8 @@ void SystemClock_Config(void) {
 
     // Настройка флеш-памяти для работы на высокой частоте
     FLASH->ACR |= FLASH_ACR_LATENCY_4WS; // Установка латентности Flash (4 такта для 150 МГц)
+
+
 
     // Настройка PLL для генерации тактовой частоты 150 МГц
     RCC->PLLCFGR = 0; // Сброс конфигурации PLL
@@ -331,10 +323,29 @@ void SystemClock_Config(void) {
     RCC->CFGR |= RCC_CFGR_SW_PLL;
     while ((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_PLL); // Ожидание установки PLL как SYSCLK
 
+
+    SET_BIT(RCC->APB1ENR1, RCC_APB1ENR1_CRSEN);
+    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
+    SET_BIT(RCC->APB1ENR1, RCC_APB1ENR1_PWREN);
+
+
     // Обновление SystemCoreClock
     SystemCoreClockUpdate();
-}
 
+    SysTick->LOAD = 160000000/1000 - 1;  // (48 mHz / 1000) -1  // 1ms
+    SysTick->VAL = 0;  // reset
+    SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk | SysTick_CTRL_ENABLE_Msk;
+
+    NVIC_EnableIRQ(SysTick_IRQn);
+
+}
+void SysTick_Handler(void){
+
+
+	if(pause)pause --;
+
+
+};
 
 
 void delay_ms(uint32_t ms){

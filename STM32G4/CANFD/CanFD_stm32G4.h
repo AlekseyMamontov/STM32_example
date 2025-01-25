@@ -47,9 +47,133 @@ FDCAN_GlobalTypeDef *FDCAN = FDCAN1;
 #define DLC_msk_pos 16	  // 9 - 15: Classic CAN: received frame has 8 data bytes
 						  // 9 - 15: CAN FD: received frame has 12/16/20/24/32/48/64 data bytes
 
-#define STDfilterRxFIFO0 1 << 27
-#define STDfilterRxFIFO1 2 << 27
 
+
+/*
+Bit 31:30
+SFT[1:0](1)Standard filter type
+– 00: Range filter from SFID1 to SFID2
+– 01: Dual ID filter for SFID1 or SFID2
+– 10: Classic filter: SFID1 = filter, SFID2 = mask
+– 11: Filter element disabled
+*/
+
+#define STDfilterID_DUAL  (1 << 30)
+#define STDfilterDisabled (3 << 30)
+#define STDfilterID_MASK  (2 << 30)
+
+
+
+/*
+ Bit 29:27
+SFEC[2:0]Standard filter element configuration
+All enabled filter elements are used for acceptance filtering of standard frames.
+Acceptance filtering stops at the first matching enabled filter element or when the end
+of the filter list is reached. If SFEC[2:0] = 100, 101 or 110 a match sets interrupt flag
+IR.HPM and, if enabled, an interrupt is generated. In this case register HPMS is
+updated with the status of the priority match.
+– 000: Disable filter element
+– 001: Store in Rx FIFO 0 if filter matches
+– 010: Store in Rx FIFO 1 if filter matches
+– 011: Reject ID if filter matches
+– 100: Set priority if filter matches
+– 101: Set priority and store in FIFO 0 if filter matches
+= 110: Set priority and store in FIFO 1 if filter matches
+– 111: Not used
+
+*/
+#define STDfilterRxFIFO0        (1 << 27)
+#define STDfilterRxFIFO1        (2 << 27)
+#define STDfilterRejectID       (3 << 27)
+#define STDfilterpriorityID     (4 << 27)
+#define STDfilFIFO0priorityID   (5 << 27)
+#define STDfilFIFO1priorityID   (6 << 27)
+
+
+#define STDfilterID1(a)      (a << 16)
+#define STDfilterID2(a)      (a << 0)
+#define STDfilterMASK(a)     (a << 0)
+
+
+/*
+    FDCAN global filter configuration register (FDCAN_RXGFC)
+    *
+   Bits 31:28: Reserved, must be kept at reset value.
+Bits 27:24: LSE[3:0]: Number of extended filter elements in the list
+
+ - 0: No extended message ID filter
+ - 1 to 8: Number of extended message ID filter elements
+ - > 8: Values greater than 8 are interpreted as 8.
+ - This bitfield is write-protected (P), which means that write access is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
+
+Bits 23:21: Reserved, must be kept at reset value.
+
+Bits 20:16: LSS[4:0]: Number of standard filter elements in the list
+
+ - 0: No standard message ID filter
+ - 1 to 28: Number of standard message ID filter elements
+ - > 28: Values greater than 28 are interpreted as 28.
+ - This bitfield is write-protected (P), which means that write access by the bits is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
+
+Bits 15:10: Reserved, must be kept at reset value.
+
+Bit 9: F0OM: FIFO 0 operation mode (overwrite or blocking)
+
+ - This bit is write-protected (P), which means that write access is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
+
+Bit 8: F1OM: FIFO 1 operation mode (overwrite or blocking)
+
+ - This bit is write-protected (P), which means that write access is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
+
+Bits 7:6: Reserved, must be kept at reset value.
+
+Bits 5:4: ANFS[1:0]: Accept Non-matching frames standard
+ - Defines how received messages with 11-bit IDs that do not match any element of the filter list are treated.
+ - 00: Accept in Rx FIFO 0
+ - 01: Accept in Rx FIFO 1
+ - 10: Reject
+ - 11: Reject
+ - This bitfield is write-protected (P), which means write access is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
+
+Bits 3:2: ANFE[1:0]: Accept non-matching frames extended
+ - Defines how received messages with 29-bit IDs that do not match any element of the filter list are treated.
+ - 00: Accept in Rx FIFO 0
+ - 01: Accept in Rx FIFO 1
+ - 10: Reject
+ - 11: Reject
+ - This bitfield is write-protected (P), which means that write access is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
+
+
+ - 0: Filter remote frames with 11-bit standard IDs
+ - 1: Reject all remote frames with 11-bit standard IDs
+ - This bit is write-protected (P), which means that write access is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
+
+
+ - 0: Filter remote frames with 29-bit standard IDs
+ - 1: Reject all remote frames with 29-bit standard IDs
+ - This bit is write-protected (P), which means that write access is possible only when the CCE and INIT bits of the FDCAN_CCCR register are both set.
+
+ */
+
+#define STDfilter_n(a)       (a << FDCAN_RXGFC_LSS_Pos) //max 28
+#define EXTfilter_n(a)       (a << FDCAN_RXGFC_LSE_Pos) //max 8
+
+//Accept non-matching frames extended
+#define ANFE_FIFO0_rx         0
+#define ANFE_FIFO1_rx         (1 << 2)
+#define ANFE_Reject_rx        (2 << 2) //0b1100
+
+//Accept Non-matching frames standard
+#define ANFS_FIFO0_rx         0
+#define ANFS_FIFO1_rx         (1 << 4)
+#define ANFS_Reject_rx        (2 << 4) //0b1100
+
+#define Reject_STDmessage     2 //Bit 1: RRFS: Reject remote frames standard
+#define Reject_EXTmessage     1 //Bit 0: RRFE: Reject remote frames extended
+
+
+#define FULL_FIFO0_blocking        (1 << 9) //F1OM: FIFO 0 operation mode (overwrite or blocking)
+#define FULL_FIFO1_blocking        (1 << 8) //F1OM: FIFO 1 operation mode (overwrite or blocking)
 
 
 
@@ -166,7 +290,7 @@ return SendCANframe((uint32_t*) &msg);
 }
 
 
-void FDCAN1_IT1_IRQHandler(void) {
+void FDCAN1_IT1_IRQHandler55(void) {
     // Проверить, было ли прерывание из FIFO 0
     if (FDCAN1->IR & (1 << FDCAN_IR_RF1N_Pos)) {
         // Обработка полученного сообщения

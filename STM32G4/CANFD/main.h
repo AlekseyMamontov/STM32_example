@@ -1,20 +1,34 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.h
-  * @brief          : Header for main.c file.
-  *                   This file contains the common defines of the application.
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2024 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
+      PA12 LED HEART
+
+      FDCAN1 PB9 TX
+      FDCAN1 PA11 RX
+
+      USART1 RX PB7
+      USART1 TX PB6
+
+      BMP280
+      PA9  I2C2 SCL
+      PA8  I2C2_SDA
+
+      IIM-42652
+      PB15 Spi2 MOSI
+      PB14 SPI2 MiSO
+      PB13 SPI2 SCK
+      PB12 IMU_int1
+      PB13 IMU int2
+      PA10 SPI2 CS
+
+      LS3MDl
+      PA5  SPI1 _SCK
+      PA6  SPI1 _MISO
+      PA7  SPI1 _MOSI
+      PB0  SPI1 _CS
+      PB1  ReadyOk
+      PB2  Warning
+
+      USART RX
   */
 /* USER CODE END Header */
 
@@ -27,8 +41,8 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32g4xx_hal.h"
 #include "stm32g4xx.h"
+
 void delay_ms(uint32_t ms);
 void SystemClock_Config(void);
 void CAN_GPIO_Config(void);
