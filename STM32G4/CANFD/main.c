@@ -88,15 +88,151 @@ int main(void) {
 
 void GPIO_INIT(void){
 
-		// Включаем тактирование GPIOA
+	/*
 
-		RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN | RCC_AHB2ENR_GPIOBEN;
+	  PA12 LED HEART
+
+      FDCAN1 PB9 TX
+      FDCAN1 PA11 RX
+
+      USART1 RX PB7
+      USART1 TX PB6
+
+      BMP280
+      PA9  I2C2 SCL
+      PA8  I2C2_SDA
+
+      IIM-42652
+      PB15 Spi2 MOSI
+      PB14 SPI2 MiSO
+      PB13 SPI2 SCK
+      PB12 IMU_int1
+      PB11 IMU int2
+      PA10 SPI2 CS
+
+      LS3MDl
+      PA5  SPI1 _SCK
+      PA6  SPI1 _MISO
+      PA7  SPI1 _MOSI
+      PB0  SPI1 _CS
+      PB1  ReadyOk
+      PB2  Warning
+
+	 */
+
+	RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN | RCC_AHB2ENR_GPIOBEN;
+
+	/*
+	GPIO port mode register (GPIOx_MODER)
+		(x =A to G)
+			Address offset:0x00
+				Reset value: 0xABFF FFFF (for port A) 1010 1011 1111 1111 1111 1111 1111 1111
+				Reset value: 0xFFFF FEBF (for port B) 1111 1111 1111 1111 1111 1110 1011 1111
+				Reset value: 0xFFFF FFFF (for ports C..G)
+
+				Bits 31:0 MODE[15:0][1:0]: Port x configuration I/O pin y (y = 15 to 0)
+				These bits are written by software to configure the I/O mode.
+					00: Input mode
+					01: General purpose output mode
+					10: Alternate function mode
+					11: Analog mode (reset state)
+	 */
 
 
 
-		//---------------  	151413121110 9 8 7 6 5 4 3 2 1 0
-	//	GPIOA->MODER   |= 0b00000000000000000101010101010101; // General purpose output mode
-	//	GPIOA->OSPEEDR |= 0b00000000000000001111111111111111; //0b11  high speed
+
+	//-------------  151413121110 9 8 7 6 5 4 3 2 1 0
+	GPIOA->MODER = 0b10101001100110101111111111111111; // General purpose output mode
+	GPIOB->MODER = 0b10101000001110111010111010111111; // General purpose output mode
+
+	/*GPIO port output type register (GPIOx_OTYPER)
+		(x = A to G)
+				Address offset: 0x04
+				Reset value: 0x0000 0000
+			Bits 15:0 OT[15:0]: Port x configuration I/O pin y (y = 15 to 0)
+			These bits are written by software to configure the I/O output type.
+				0: Output push-pull (reset state)
+				1: Output open-drain
+   */
+
+
+
+	/*
+	GPIO port output speed register (GPIOx_OSPEEDR)
+		(x = A to G)
+		Address offset: 0x08
+			Reset value: 0x0C00 0000 (for port A)
+			Reset value: 0x0000 0000 (for the other ports)
+
+		Bits 31:0 OSPEED[15:0][1:0]: Port x configuration I/O pin y (y = 15 to 0)
+		These bits are written by software to configure the I/O output speed.
+			00: Low speed
+			01: Medium speed
+			10: High speed
+			11: Very high speed
+    */
+
+	//---------------  	151413121110 9 8 7 6 5 4 3 2 1 0
+	GPIOA->OSPEEDR |= 0b00000000000000001111111111111111; //0b11  high speed
+	GPIOB->OSPEEDR |= 0b00000000000000001111111111111111;
+
+	/*
+	GPIO port pull-up/pull-down register (GPIOx_PUPDR)
+			(x = A to G)
+			Address offset: 0x0C
+			Reset value: 0x6400 0000 (for port A)
+			Reset value: 0x0000 0100 (for port B)
+			Reset value: 0x0000 0000 (for other ports)
+
+				These bits are written by software to configure the I/O pull-up or pull-down
+				00: No pull-up, pull-down
+				01: Pull-up
+				10: Pull-down
+				11: Reserved
+  */
+	     //-------------  151413121110 9 8 7 6 5 4 3 2 1 0
+		 GPIOA->PUPDR = 0b01100100000000000000000000000000; // General purpose output mode
+	     //-------------  151413121110 9 8 7 6 5 4 3 2 1 0
+		 GPIOB->PUPDR = 0b00000000000000010000000000000000; // General purpose output mode
+	/*
+	GPIO port input data register (GPIOx_IDR)  Address offset: 0x10 Reset value: 0x0000 XXXX
+	GPIO port output data register (GPIOx_ODR) Address offset: 0x14 Reset value: 0x0000 0000
+
+	GPIO port bit set/reset register (GPIOx_BSRR) (x = A to G) Address offset: 0x18
+
+		Bits 31:16 BR[15:0]: Port x reset I/O pin y (y = 15 to 0)
+			These bits are write-only. A read to these bits returns the value 0x0000.
+				0: No action on the corresponding ODx bit
+				1: Resets the corresponding ODx bit
+				Note: If both BSx and BRx are set, BSx has priority.
+		Bits 15:0 BS[15:0]: Port x set I/O pin y (y = 15 to 0)
+			These bits are write-only. A read to these bits returns the value 0x0000.
+				0: No action on the corresponding ODx bit
+				1: Sets the corresponding ODx bit
+	  */
+
+
+	/*
+
+	GPIO alternate function low register (GPIOx_AFRL) (x = A to G) Address offset: 0x20 Reset value: 0x0000 0000
+	GPIO alternate function high register (GPIOx_AFRH)(x = A to G) Address offset: 0x24 Reset value: 0x0000 0000
+	0000: AF0 0001: AF1  0010: AF2  0011: AF3  0100: AF4  0101: AF5  0110: AF6  0111: AF7
+	1000: AF8 1001: AF9  1010: AF10 1011: AF11 1100: AF12 1101: AF13 1110: AF14 1111: AF15
+  */
+
+
+
+
+	/*
+	GPIO port bit reset register (GPIOx_BRR) (x = A to G)Address offset: 0x28 Reset value: 0x0000 0000
+	 */
+
+
+
+
+
+
+
 
 
 
@@ -235,7 +371,7 @@ void FDCAN1_IT1_IRQHandler(void){
 	uint32_t index_rxfifo = 0, rxHeader0,rxHeader1,id,dlc;
 	uint32_t* RxBuffer;
 
-	test = 1;
+	//test = 1;
 
     // Проверить, было ли прерывание из FIFO 0
 	if (FDCAN1->IR & 1 || FDCAN1->IR & 2) {
@@ -270,6 +406,124 @@ void FDCAN1_IT1_IRQHandler(void){
 
 
 }
+
+///////////////////// SPI2/////////////////////
+
+void ConfigSPI2(void){
+
+	RCC->APB1ENR1 |= RCC_APB1ENR1_SPI2EN;
+
+
+	/*
+	 SPI control register 1 (SPIx_CR1) Address offset: 0x00 Reset value: 0x0000
+
+	 Bit 15 BIDIMODE: Bidirectional data mode enable.
+			This bit enables half-duplex communication using common single bidirectional data line.
+			Keep RXONLY bit clear when bidirectional mode is active.
+			0: 2-line unidirectional data mode selected
+			1: 1-line bidirectional data mode selected
+N
+	Bit 14 BIDIOE: Output enable in bidirectional mode
+			This bit combined with the BIDIMODE bit selects the direction of transfer in bidirectional mode.
+			0: Output disabled (receive-only mode)
+			1: Output enabled (transmit-only mode)
+		Note: In master mode, the MOSI pin is used and in slave mode, the MISO pin is used.
+
+		Bit 13 CRCEN: Hardware CRC calculation enable
+			0: CRC calculation disabled
+			1: CRC calculation enabled
+		Note: This bit should be written only when SPI is disabled (SPE = ‘0’) for correct operation.
+
+		Bit 12 CRCNEXT: Transmit CRC next
+			0: Next transmit value is from Tx buffer.
+			1: Next transmit value is from Tx CRC register.
+			Note: This bit has to be written as soon as the last data is written in the SPIx_DR register.
+
+		Bit 11 CRCL: CRC length
+			This bit is set and cleared by software to select the CRC length.
+			0: 8-bit CRC length
+			1: 16-bit CRC length
+		Note: This bit should be written only when SPI is disabled (SPE = ‘0’) for correct operation.
+
+		Bit 10 RXONLY: Receive only mode enabled.
+		This bit enables simplex communication using a single unidirectional line to receive data
+			exclusively. Keep BIDIMODE bit clear when receive only mode is active.This bit is also
+			useful in a multislave system in which this particular slave is not accessed, the output from
+				the accessed slave is not corrupted.
+			0: Full-duplex (Transmit and receive)
+			1: Output disabled (Receive-only mode)
+
+			Bit 9 SSM: Software slave management
+			When the SSM bit is set, the NSS pin input is replaced with the value from the SSI bit.
+			0: Software slave management disabled
+			1: Software slave management enabled
+
+			Bit 8 SSI: Internal slave select
+				This bit has an effect only when the SSM bit is set. The value of this bit is forced onto the
+					NSS pin and the I/O value of the NSS pin is ignored.
+			Note: This bit is not used in I2S mode and SPI TI mode.
+			Bit 7 LSBFIRST: Frame format
+					0: data is transmitted / received with the MSB first
+					1: data is transmitted / received with the LSB first
+			Note: 1. This bit should not be changed when communication is ongoing.
+			2. This bit is not used in I2S mode and SPI TI mode.
+			Bit 6 SPE: SPI enable
+				0: Peripheral disabled
+				1: Peripheral enabled
+				Note: When disabling the SPI, follow the procedure described in Procedure for disabling the
+				SPI on page 1761.
+				Bits 5:3 BR[2:0]: Baud rate control
+					000: fPCLK/2
+					001: fPCLK/4
+					010: fPCLK/8
+					011: fPCLK/16
+					100: fPCLK/32
+					101: fPCLK/64
+					110: fPCLK/128
+					111: fPCLK/256
+
+				Bit 2 MSTR: Master selection
+					0: Slave configuration
+					1: Master configuration
+
+	 */
+
+	SPI2->CR1 |=  SPI_CR1_MSTR | SPI_CR1_BR_1 | 2 | (1<<9); // master | clk/8 | CPOL _/ SSM=1
+
+/*
+ SPI control register 2 (SPIx_CR2) Address offset: 0x04 Reset value: 0x0700 (8 bit)
+
+ 	 	    Bit 12 FRXTH: FIFO reception threshold
+				This bit is used to set the threshold of the RXFIFO that triggers an RXNE event
+			    0: RXNE event is generated if the FIFO level is greater than or equal to 1/2 (16-bit)
+				1: RXNE event is generated if the FIFO level is greater than or equal to 1/4 (8-bit)
+			Bits 11:8 DS[3:0]: Data size
+ 	 	 	Bit 7 TXEIE: Tx buffer empty interrupt enable
+				0: TXE interrupt masked
+				1: TXE interrupt not masked. Used to generate an interrupt request when the TXE flag is set.
+			Bit 6 RXNEIE: RX buffer not empty interrupt enable
+				0: RXNE interrupt masked
+				1: RXNE interrupt not masked. Used to generate an interrupt request when the RXNE flag is set.
+			Bit 4 FRF: Frame format
+				0: SPI Motorola mode
+				1: SPI TI mode
+ */
+
+
+	SPI2->CR2 |=0;
+
+
+
+
+
+
+
+}
+
+
+
+
+
 
 
 
@@ -329,6 +583,11 @@ void SystemClock_Config(void) {
     SET_BIT(RCC->APB1ENR1, RCC_APB1ENR1_PWREN);
 
 
+
+
+
+
+
     // Обновление SystemCoreClock
     SystemCoreClockUpdate();
 
@@ -337,6 +596,16 @@ void SystemClock_Config(void) {
     SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk | SysTick_CTRL_ENABLE_Msk;
 
     NVIC_EnableIRQ(SysTick_IRQn);
+
+
+
+
+
+
+
+
+
+
 
 }
 void SysTick_Handler(void){
