@@ -3,7 +3,7 @@
 #include "CanFD_stm32G4.h"
 
 
-uint8_t test = 1, trigger = 0;
+uint8_t test = 1, trigger = 0, command = 0, data = 0;
 uint32_t pause = 500;
 
 int main(void) {
@@ -12,13 +12,13 @@ int main(void) {
     SystemClock_Config();
     GPIO_INIT();
     CAN_Config();
+    ConfigSPI2();
     __enable_irq();
     // Сообщение для отправки
-    uint8_t   data[16] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
-    					  0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00};
+    uint8_t   data2[16] = {0};
     uint32_t  data32[18]={0};
-    uint32_t  id = 0x222;  // Стандартный идентификатор CAN
-    uint32_t* RAM = (uint32_t*)data32;///RAMBaseFDCAN1;//RAMBaseFDCAN1;
+    uint32_t  id = 0x222,per32;  // Стандартный идентификатор CAN
+    uint32_t* RAM = (uint32_t*)data32;
     uint32_t  counterRAM = 0;
     uint32_t getIndex;
 
@@ -47,19 +47,28 @@ int main(void) {
         }
 */
 
-
-
         if(test){
 
+        	  GPIOB->BRR = 1<<10;
+        	  while (!(SPI2->SR & SPI_SR_TXE)); // Ожидание TXE
 
-        	data32[0] = FDCAN1->IE;
-        	data32[1] = FDCAN1->ILE;
-        	CAN_SendMessage(id,data32, 8);//(uint8_t*)RAM + counterRAM*4
+        	  per32 = command;
+        	  SPI2->DR =((per32 << 8) | data);
+        	  while (!(SPI2->SR & SPI_SR_RXNE));
+        	  data32[0] = SPI2->DR;
+        	  GPIOB->BSRR = 1<<10;
 
 
-         //counterRAM++;
-        //if(counterRAM >= 28) counterRAM = 0;
-        test = 0;
+
+        	CAN_SendMessage(id,(uint8_t*)data32, 8);//(uint8_t*)RAM + counterRAM*4
+
+
+
+
+
+
+
+         test = 0;
         };
 
 
@@ -114,9 +123,6 @@ void GPIO_INIT(void){
       PA5  SPI1 _SCK
       PA6  SPI1 _MISO
       PA7  SPI1 _MOSI
-      PB0  SPI1 _CS
-      PB1  ReadyOk
-      PB2  Warning
 
 	 */
 
@@ -136,28 +142,7 @@ void GPIO_INIT(void){
 					01: General purpose output mode
 					10: Alternate function mode
 					11: Analog mode (reset state)
-	 */
 
-
-
-
-	//-------------  151413121110 9 8 7 6 5 4 3 2 1 0
-	GPIOA->MODER = 0b10101001100110101111111111111111; // General purpose output mode
-	GPIOB->MODER = 0b10101000001110111010111010111111; // General purpose output mode
-
-	/*GPIO port output type register (GPIOx_OTYPER)
-		(x = A to G)
-				Address offset: 0x04
-				Reset value: 0x0000 0000
-			Bits 15:0 OT[15:0]: Port x configuration I/O pin y (y = 15 to 0)
-			These bits are written by software to configure the I/O output type.
-				0: Output push-pull (reset state)
-				1: Output open-drain
-   */
-
-
-
-	/*
 	GPIO port output speed register (GPIOx_OSPEEDR)
 		(x = A to G)
 		Address offset: 0x08
@@ -172,9 +157,37 @@ void GPIO_INIT(void){
 			11: Very high speed
     */
 
-	//---------------  	151413121110 9 8 7 6 5 4 3 2 1 0
-	GPIOA->OSPEEDR |= 0b00000000000000001111111111111111; //0b11  high speed
-	GPIOB->OSPEEDR |= 0b00000000000000001111111111111111;
+    // PA12 LED|PA11 FDCAN1_RX|PA10 SPI2_CS|PA9 I2C2 SCL|PA8 I2C2_SDA|PA7 SPI1_MOSI|PA6 SPI1_MISO|PA5 SPI1 _SCK
+
+	//   -------------  151413121110 9 8 7 6 5 4 3 2 1 0
+	GPIOA->MODER = 	  0b10101001100110101010101111111111; // General purpose output moder
+
+
+
+	//-------------    151413121110 9 8 7 6 5 4 3 2 1 0
+	GPIOA->OSPEEDR = 0b11111101111111111111110000000000;
+
+    // PB15 Spi2 MOSI | PB14 SPI2 MiSO|PB13 SPI2 SCK|PB12 IMU_int1|PB11 IMU int2|PB9 FDCAN1_TX|
+    // PB7 USART1 RX  | PB6 USART1 TX |PB2 input War|PB1  ReadyOk |PBO spi2_CS
+
+	//-------------    151413121110 9 8 7 6 5 4 3 2 1 0
+	GPIOB->MODER =   0b10101000001110111010111111000001; // General purpose output mode
+	//-------------    151413121110 9 8 7 6 5 4 3 2 1 0
+	GPIOB->OSPEEDR = 0b11111111110011001111000000111111;
+
+	/*GPIO port output type register (GPIOx_OTYPER)
+		(x = A to G)
+				Address offset: 0x04
+				Reset value: 0x0000 0000
+			Bits 15:0 OT[15:0]: Port x configuration I/O pin y (y = 15 to 0)
+			These bits are written by software to configure the I/O output type.
+				0: Output push-pull (reset state)
+				1: Output open-drain
+   */
+
+	//-------------   151413121110 9 8 7 6 5 4 3 2 1 0
+	GPIOA->OTYPER = 0b00000000000000000000000000000000;
+	GPIOB->OTYPER = 0b00000000000000000000000000000000;
 
 	/*
 	GPIO port pull-up/pull-down register (GPIOx_PUPDR)
@@ -194,6 +207,49 @@ void GPIO_INIT(void){
 		 GPIOA->PUPDR = 0b01100100000000000000000000000000; // General purpose output mode
 	     //-------------  151413121110 9 8 7 6 5 4 3 2 1 0
 		 GPIOB->PUPDR = 0b00000000000000010000000000000000; // General purpose output mode
+
+	/*
+
+			GPIO alternate function low register (GPIOx_AFRL) (x = A to G) Address offset: 0x20 Reset value: 0x0000 0000
+			GPIO alternate function high register (GPIOx_AFRH)(x = A to G) Address offset: 0x24 Reset value: 0x0000 0000
+				0000: AF0
+				0001: AF1
+				0010: AF2
+				0011: AF3
+				0100: AF4
+				0101: AF5
+				0110: AF6
+				0111: AF7
+				1000: AF8
+				1001: AF9
+				1010: AF10
+				1011: AF11
+..
+1111: AF15
+	*/
+
+		 // PA7 SPI1_MOSI AF5| PA6 SPI1_MISO AF5 | PA5 SPI1_SCK AF5
+			//-------	     7   6   5   4   3   2   1   0
+		GPIOA->AFR[0] = 0b01010101010100000000000000000000;
+
+		// PA12 LED    |PA11 FDCAN1_RX AF9|PA10 SPI2_CS |PA9 I2C2 SCL AF4|PA8 I2C2_SDA AF4
+		   //-------	    15  14  13  12  11  10   9   8
+	    GPIOA->AFR[1] = 0b00000000000000001001000001000100;
+
+
+
+	       // PB7 USART1 RX AF7 | PB6 USART1 TX AF7 |PB2 input War|PB1  ReadyOk |PBO s pi2_CS
+	       //-------	     7   6   5   4   3   2   1   0
+	    GPIOB->AFR[0] = 0b01110111000000000000000000000000;
+
+	        // PB15 Spi2 MOSI AF5| PB14 SPI2 MiSO AF5|PB13 SPI2 SCK AF5|PB12 IMU_int1|PB11 IMU int2|PB9 FDCAN1_TX AF9|
+	    	//-------	    15  14  13  12  11  10   9   8
+	    GPIOB->AFR[1] = 0b01010101010100000000000010010000;
+
+
+
+
+
 	/*
 	GPIO port input data register (GPIOx_IDR)  Address offset: 0x10 Reset value: 0x0000 XXXX
 	GPIO port output data register (GPIOx_ODR) Address offset: 0x14 Reset value: 0x0000 0000
@@ -211,73 +267,10 @@ void GPIO_INIT(void){
 				1: Sets the corresponding ODx bit
 	  */
 
+  // PA10 SPI2_CS / PBO spi2_CS
 
-	/*
-
-	GPIO alternate function low register (GPIOx_AFRL) (x = A to G) Address offset: 0x20 Reset value: 0x0000 0000
-	GPIO alternate function high register (GPIOx_AFRH)(x = A to G) Address offset: 0x24 Reset value: 0x0000 0000
-	0000: AF0 0001: AF1  0010: AF2  0011: AF3  0100: AF4  0101: AF5  0110: AF6  0111: AF7
-	1000: AF8 1001: AF9  1010: AF10 1011: AF11 1100: AF12 1101: AF13 1110: AF14 1111: AF15
-  */
-
-
-
-
-	/*
-	GPIO port bit reset register (GPIOx_BRR) (x = A to G)Address offset: 0x28 Reset value: 0x0000 0000
-	 */
-
-
-
-
-
-
-
-
-
-
-		//---------------  	151413121110 9 8 7 6 5 4 3 2 1 0
-	//	GPIOB->MODER   |= 0b00000000000000000101010101010101; // General purpose output mode
-    //	GPIOB->OSPEEDR |= 0b00000000000000001111111111111111; //0b11  high speed
-
-
-
-
-	    //LED////////////
-
-	    // Настраиваем PA12 как выход
-	    GPIOA->MODER &= ~(GPIO_MODER_MODE12); // Очищаем биты
-	    GPIOA->MODER |= GPIO_MODER_MODE12_0;  // Устанавливаем как выход
-	    // Настраиваем PA12 на Push-Pull выход
-	    GPIOA->OTYPER &= ~(GPIO_OTYPER_OT12);
-	    // Настраиваем PA12 на высокий скоростной режим
-	    GPIOA->OSPEEDR |= GPIO_OSPEEDR_OSPEED12;
-	    // Отключаем Pull-up и Pull-down резисторы
-	    GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPD12);
-
-	    //CAN ///////////
-
-	    // Настройка PA11 (CAN_RX) и PB9 (CAN_TX) в режим альтернативной функции
-	    GPIOA->MODER &= ~(GPIO_MODER_MODE11); // Очистка битов режима для PA11
-	    GPIOA->MODER |= GPIO_MODER_MODE11_1;  // Альтернативная функция для PA11
-	    GPIOA->AFR[1] |= (9 << GPIO_AFRH_AFSEL11_Pos); // AF9 для CAN_RX (PA11)
-
-	    GPIOB->MODER &= ~(GPIO_MODER_MODE9);  // Очистка битов режима для PB9
-	    GPIOB->MODER |= GPIO_MODER_MODE9_1;   // Альтернативная функция для PB9
-	    GPIOB->AFR[1] |= (9 << GPIO_AFRH_AFSEL9_Pos);  // AF9 для CAN_TX (PB9)
-
-	    // Настройка PA11 и PB9 на высокую скорость
-	    GPIOA->OSPEEDR |= GPIO_OSPEEDR_OSPEED11;
-	    GPIOB->OSPEEDR |= GPIO_OSPEEDR_OSPEED9;
-
-
-	    // SPI2
-
-
-
-
-
-
+  GPIOA->BSRR = 0b0000001000000000;
+  GPIOB->BSRR = 0x0000000000000001;
 
 }
 
@@ -386,9 +379,16 @@ void FDCAN1_IT1_IRQHandler(void){
 
 		switch(id){
 
-		case 100:
+		case 0x100:
+
+
+
+
+			if (dlc<2) break;
 
 			test = 1;
+			command = (*RxBuffer) & 0xFF;
+			data = (*RxBuffer >> 8) & 0xFF;
 
 		   break;
 
@@ -488,43 +488,127 @@ N
 
 	 */
 
-	SPI2->CR1 |=  SPI_CR1_MSTR | SPI_CR1_BR_1 | 2 | (1<<9); // master | clk/8 | CPOL _/ SSM=1
+	SPI2->CR1 =  SPI_CR1_MSTR | SPI_CR1_BR_2 | 0 | (1<<9); // master | clk/8 | CPOL0 _/ SSM=1
 
 /*
  SPI control register 2 (SPIx_CR2) Address offset: 0x04 Reset value: 0x0700 (8 bit)
 
- 	 	    Bit 12 FRXTH: FIFO reception threshold
-				This bit is used to set the threshold of the RXFIFO that triggers an RXNE event
-			    0: RXNE event is generated if the FIFO level is greater than or equal to 1/2 (16-bit)
+		Bit 14 LDMA_TX: Last DMA transfer for transmission
+			This bit is used in data packing mode, to define if the total number of data to transmit by DMA
+			is odd or even. It has significance only if the TXDMAEN bit in the SPIx_CR2 register is set
+			and if packing mode is used (data length =< 8-bit and write access to SPIx_DR is 16-bit
+			wide). It has to be written when the SPI is disabled (SPE = 0 in the SPIx_CR1 register).
+					0: Number of data to transfer is even
+					1: Number of data to transfer is odd
+				Note: Refer to Procedure for disabling the SPI on page 1761 if the CRCEN bit is set.
+
+		Bit 13 LDMA_RX: Last DMA transfer for reception
+			This bit is used in data packing mode, to define if the total number of data to receive by DMA
+			is odd or even. It has significance only if the RXDMAEN bit in the SPIx_CR2 register is set
+			and if packing mode is used (data length =< 8-bit and write access to SPIx_DR is 16-bit
+			wide). It has to be written when the SPI is disabled (SPE = 0 in the SPIx_CR1 register).
+					0: Number of data to transfer is even
+					1: Number of data to transfer is odd
+			Note: Refer to Procedure for disabling the SPI on page 1761 if the CRCEN bit is set.
+
+		Bit 12 FRXTH: FIFO reception threshold
+			This bit is used to set the threshold of the RXFIFO that triggers an RXNE event
+				0: RXNE event is generated if the FIFO level is greater than or equal to 1/2 (16-bit)
 				1: RXNE event is generated if the FIFO level is greater than or equal to 1/4 (8-bit)
-			Bits 11:8 DS[3:0]: Data size
- 	 	 	Bit 7 TXEIE: Tx buffer empty interrupt enable
+
+
+		Bits 11:8 DS[3:0]: Data size
+			These bits configure the data length for SPI transfers.
+				0111: 8-bit
+				1111: 16-bit
+
+				If software attempts to write one of the “Not used” values, they are forced to the value “0111”
+				(8-bit)
+
+		Bit 7 TXEIE: Tx buffer empty interrupt enable
 				0: TXE interrupt masked
 				1: TXE interrupt not masked. Used to generate an interrupt request when the TXE flag is set.
-			Bit 6 RXNEIE: RX buffer not empty interrupt enable
+		Bit 6 RXNEIE: RX buffer not empty interrupt enable
 				0: RXNE interrupt masked
-				1: RXNE interrupt not masked. Used to generate an interrupt request when the RXNE flag is set.
-			Bit 4 FRF: Frame format
+				1: RXNE interrupt not masked. Used to generate an interrupt request when the RXNE flag isset.
+		Bit 5 ERRIE: Error interrupt enable
+			This bit controls the generation of an interrupt when an error condition occurs (CRCERR,
+			OVR, MODF in SPI mode, FRE at TI mode and UDR, OVR, and FRE in I2S mode).
+				0: Error interrupt is masked
+				1: Error interrupt is enabled
+		Bit 4 FRF: Frame format
 				0: SPI Motorola mode
-				1: SPI TI mode
+				1 SPI TI mode
+		Note: This bit must be written only when the SPI is disabled (SPE=0).
+
+		Bit 3 NSSP: NSS pulse management
+			This bit is used in master mode only. it allows the SPI to generate an NSS pulse between two
+			consecutive data when doing continuous transfers. In the case of a single data transfer, it
+			forces the NSS pin high level after the transfer.
+			It has no meaning if CPHA = ’1’, or FRF = ’1’.
+				0: No NSS pulse
+				1: NSS pulse generated
+		Note: 1. This bit must be written only when the SPI is disabled (SPE=0).
+		2. This bit is not used in I2S mode and SPI TI mode.
+
+		Bit 2 SSOE: SS output enable
+				0: SS output is disabled in master mode and the SPI interface can work in multimasterconfiguration
+				1: SS output is enabled in master mode and when the SPI interface is enabled. The SPI
+				interface cannot work in a multimaster environment.
+Note: This bit is not used in I2S mode and SPI TI mode.
+		Bit 1 TXDMAEN: Tx buffer DMA enable
+				When this bit is set, a DMA request is generated whenever the TXE flag is set.
+				0: Tx buffer DMA disabled
+				1: Tx buffer DMA enabled
+				Bit 0 RXDMAEN: Rx buffer DMA enable
+		When this bit is set, a DMA request is generated whenever the RXNE flag is set.
+				0: Rx buffer DMA disabled
+				1: Rx buffer DMA enabled
  */
 
 
-	SPI2->CR2 |=0;
+	SPI2->CR2 |=0x0F00;
+
+/*
+	SPI status register (SPIx_SR)
+	Address offset: 0x08
+	Reset value: 0x0002
+
+	Біти 12:11 FTLVL[1:0]: Рівень передачі FIFO Ці біти встановлюються та скидаються апаратно.
+		00: FIFO порожній 01: 1/4 FIFO  10: 1/2 FIFO 11: FIFO повний (вважається повним, коли поріг FIFO більше 1/2)
+
+	Біти 10:9 FRLVL[1:0]: Рівень прийому FIFO Ці біти встановлюються та скидаються апаратно.
+		00: FIFO порожній 01: 1/4 FIFO 	10: 1/2 FIFO 	11: FIFO повний
+	.
+	Біт 7 BSY: Флаг зайнятості
+		0: SPI (або I2S) не зайнятий
+		1: SPI (або I2S) зайнятий у процесі передачі або буфер Tx не порожній
+		Цей флаг встановлюється та скидається апаратно.
+		Примітка: Флаг BSY слід використовувати з обережністю: дивіться розділ 39.5.10:
+		Флаги стану SPI та процедуру відключення SPI на сторінці 1761.
+
+	Біт 6 OVR: Флаг переповнення
+		0: Переповнення не сталося
+		1: Виникло переповнення
+		Цей флаг встановлюється апаратно і скидається програмною послідовністю.
+	Біт 5 MODF: Помилка режиму
+		0: Помилки режиму не сталося 1: Виникла помилка режиму
+		Цей флаг встановлюється апаратно і скидається програмною послідовністю.
+	Біт 4 CRCERR: Флаг помилки CRC
+		0: Отримане значення CRC збігається зі значенням SPIx_RXCRCR
+		1: Отримане значення CRC не збігає зі значенням SPIx_RXCRCR
+	Біт 1 TXE: Буфер передачі порожній
+		0: Буфер Tx не порожній
+		1: Буфер Tx порожній
+	Біт 0 RXNE: Буфер прийому не порожній
+		0: Буфер Rx порожній
+		1: Буфер Rx не порожній
+*/
 
 
-
-
-
-
+	SPI2->CR1 |= SPI_CR1_SPE;
 
 }
-
-
-
-
-
-
 
 
 
