@@ -3,7 +3,7 @@
 #include "CanFD_stm32G4.h"
 
 
-uint8_t test = 1, trigger = 0, command = 0, data = 0;
+uint8_t test = 1, trigger = 0, command = 0xEF, data = 0;
 uint32_t pause = 500;
 
 int main(void) {
@@ -15,7 +15,7 @@ int main(void) {
     ConfigSPI2();
     __enable_irq();
     // Сообщение для отправки
-    uint8_t   data2[16] = {0};
+    uint8_t   data2[16] = {0},stat;
     uint32_t  data32[18]={0};
     uint32_t  id = 0x222,per32;  // Стандартный идентификатор CAN
     uint32_t* RAM = (uint32_t*)data32;
@@ -47,16 +47,55 @@ int main(void) {
         }
 */
 
+
         if(test){
 
-        	  GPIOB->BRR = 1<<10;
-        	  while (!(SPI2->SR & SPI_SR_TXE)); // Ожидание TXE
+        	  GPIOA->BRR = 1<<10;
 
-        	  per32 = command;
-        	  SPI2->DR =((per32 << 8) | data);
-        	  while (!(SPI2->SR & SPI_SR_RXNE));
+        	  /*
+
+        	  for(int i = 0 ; i<2000000;i++){
+
+        		 if(SPI2->SR & SPI_SR_TXE){
+        			 per32 = command;
+        			 SPI2->DR =((per32 << 8) | data);
+        			 break;
+        		 }
+
+        	  };
+
+
+        	  stat=1;
+
+
+        	  for(int i = 0 ; i<2000000;i++){
+
+        		 if(SPI2->SR & 1){
+
+        			 data32[0] = SPI2->DR;
+        			 stat=0;
+        			 break;
+        		 }
+
+
+        	  };
+
+ */
+
+        	  while(!(SPI2->SR & SPI_SR_TXE));
+
+        	  per32 = data;
+        	  SPI2->DR =((per32 << 8) | command);
+        	 // SPI2->DR =0;
+        	  while(!(SPI2->SR & SPI_SR_RXNE));
+
+        	  GPIOA->BSRR = 1<<10;
+
         	  data32[0] = SPI2->DR;
-        	  GPIOB->BSRR = 1<<10;
+        	 // data32[1] = SPI2->DR;
+
+
+        	  //if(stat){ data32[0] = SPI2->SR;data32[1]=SPI2->SR;}
 
 
 
@@ -168,7 +207,7 @@ void GPIO_INIT(void){
 	GPIOA->OSPEEDR = 0b11111101111111111111110000000000;
 
     // PB15 Spi2 MOSI | PB14 SPI2 MiSO|PB13 SPI2 SCK|PB12 IMU_int1|PB11 IMU int2|PB9 FDCAN1_TX|
-    // PB7 USART1 RX  | PB6 USART1 TX |PB2 input War|PB1  ReadyOk |PBO spi2_CS
+    // PB7 USART1 RX  | PB6 USART1 TX |PB2 input War|PB1  ReadyOk |PBO SPI1_CS
 
 	//-------------    151413121110 9 8 7 6 5 4 3 2 1 0
 	GPIOB->MODER =   0b10101000001110111010111111000001; // General purpose output mode
@@ -238,7 +277,7 @@ void GPIO_INIT(void){
 
 
 
-	       // PB7 USART1 RX AF7 | PB6 USART1 TX AF7 |PB2 input War|PB1  ReadyOk |PBO s pi2_CS
+	       // PB7 USART1 RX AF7 | PB6 USART1 TX AF7 |PB2 input War|PB1  ReadyOk |PBO s pi!_CS
 	       //-------	     7   6   5   4   3   2   1   0
 	    GPIOB->AFR[0] = 0b01110111000000000000000000000000;
 
@@ -269,8 +308,8 @@ void GPIO_INIT(void){
 
   // PA10 SPI2_CS / PBO spi2_CS
 
-  GPIOA->BSRR = 0b0000001000000000;
-  GPIOB->BSRR = 0x0000000000000001;
+  GPIOA->BSRR = 1 << 10; //spi2cs
+  GPIOB->BSRR = 1;  // spi1cs
 
 }
 
@@ -467,6 +506,7 @@ N
 					1: data is transmitted / received with the LSB first
 			Note: 1. This bit should not be changed when communication is ongoing.
 			2. This bit is not used in I2S mode and SPI TI mode.
+
 			Bit 6 SPE: SPI enable
 				0: Peripheral disabled
 				1: Peripheral enabled
@@ -488,7 +528,8 @@ N
 
 	 */
 
-	SPI2->CR1 =  SPI_CR1_MSTR | SPI_CR1_BR_2 | 0 | (1<<9); // master | clk/8 | CPOL0 _/ SSM=1
+	SPI2->CR1 =  (1 << 2) | (3 << 3) | (3 << 8)|0; // master | clk/8 |  SSM=1 SSI =1 CPOL0 _/
+
 
 /*
  SPI control register 2 (SPIx_CR2) Address offset: 0x04 Reset value: 0x0700 (8 bit)
@@ -567,7 +608,7 @@ Note: This bit is not used in I2S mode and SPI TI mode.
  */
 
 
-	SPI2->CR2 |=0x0F00;
+	SPI2->CR2 |=(0b1111 << 8);
 
 /*
 	SPI status register (SPIx_SR)
@@ -606,7 +647,7 @@ Note: This bit is not used in I2S mode and SPI TI mode.
 */
 
 
-	SPI2->CR1 |= SPI_CR1_SPE;
+	SPI2->CR1 |= (1 << 6);
 
 }
 
