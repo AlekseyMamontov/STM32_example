@@ -1,10 +1,12 @@
 #include "stm32g4xx.h"
 #include "main.h"
 #include "CanFD_stm32G4.h"
+#include "I2C.h"
 
 
 uint8_t test = 1, trigger = 0, command = 0xEF, data = 0;
 uint32_t pause = 500;
+
 
 int main(void) {
     // Настройка системного тактирования
@@ -13,9 +15,14 @@ int main(void) {
     GPIO_INIT();
     CAN_Config();
     ConfigSPI2();
+    I2C2_Init();
+    BMP280_Init();
+
+
     __enable_irq();
+
     // Сообщение для отправки
-    uint8_t   data2[16] = {0},stat;
+    uint8_t   data2[16] = {0};
     uint32_t  data32[18]={0};
     uint32_t  id = 0x222,per32;  // Стандартный идентификатор CAN
     uint32_t* RAM = (uint32_t*)data32;
@@ -52,35 +59,6 @@ int main(void) {
 
         	  GPIOA->BRR = 1<<10;
 
-        	  /*
-
-        	  for(int i = 0 ; i<2000000;i++){
-
-        		 if(SPI2->SR & SPI_SR_TXE){
-        			 per32 = command;
-        			 SPI2->DR =((per32 << 8) | data);
-        			 break;
-        		 }
-
-        	  };
-
-
-        	  stat=1;
-
-
-        	  for(int i = 0 ; i<2000000;i++){
-
-        		 if(SPI2->SR & 1){
-
-        			 data32[0] = SPI2->DR;
-        			 stat=0;
-        			 break;
-        		 }
-
-
-        	  };
-
- */
 
         	  while(!(SPI2->SR & SPI_SR_TXE));
 
@@ -102,9 +80,15 @@ int main(void) {
         	CAN_SendMessage(id,(uint8_t*)data32, 8);//(uint8_t*)RAM + counterRAM*4
 
 
+        	data32[0]=BMP280_ReadTemperature();
 
 
-
+        	data32[1]= (I2C2_ReadByte(0x76, 0xD0)<<24) |
+        			   (I2C2_ReadByte(0x76, 0xf7)<<16) |
+					   (I2C2_ReadByte(0x76, 0xf8)<< 8) |
+					   (I2C2_ReadByte(0x76, 0xf9))
+					   ;
+        	CAN_SendMessage(id,(uint8_t*)data32,8);
 
 
          test = 0;
@@ -722,17 +706,8 @@ void SystemClock_Config(void) {
 
     NVIC_EnableIRQ(SysTick_IRQn);
 
-
-
-
-
-
-
-
-
-
-
 }
+
 void SysTick_Handler(void){
 
 
@@ -748,6 +723,9 @@ void delay_ms(uint32_t ms){
     SysTick->VAL = 0; // Обнуляем текущее значение
     SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_ENABLE_Msk;
 
+
+
+
     for (uint32_t i = 0; i < ms; i++) {
         // Ждем, пока счетчик не дойдет до нуля
         while (!(SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk));
@@ -756,6 +734,23 @@ void delay_ms(uint32_t ms){
     // Отключаем SysTick
     SysTick->CTRL = 0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
