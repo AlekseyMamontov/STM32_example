@@ -41,16 +41,12 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32g4xx.h"
 
 
 
-void delay_ms(uint32_t ms);
-void SystemClock_Config(void);
 void CAN_GPIO_Config(void);
 void CAN_Config(void);
-void GPIO_INIT(void);
-void ConfigSPI2(void);
+
 
 //////////////////////
 /*Device address*/
