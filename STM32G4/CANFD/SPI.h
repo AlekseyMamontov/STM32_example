@@ -8,7 +8,8 @@
 #ifndef INC_SPI_H_
 #define INC_SPI_H_
 
-
+#define SPI2_CS_on  GPIOA->BRR = 1<<10;
+#define SPI2_CS_off GPIOA->BSRR = 1<<10;
 
 void ConfigSPI2(void){
 
@@ -212,5 +213,95 @@ Note: This bit is not used in I2S mode and SPI TI mode.
 	SPI2->CR1 |= (1 << 6);
 
 }
+
+///////////////////////////////////////////////
+
+uint8_t SPI2_data(uint8_t reg,uint8_t data ){
+
+	SPI2_CS_on
+	while(!(SPI2->SR & SPI_SR_TXE));
+	SPI2->DR =(reg << 8) | data ;
+	while(!(SPI2->SR & SPI_SR_RXNE));
+	SPI2_CS_off
+
+	return SPI2->DR;
+};
+
+///////////////////////////////////////////////
+
+#define SPI_TIMEOUT 1000
+
+uint8_t SPI2_Send_Data(uint8_t reg,uint8_t *data, uint16_t length) {
+
+	uint8_t error =1;
+	uint32_t timeout = 0;
+
+	SPI2_CS_on
+
+    while (!(SPI2->SR & SPI_SR_TXE)) {
+        if (++timeout > SPI_TIMEOUT) goto spi_exit;}
+
+        SPI2->DR = reg;
+
+
+    for (size_t i = 0; i < length; i++) {
+
+       timeout = 0;
+       while (!(SPI2->SR & SPI_SR_TXE)){
+            if (++timeout > SPI_TIMEOUT) goto spi_exit;}
+
+        SPI2->DR = data[i];
+
+        timeout = 0;
+        while (!(SPI2->SR & SPI_SR_RXNE)){
+            if (++timeout > SPI_TIMEOUT) goto spi_exit;}
+
+        (void)SPI2->DR;  // Чтение данных из регистра для сброса флага RXNE
+    }
+
+    error = 0;
+spi_exit: SPI2_CS_off;  // Деактивировать устройство
+    return error;  // Успешная передача
+}
+
+////////////////////////////////////////////////////////////////////
+
+uint8_t SPI2_Read_Data(uint8_t reg,uint8_t *data, uint16_t length) {
+
+	uint8_t error =1;
+	uint32_t timeout = 0;
+
+	SPI2_CS_on
+
+    while (!(SPI2->SR & SPI_SR_TXE)) {
+        if (++timeout > SPI_TIMEOUT) goto spi_exit;}
+
+       SPI2->DR = reg;  // Отправка адреса регистра
+
+
+    for (size_t i = 0; i < length; i++) {
+
+       timeout = 0;
+       while (!(SPI2->SR & SPI_SR_TXE)){
+            if (++timeout > SPI_TIMEOUT) goto spi_exit;}
+
+        SPI2->DR = 0;  // Отправка байта
+
+        timeout = 0;
+        while (!(SPI2->SR & SPI_SR_RXNE)){
+            if (++timeout > SPI_TIMEOUT) goto spi_exit;}
+
+        data[i] = SPI2->DR;  // Чтение данных из регистра для сброса флага RXNE
+    }
+
+error = 0;
+spi_exit: SPI2_CS_off;  // Деактивировать устройство
+return error;  // Успешная передача
+}
+
+
+
+
+
 
 #endif /* INC_SPI_H_ */

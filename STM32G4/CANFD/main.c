@@ -56,24 +56,9 @@ int main(void) {
 
         if(test){
 
-        	  GPIOA->BRR = 1<<10;
 
 
-        	  while(!(SPI2->SR & SPI_SR_TXE));
-
-        	  per32 = data;
-        	  SPI2->DR =((per32 << 8) | command);
-        	 // SPI2->DR =0;
-        	  while(!(SPI2->SR & SPI_SR_RXNE));
-
-        	  GPIOA->BSRR = 1<<10;
-
-        	  data32[0] = SPI2->DR;
-        	 // data32[1] = SPI2->DR;
-
-
-        	  //if(stat){ data32[0] = SPI2->SR;data32[1]=SPI2->SR;}
-
+        	data32[0] = SPI2_data(command,data);
 
 
         	CAN_SendMessage(id,(uint8_t*)data32, 8);//(uint8_t*)RAM + counterRAM*4
@@ -133,8 +118,8 @@ void FDCAN1_IT1_IRQHandler(void){
 			if (dlc<2) break;
 
 			test = 1;
-			command = (*RxBuffer) & 0xFF;
-			data = (*RxBuffer >> 8) & 0xFF;
+			data = (*RxBuffer) & 0xFF;
+			command = (*RxBuffer >> 8) & 0xFF;
 
 		   break;
 

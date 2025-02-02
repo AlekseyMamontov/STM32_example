@@ -266,7 +266,7 @@ struct BMP280{
     uint8_t addr;
 };
 
-struct BMP280 BMP280_sensor1 = {
+static struct BMP280 BMP280_sensor1 = {
 
 		.dig_T1 = (uint16_t*)data_calib,
 		.dig_T2 = data_calib+1,
