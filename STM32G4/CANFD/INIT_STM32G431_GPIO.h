@@ -191,7 +191,7 @@ void GPIO_INIT(void){
 	     //-------------  151413121110 9 8 7 6 5 4 3 2 1 0
 		 GPIOA->PUPDR = 0b01100100000000000000000000000000; // General purpose output mode
 	     //-------------  151413121110 9 8 7 6 5 4 3 2 1 0
-		 GPIOB->PUPDR = 0b00000000000000010000000000000000; // General purpose output mode
+		 GPIOB->PUPDR = 0b00000001010000010000000000000000; // General purpose output mode
 
 	/*
 
@@ -257,7 +257,28 @@ void GPIO_INIT(void){
   GPIOA->BSRR = 1 << 10; //spi2cs
   GPIOB->BSRR = 1;  // spi1cs
 
+
+
+  /* EXTI
+   PB12 IMU_int1  EXTI 12 configuration bits
+   PB11 IMU int2
+  */
+  SYSCFG->EXTICR[3] |= 0b0000000000000001;  // PB12
+  SYSCFG->EXTICR[2] |= 0b0001000000000000;  // PB11
+
+  EXTI->IMR1  |= 0b0001100000000000;// On interput EXTI1
+  EXTI->EMR1  |= 0b0001100000000000;// Pending register 1 (EXTI_PR1)
+  EXTI->FTSR1 |= 0b0001100000000000;
+
+  //NVIC_EnableIRQ(EXTI15_10_IRQHandler);
+  //NVIC_SetPriority(EXTI15_10_IRQHandler, 0);
+
+
 }
+
+
+
+
 
 
 void delay_ms(uint32_t ms){

@@ -214,22 +214,65 @@ Note: This bit is not used in I2S mode and SPI TI mode.
 
 }
 
-///////////////////////////////////////////////
+#define SPI_TIMEOUT 5000
+
+//////////////////   16 bit    ///////////////////
 
 uint8_t SPI2_data(uint8_t reg,uint8_t data ){
 
+	uint32_t timeout = 0;
+
 	SPI2_CS_on
-	while(!(SPI2->SR & SPI_SR_TXE));
+
+	while (!(SPI2->SR & SPI_SR_TXE)){
+		if(++timeout > SPI_TIMEOUT){SPI2_CS_off;return 0;}};
+
 	SPI2->DR =(reg << 8) | data ;
-	while(!(SPI2->SR & SPI_SR_RXNE));
+
+	while(!(SPI2->SR & SPI_SR_RXNE)){
+		if(++timeout > SPI_TIMEOUT){SPI2_CS_off;return 0;}};
+
 	SPI2_CS_off
 
 	return SPI2->DR;
 };
 
-///////////////////////////////////////////////
+//////////////////   16 bit check  ///////////////////
 
-#define SPI_TIMEOUT 1000
+uint8_t SPI2_data_check(uint8_t reg,uint8_t* data ){
+
+	uint8_t error = 1;
+	uint32_t timeout = 0;
+
+	SPI2_CS_on
+
+	while (!(SPI2->SR & SPI_SR_TXE)){
+		if(++timeout > SPI_TIMEOUT)goto spi_exit;}
+
+	SPI2->DR =(reg << 8) | *data ;
+
+	while(!(SPI2->SR & SPI_SR_RXNE)){
+		if(++timeout > SPI_TIMEOUT)goto spi_exit;}
+
+	*data = SPI2->DR;
+	 error= 0;
+
+spi_exit:
+
+    SPI2_CS_off
+	return error ;
+};
+
+
+
+
+/* 8bit
+ *
+Bits 11:8 DS[3:0]: Data size
+	These bits configure the data length for SPI transfers.
+		0111: 8-bit  -> ON
+		1111: 16-bit
+*/
 
 uint8_t SPI2_Send_Data(uint8_t reg,uint8_t *data, uint16_t length) {
 
@@ -260,11 +303,15 @@ uint8_t SPI2_Send_Data(uint8_t reg,uint8_t *data, uint16_t length) {
     }
 
     error = 0;
-spi_exit: SPI2_CS_off;  // Деактивировать устройство
+
+spi_exit:
+
+    SPI2_CS_off;  // Деактивировать устройство
     return error;  // Успешная передача
 }
 
-////////////////////////////////////////////////////////////////////
+////////////////////        8bit    /////////////////////////
+
 
 uint8_t SPI2_Read_Data(uint8_t reg,uint8_t *data, uint16_t length) {
 
@@ -294,11 +341,70 @@ uint8_t SPI2_Read_Data(uint8_t reg,uint8_t *data, uint16_t length) {
         data[i] = SPI2->DR;  // Чтение данных из регистра для сброса флага RXNE
     }
 
-error = 0;
-spi_exit: SPI2_CS_off;  // Деактивировать устройство
-return error;  // Успешная передача
+    error = 0;
+
+spi_exit:
+
+	SPI2_CS_off;  // Деактивировать устройство
+	return error;  // Успешная передача
 }
 
+
+//////////////////////////////
+
+// Налаштування DMA для передачі та прийому 16-бітних даних
+void DMA_Init(void) {
+
+    RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN;
+
+    // Налаштування DMA для передачі
+    DMA1_Channel1->CCR = DMA_CCR_DIR | DMA_CCR_MINC | DMA_CCR_PSIZE_1 | DMA_CCR_MSIZE_1; // Прямий напрямок, інкремент пам'яті, 16-бітні дані
+    DMA1_Channel1->CNDTR = 4; // Кількість 16-бітних елементів
+    DMA1_Channel1->CPAR = (uint32_t)&SPI2->DR; // Адреса периферії (SPI2 Data Register)
+
+    // Налаштування DMA для прийому
+    DMA1_Channel2->CCR = DMA_CCR_MINC | DMA_CCR_PSIZE_1 | DMA_CCR_MSIZE_1; // Периферія в пам'ять, інкремент пам'яті, 16-бітні дані
+    DMA1_Channel2->CNDTR = 4; // Кількість 16-бітних елементів
+    DMA1_Channel2->CPAR = (uint32_t)&SPI2->DR; // Адреса периферії
+}
+
+// Обробник переривання для SPI
+void SPI2_IRQHandler(void) {
+    if (SPI2->SR & SPI_SR_OVR) { // Перевірка на переповнення
+        // Обробка переповнення: скидання флагу та збереження стану
+        uint32_t dummy = SPI2->DR; // Читання даних для скидання флагу
+        (void)dummy; // Попередження компілятора про невикористання змінної
+    }
+}
+
+// Обробник переривання для DMA
+void DMA1_Channel1_IRQHandler(void) {
+    if (DMA1->ISR & DMA_ISR_TEIF1) { // Перевірка на помилку передачі
+        // Обробка помилки DMA
+        DMA1->IFCR |= DMA_IFCR_CTEIF1; // Скидання флагу помилки
+    }
+}
+
+void DMA1_Channel2_IRQHandler(void) {
+    if (DMA1->ISR & DMA_ISR_TEIF2) { // Перевірка на помилку прийому
+        // Обробка помилки DMA
+        DMA1->IFCR |= DMA_IFCR_CTEIF2; // Скидання флагу помилки
+    }
+}
+
+// Одночасна передача та прийом даних через DMA
+void SPI2_TransmitReceive_DMA(uint16_t *txData, uint16_t *rxData, uint16_t size) {
+
+    DMA1_Channel1->CMAR = (uint32_t)txData; // Адреса пам'яті для передачі
+    DMA1_Channel1->CNDTR = size; // Кількість 16-бітних елементів
+    DMA1_Channel1->CCR |= DMA_CCR_EN; // Увімкнення DMA каналу для передачі
+
+    DMA1_Channel2->CMAR = (uint32_t)rxData; // Адреса пам'яті для прийому
+    DMA1_Channel2->CNDTR = size; // Кількість 16-бітних елементів
+    DMA1_Channel2->CCR |= DMA_CCR_EN; // Увімкнення DMA каналу для прийому
+
+    SPI2->CR2 |= SPI_CR2_TXDMAEN | SPI_CR2_RXDMAEN; // Увімкнення DMA для передачі та прийому
+}
 
 
 

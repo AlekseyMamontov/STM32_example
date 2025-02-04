@@ -1,10 +1,18 @@
 
+
 #include "stm32g4xx.h"
 #include "INIT_STM32G431_GPIO.h"
 #include <CANFD_STM32G431.h>
 #include "I2C.h"
 #include "SPI.h"
 #include "main.h"
+
+//#include "Ixm42xxxTransport.h"
+//#include "Ixm42xxxDefs.h"
+//#include "Ixm42xxxDriver_HL.h"
+
+
+
 uint8_t test = 1, trigger = 0, command = 0xEF, data = 0;
 uint32_t pause = 500;
 
@@ -24,15 +32,11 @@ int main(void) {
     // Сообщение для отправки
 
     uint32_t  data32[18]={0};
-    uint32_t  id = 0x222,per32;  // Стандартный идентификатор CAN
+    uint32_t  id = 0x222;  // Стандартный идентификатор CAN
 
 
 
     while (1) {
-
-        // Включаем светодиод
-       // GPIOA->BSRR = GPIO_BSRR_BS12; // Включаем светодиод
-       // delay_ms(500); // Задержка 500 мс
 
         // Выключаем светодиод
         if(!pause){
@@ -42,16 +46,7 @@ int main(void) {
           pause = 500;
 
           };
-/*
 
-        if( FDCAN1->RXF0S & FDCAN_RXF0S_F0FL_Msk){
-
-            getIndex = (FDCAN1->RXF0S & FDCAN_RXF0S_F0GI_Msk) >> 8;
-        	test = 1;
-
-        	FDCAN1->RXF0A = getIndex;
-        }
-*/
 
 
         if(test){
