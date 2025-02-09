@@ -53,14 +53,21 @@ int main(void) {
 
 
 
-        	data32[0] = SPI2_data(command,data);
-
+            SPI2_data(command,data);
+        	data = 0 ;
+        	data32[0]  =  SPI2_data(0x80|0x1E,data);
+        	data32[0] |= (SPI2_data(0x80|0x1D,data))<<8;
+        	data32[0] |= (SPI2_data(0x80|0x20,data))<<16;
+        	data32[0] |= (SPI2_data(0x80|0x1f,data))<<24;
+        	data32[1]  =  SPI2_data(0x80|0x22,data);
+        	data32[1] |= (SPI2_data(0x80|0x21,data))<<8;
+        	data32[1] |= (SPI2_data(0x80|0x24,data))<<16;
+        	data32[1] |= (SPI2_data(0x80|0x23,data))<<24;
 
         	CAN_SendMessage(id,(uint8_t*)data32, 8);//(uint8_t*)RAM + counterRAM*4
 
 
         	BMP280_Read_Raw_Data(&BMP280_sensor1);
-        				   ;
         	data32[0]=  BMP280_Compensate_Temperature(&BMP280_sensor1);
         	data32[1]=  BMP280_Compensate_Pressure(&BMP280_sensor1);
         	CAN_SendMessage(id,(uint8_t*)data32,8);

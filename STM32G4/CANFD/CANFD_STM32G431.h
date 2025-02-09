@@ -503,7 +503,7 @@ void FDCAN_Config(FDCAN_BaudRate* config) {
     while (!(FDCAN->CCCR & FDCAN_CCCR_INIT));
 
     // Разрешаем доступ к конфигурационным регистрам
-    FDCAN->CCCR |= FDCAN_CCCR_CCE;
+	FDCAN->CCCR |= FDCAN_CCCR_CCE;
 
     // Установка скорости передачи данных
     FDCAN_SetBaudRate(config);
