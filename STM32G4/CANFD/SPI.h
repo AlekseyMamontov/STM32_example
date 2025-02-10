@@ -11,204 +11,201 @@
 #define SPI2_CS_on  GPIOA->BRR = 1<<10;
 #define SPI2_CS_off GPIOA->BSRR = 1<<10;
 
-void ConfigSPI2(void){
+void ConfigSPI2(void) {
 
 	RCC->APB1ENR1 |= RCC_APB1ENR1_SPI2EN;
-
 
 	/*
 	 SPI control register 1 (SPIx_CR1) Address offset: 0x00 Reset value: 0x0000
 
-	 Bit 15 BIDIMODE: Bidirectional data mode enable.
-			This bit enables half-duplex communication using common single bidirectional data line.
-			Keep RXONLY bit clear when bidirectional mode is active.
-			0: 2-line unidirectional data mode selected
-			1: 1-line bidirectional data mode selected
-N
-	Bit 14 BIDIOE: Output enable in bidirectional mode
-			This bit combined with the BIDIMODE bit selects the direction of transfer in bidirectional mode.
-			0: Output disabled (receive-only mode)
-			1: Output enabled (transmit-only mode)
-		Note: In master mode, the MOSI pin is used and in slave mode, the MISO pin is used.
+	 [15] BIDIMODE: Bidirectional data mode enable.
+	 This bit enables half-duplex communication using common single bidirectional data line.
+	 Keep RXONLY bit clear when bidirectional mode is active.
+	 *	0: 2-line unidirectional data mode selected
+	 *	1: 1-line bidirectional data mode selected
+	 N
+	 [14] BIDIOE: Output enable in bidirectional mode
+	 This bit combined with the BIDIMODE bit selects the direction of transfer in bidirectional mode.
+	 * 	0: Output disabled (receive-only mode)
+	 *	1: Output enabled (transmit-only mode)
+	 Note: In master mode, the MOSI pin is used and in slave mode, the MISO pin is used.
 
-		Bit 13 CRCEN: Hardware CRC calculation enable
-			0: CRC calculation disabled
-			1: CRC calculation enabled
-		Note: This bit should be written only when SPI is disabled (SPE = ‘0’) for correct operation.
+	 [13] CRCEN: Hardware CRC calculation enable
+	 *	0: CRC calculation disabled
+	 *	1: CRC calculation enabled
+	 Note: This bit should be written only when SPI is disabled (SPE = ‘0’) for correct operation.
 
-		Bit 12 CRCNEXT: Transmit CRC next
-			0: Next transmit value is from Tx buffer.
-			1: Next transmit value is from Tx CRC register.
-			Note: This bit has to be written as soon as the last data is written in the SPIx_DR register.
+	 [12] CRCNEXT: Transmit CRC next
+	 *	0: Next transmit value is from Tx buffer.
+	 *	1: Next transmit value is from Tx CRC register.
+	 Note: This bit has to be written as soon as the last data is written in the SPIx_DR register.
 
-		Bit 11 CRCL: CRC length
-			This bit is set and cleared by software to select the CRC length.
-			0: 8-bit CRC length
-			1: 16-bit CRC length
-		Note: This bit should be written only when SPI is disabled (SPE = ‘0’) for correct operation.
+	 [11] CRCL: CRC length
+	 This bit is set and cleared by software to select the CRC length.
+	 *	0: 8-bit CRC length
+	 *	1: 16-bit CRC length
+	 Note: This bit should be written only when SPI is disabled (SPE = ‘0’) for correct operation.
 
-		Bit 10 RXONLY: Receive only mode enabled.
-		This bit enables simplex communication using a single unidirectional line to receive data
-			exclusively. Keep BIDIMODE bit clear when receive only mode is active.This bit is also
-			useful in a multislave system in which this particular slave is not accessed, the output from
-				the accessed slave is not corrupted.
-			0: Full-duplex (Transmit and receive)
-			1: Output disabled (Receive-only mode)
+	 [10] RXONLY: Receive only mode enabled.
+	 This bit enables simplex communication using a single unidirectional line to receive data
+	 exclusively. Keep BIDIMODE bit clear when receive only mode is active.This bit is also
+	 useful in a multislave system in which this particular slave is not accessed, the output from
+	 the accessed slave is not corrupted.
+	 *	0: Full-duplex (Transmit and receive)
+	 *	1: Output disabled (Receive-only mode)
 
-			Bit 9 SSM: Software slave management
-			When the SSM bit is set, the NSS pin input is replaced with the value from the SSI bit.
-			0: Software slave management disabled
-			1: Software slave management enabled
+	 [9] SSM: Software slave management
+	 When the SSM bit is set, the NSS pin input is replaced with the value from the SSI bit.
+	 *	0: Software slave management disabled
+	 *	1: Software slave management enabled
 
-			Bit 8 SSI: Internal slave select
-				This bit has an effect only when the SSM bit is set. The value of this bit is forced onto the
-					NSS pin and the I/O value of the NSS pin is ignored.
-			Note: This bit is not used in I2S mode and SPI TI mode.
-			Bit 7 LSBFIRST: Frame format
-					0: data is transmitted / received with the MSB first
-					1: data is transmitted / received with the LSB first
-			Note: 1. This bit should not be changed when communication is ongoing.
-			2. This bit is not used in I2S mode and SPI TI mode.
+	 [8] SSI: Internal slave select
+	 This bit has an effect only when the SSM bit is set. The value of this bit is forced onto the
+	 NSS pin and the I/O value of the NSS pin is ignored.
+	 Note: This bit is not used in I2S mode and SPI TI mode.
+	 [7] LSBFIRST: Frame format
+	 *	0: data is transmitted / received with the MSB first
+	 *	1: data is transmitted / received with the LSB first
+	 Note: 1. This bit should not be changed when communication is ongoing.
+	 2. This bit is not used in I2S mode and SPI TI mode.
 
-			Bit 6 SPE: SPI enable
-				0: Peripheral disabled
-				1: Peripheral enabled
-				Note: When disabling the SPI, follow the procedure described in Procedure for disabling the
-				SPI on page 1761.
-				Bits 5:3 BR[2:0]: Baud rate control
-					000: fPCLK/2
-					001: fPCLK/4
-					010: fPCLK/8
-					011: fPCLK/16
-					100: fPCLK/32
-					101: fPCLK/64
-					110: fPCLK/128
-					111: fPCLK/256
+	 [6] SPE: SPI enable
+	 *	0: Peripheral disabled
+	 *	1: Peripheral enabled
+	 Note: When disabling the SPI, follow the procedure described in Procedure for disabling the
+	 SPI on page 1761.
+	 [5:3] BR[2:0]: Baud rate control
+	 *	000: fPCLK/2
+	 *	001: fPCLK/4
+	 *	010: fPCLK/8
+	 *	011: fPCLK/16
+	 *	100: fPCLK/32
+	 *	101: fPCLK/64
+	 *	110: fPCLK/128
+	 *	111: fPCLK/256
 
-				Bit 2 MSTR: Master selection
-					0: Slave configuration
-					1: Master configuration
+	 [2] MSTR: Master selection
+	 *	0: Slave configuration
+	 *	1: Master configuration
 
 	 */
 
-	SPI2->CR1 =  (1 << 2) | (3 << 3) | (3 << 8)|0; // master | clk/8 |  SSM=1 SSI =1 CPOL0 _/
+	SPI2->CR1 = (1 << 2) | (3 << 3) | (3 << 8) | 0; // master | clk/8 |  SSM=1 SSI =1 CPOL0 _/
 
+	/*
+	 SPI control register 2 (SPIx_CR2) Address offset: 0x04 Reset value: 0x0700 (8 bit)
+	 Регістровий опис SPI_CR2
+	 Адреса відступу: 0x04
+	 Початкове значення: 0x0700 (8 біт)
 
-/*
- SPI control register 2 (SPIx_CR2) Address offset: 0x04 Reset value: 0x0700 (8 bit)
+	 [14] LDMA_TX: Остання передача DMA для передачі
+	 Цей біт використовується в режимі пакування даних, щоб визначити, чи загальна кількість даних для передачі через DMA
+	 є парною 		чи непарною. Має значення лише якщо біт TXDMAEN в регістрі SPI_CR2 встановлений, і якщо використовується
+	 режим пакування (довжина даних ≤ 8 біт і запис у SPI_DR шириною 16 біт). Його потрібно записати, коли SPI вимкнено
+	 (SPE = 0 в регістрі SPI_CR1).
+	 *	0: Кількість даних для передачі парна
+	 *	1: Кількість даних для передачі непарна
+	 Примітка: Дивіться процедуру вимкнення SPI на сторінці 1761, якщо біт CRCEN встановлений.
 
-		Bit 14 LDMA_TX: Last DMA transfer for transmission
-			This bit is used in data packing mode, to define if the total number of data to transmit by DMA
-			is odd or even. It has significance only if the TXDMAEN bit in the SPIx_CR2 register is set
-			and if packing mode is used (data length =< 8-bit and write access to SPIx_DR is 16-bit
-			wide). It has to be written when the SPI is disabled (SPE = 0 in the SPIx_CR1 register).
-					0: Number of data to transfer is even
-					1: Number of data to transfer is odd
-				Note: Refer to Procedure for disabling the SPI on page 1761 if the CRCEN bit is set.
+	 [13]LDMA_RX: Остання передача DMA для прийому
+	 Цей біт використовується в режимі пакування даних, щоб визначити, чи загальна кількість даних для прийому ч
+	 ерез DMA є парною чи непарною. Має значення лише якщо біт RXDMAEN в регістрі SPI_CR2 встановлений, і якщо
+	 використовується режим пакування (довжина даних ≤ 8 біт і запис у SPI_DR шириною 16 біт).
+	 Його потрібно записати, коли SPI вимкнено (SPE = 0 в регістрі SPI_CR1).
+	 *	0: Кількість даних для прийому парна
+	 *	1: Кількість даних для прийому непарна
+	 Примітка: Дивіться процедуру вимкнення SPI на сторінці 1761, якщо біт CRCEN встановлений.
 
-		Bit 13 LDMA_RX: Last DMA transfer for reception
-			This bit is used in data packing mode, to define if the total number of data to receive by DMA
-			is odd or even. It has significance only if the RXDMAEN bit in the SPIx_CR2 register is set
-			and if packing mode is used (data length =< 8-bit and write access to SPIx_DR is 16-bit
-			wide). It has to be written when the SPI is disabled (SPE = 0 in the SPIx_CR1 register).
-					0: Number of data to transfer is even
-					1: Number of data to transfer is odd
-			Note: Refer to Procedure for disabling the SPI on page 1761 if the CRCEN bit is set.
+	 [12] FRXTH: Поріг приймання FIFO
+	 Цей біт використовується для встановлення порогу RXFIFO, який викликає подію RXNE.
+	 0: Подія RXNE генерується, якщо рівень FIFO більший або рівний 1/2 (16 біт)
+	 1: Подія RXNE генерується, якщо рівень FIFO більший або рівний 1/4 (8 біт)
 
-		Bit 12 FRXTH: FIFO reception threshold
-			This bit is used to set the threshold of the RXFIFO that triggers an RXNE event
-				0: RXNE event is generated if the FIFO level is greater than or equal to 1/2 (16-bit)
-				1: RXNE event is generated if the FIFO level is greater than or equal to 1/4 (8-bit)
+	 [11:8] DS[3:0]: Розмір даних
+	 Ці біти конфігурують довжину даних для передач через SPI.
+	 *	0111: 8 біт
+	 *	1111: 16 біт
+	 Якщо програмне забезпечення намагається записати одне з "Не використовується" значень,
+	 вони фіксуються на значенні "0111" (8 біт).
 
+	 [7] TXEIE: Увімкнення переривання для порожнього буфера TX
+	 *	0: Переривання TXE заблоковано
+	 *	1: Переривання TXE не заблоковано. Використовується для генерації запиту на переривання, коли прапорець TXE встановлений.
+	 [6] RXNEIE: Увімкнення переривання для непорожнього буфера RX
+	 *	0: Переривання RXNE заблоковано
+	 *	1: Переривання RXNE не заблоковано. Використовується для генерації запиту на переривання, коли прапорець RXNE встановлений.
+	 [5] ERRIE: Увімкнення переривання для помилок
+	 Цей біт контролює генерацію переривання, коли виникає умова помилки (CRCERR, OVR, MODF в режимі SPI, FRE в режимі TI
+	 та UDR, OVR і FRE в режимі I2S).
+	 *	0: Переривання помилки заблоковано
+	 *	1: Переривання помилки увімкнено
+	 [4] FRF: Формат кадру
+	 0: Режим Motorola SPI
+	 1: Режим TI SPI
+	 Примітка: Цей біт потрібно записувати лише коли SPI вимкнено (SPE=0).
+	 [3] NSSP: Керування імпульсом NSS
+	 Цей біт використовується лише в майстер-режимі. Дозволяє SPI генерувати імпульс NSS між двома послідовними даними
+	 під час безперервних передач. У випадку одиничної передачі даних, він примусово підвищує рівень NSS після передачі.
+	 Не має значення, якщо CPHA = '1', або FRF = '1'.
+	 *	0: Імпульс NSS не генерується
+	 *	1: Імпульс NSS генерується
+	 Примітка: 1. Цей біт потрібно записувати лише коли SPI вимкнено (SPE=0).
+	 Цей біт не використовується в режимі I2S і TI SPI.
 
-		Bits 11:8 DS[3:0]: Data size
-			These bits configure the data length for SPI transfers.
-				0111: 8-bit
-				1111: 16-bit
+	 [2] SSOE: Увімкнення виходу SS
+	 *	0: Вихід SS вимкнено в майстер-режимі, і SPI інтерфейс може працювати в мультимайстерній конфігурації
+	 *	1: Вихід SS увімкнено в майстер-режимі, і коли SPI інтерфейс увімкнено.
+	 *	   SPI інтерфейс не може працювати в мультимайстерному середовищі.
+	 Примітка: Цей біт не використовується в режимі I2S і TI SPI.
 
-				If software attempts to write one of the “Not used” values, they are forced to the value “0111”
-				(8-bit)
+	 [1] TXDMAEN: Увімкнення DMA для буфера TX
+	 Коли цей біт встановлений, генерується запит DMA щоразу, коли встановлюється прапорець TXE.
+	 *	0: DMA для буфера TX вимкнено
+	 *	1: DMA для буфера TX увімкнено
+	 *
+	 [0] RXDMAEN: Увімкнення DMA для буфера RX
+	 Коли цей біт встановлений, генерується запит DMA щоразу, коли встановлюється прапорець RXNE.
+	 *	0: DMA для буфера RX вимкнено
+	 *	1: DMA для буфера RX увімкнено
+	 */
 
-		Bit 7 TXEIE: Tx buffer empty interrupt enable
-				0: TXE interrupt masked
-				1: TXE interrupt not masked. Used to generate an interrupt request when the TXE flag is set.
-		Bit 6 RXNEIE: RX buffer not empty interrupt enable
-				0: RXNE interrupt masked
-				1: RXNE interrupt not masked. Used to generate an interrupt request when the RXNE flag isset.
-		Bit 5 ERRIE: Error interrupt enable
-			This bit controls the generation of an interrupt when an error condition occurs (CRCERR,
-			OVR, MODF in SPI mode, FRE at TI mode and UDR, OVR, and FRE in I2S mode).
-				0: Error interrupt is masked
-				1: Error interrupt is enabled
-		Bit 4 FRF: Frame format
-				0: SPI Motorola mode
-				1 SPI TI mode
-		Note: This bit must be written only when the SPI is disabled (SPE=0).
+	SPI2->CR2 |= (0b1111 << 8) | 2; // 16 BIT / Rx DMA/ TX DMA
 
-		Bit 3 NSSP: NSS pulse management
-			This bit is used in master mode only. it allows the SPI to generate an NSS pulse between two
-			consecutive data when doing continuous transfers. In the case of a single data transfer, it
-			forces the NSS pin high level after the transfer.
-			It has no meaning if CPHA = ’1’, or FRF = ’1’.
-				0: No NSS pulse
-				1: NSS pulse generated
-		Note: 1. This bit must be written only when the SPI is disabled (SPE=0).
-		2. This bit is not used in I2S mode and SPI TI mode.
+	/*
+	 SPI status register (SPIx_SR)
+	 Address offset: 0x08
+	 Reset value: 0x0002
 
-		Bit 2 SSOE: SS output enable
-				0: SS output is disabled in master mode and the SPI interface can work in multimasterconfiguration
-				1: SS output is enabled in master mode and when the SPI interface is enabled. The SPI
-				interface cannot work in a multimaster environment.
-Note: This bit is not used in I2S mode and SPI TI mode.
-		Bit 1 TXDMAEN: Tx buffer DMA enable
-				When this bit is set, a DMA request is generated whenever the TXE flag is set.
-				0: Tx buffer DMA disabled
-				1: Tx buffer DMA enabled
-				Bit 0 RXDMAEN: Rx buffer DMA enable
-		When this bit is set, a DMA request is generated whenever the RXNE flag is set.
-				0: Rx buffer DMA disabled
-				1: Rx buffer DMA enabled
- */
+	 Біти 12:11 FTLVL[1:0]: Рівень передачі FIFO Ці біти встановлюються та скидаються апаратно.
+	 00: FIFO порожній 01: 1/4 FIFO  10: 1/2 FIFO 11: FIFO повний (вважається повним, коли поріг FIFO більше 1/2)
 
+	 Біти 10:9 FRLVL[1:0]: Рівень прийому FIFO Ці біти встановлюються та скидаються апаратно.
+	 00: FIFO порожній 01: 1/4 FIFO 	10: 1/2 FIFO 	11: FIFO повний
+	 .
+	 Біт 7 BSY: Флаг зайнятості
+	 0: SPI (або I2S) не зайнятий
+	 1: SPI (або I2S) зайнятий у процесі передачі або буфер Tx не порожній
+	 Цей флаг встановлюється та скидається апаратно.
+	 Примітка: Флаг BSY слід використовувати з обережністю: дивіться розділ 39.5.10:
+	 Флаги стану SPI та процедуру відключення SPI на сторінці 1761.
 
-	SPI2->CR2 |=(0b1111 << 8);
-
-/*
-	SPI status register (SPIx_SR)
-	Address offset: 0x08
-	Reset value: 0x0002
-
-	Біти 12:11 FTLVL[1:0]: Рівень передачі FIFO Ці біти встановлюються та скидаються апаратно.
-		00: FIFO порожній 01: 1/4 FIFO  10: 1/2 FIFO 11: FIFO повний (вважається повним, коли поріг FIFO більше 1/2)
-
-	Біти 10:9 FRLVL[1:0]: Рівень прийому FIFO Ці біти встановлюються та скидаються апаратно.
-		00: FIFO порожній 01: 1/4 FIFO 	10: 1/2 FIFO 	11: FIFO повний
-	.
-	Біт 7 BSY: Флаг зайнятості
-		0: SPI (або I2S) не зайнятий
-		1: SPI (або I2S) зайнятий у процесі передачі або буфер Tx не порожній
-		Цей флаг встановлюється та скидається апаратно.
-		Примітка: Флаг BSY слід використовувати з обережністю: дивіться розділ 39.5.10:
-		Флаги стану SPI та процедуру відключення SPI на сторінці 1761.
-
-	Біт 6 OVR: Флаг переповнення
-		0: Переповнення не сталося
-		1: Виникло переповнення
-		Цей флаг встановлюється апаратно і скидається програмною послідовністю.
-	Біт 5 MODF: Помилка режиму
-		0: Помилки режиму не сталося 1: Виникла помилка режиму
-		Цей флаг встановлюється апаратно і скидається програмною послідовністю.
-	Біт 4 CRCERR: Флаг помилки CRC
-		0: Отримане значення CRC збігається зі значенням SPIx_RXCRCR
-		1: Отримане значення CRC не збігає зі значенням SPIx_RXCRCR
-	Біт 1 TXE: Буфер передачі порожній
-		0: Буфер Tx не порожній
-		1: Буфер Tx порожній
-	Біт 0 RXNE: Буфер прийому не порожній
-		0: Буфер Rx порожній
-		1: Буфер Rx не порожній
-*/
-
+	 Біт 6 OVR: Флаг переповнення
+	 0: Переповнення не сталося
+	 1: Виникло переповнення
+	 Цей флаг встановлюється апаратно і скидається програмною послідовністю.
+	 Біт 5 MODF: Помилка режиму
+	 0: Помилки режиму не сталося 1: Виникла помилка режиму
+	 Цей флаг встановлюється апаратно і скидається програмною послідовністю.
+	 Біт 4 CRCERR: Флаг помилки CRC
+	 0: Отримане значення CRC збігається зі значенням SPIx_RXCRCR
+	 1: Отримане значення CRC не збігає зі значенням SPIx_RXCRCR
+	 Біт 1 TXE: Буфер передачі порожній
+	 0: Буфер Tx не порожній
+	 1: Буфер Tx порожній
+	 Біт 0 RXNE: Буфер прийому не порожній
+	 0: Буфер Rx порожній
+	 1: Буфер Rx не порожній
+	 */
 
 	SPI2->CR1 |= (1 << 6);
 
@@ -218,196 +215,245 @@ Note: This bit is not used in I2S mode and SPI TI mode.
 
 //////////////////   16 bit    ///////////////////
 
-uint8_t SPI2_data(uint8_t reg,uint8_t data ){
+uint8_t SPI2_data(uint8_t reg, uint8_t data) {
 
 	uint32_t timeout = 0;
 
 	SPI2_CS_on
 
-	while (!(SPI2->SR & SPI_SR_TXE)){
-		if(++timeout > SPI_TIMEOUT){SPI2_CS_off;return 0;}};
+	while (!(SPI2->SR & SPI_SR_TXE)) {
+		if (++timeout > SPI_TIMEOUT) {
+			SPI2_CS_off
+			;
+			return 0;
+		}
+	};
 
-	SPI2->DR =(reg << 8) | data ;
+	SPI2->DR = (reg << 8) | data;
 
-	while(!(SPI2->SR & SPI_SR_RXNE)){
-		if(++timeout > SPI_TIMEOUT){SPI2_CS_off;return 0;}};
+	while (!(SPI2->SR & SPI_SR_RXNE)) {
+		if (++timeout > SPI_TIMEOUT) {
+			SPI2_CS_off
+			;
+			return 0;
+		}
+	};
 
 	SPI2_CS_off
 
 	return SPI2->DR;
-};
+}
+;
 
 //////////////////   16 bit check  ///////////////////
 
-uint8_t SPI2_data_check(uint8_t reg,uint8_t* data ){
+uint8_t SPI2_data_check(uint8_t reg, uint8_t *data) {
 
 	uint8_t error = 1;
 	uint32_t timeout = 0;
 
 	SPI2_CS_on
 
-	while (!(SPI2->SR & SPI_SR_TXE)){
-		if(++timeout > SPI_TIMEOUT)goto spi_exit;}
+	while (!(SPI2->SR & SPI_SR_TXE)) {
+		if (++timeout > SPI_TIMEOUT)
+			goto spi_exit;
+	}
 
-	SPI2->DR =(reg << 8) | *data ;
+	SPI2->DR = (reg << 8) | *data;
 
-	while(!(SPI2->SR & SPI_SR_RXNE)){
-		if(++timeout > SPI_TIMEOUT)goto spi_exit;}
+	while (!(SPI2->SR & SPI_SR_RXNE)) {
+		if (++timeout > SPI_TIMEOUT)
+			goto spi_exit;
+	}
 
 	*data = SPI2->DR;
-	 error= 0;
+	error = 0;
 
-spi_exit:
+	spi_exit:
 
-    SPI2_CS_off
-	return error ;
-};
-
-
-
+	SPI2_CS_off
+	return error;
+}
+;
 
 /* 8bit
  *
-Bits 11:8 DS[3:0]: Data size
-	These bits configure the data length for SPI transfers.
-		0111: 8-bit  -> ON
-		1111: 16-bit
-*/
+ Bits 11:8 DS[3:0]: Data size
+ These bits configure the data length for SPI transfers.
+ 0111: 8-bit  -> ON
+ 1111: 16-bit
+ */
 
-uint8_t SPI2_Send_Data(uint8_t reg,uint8_t *data, uint16_t length) {
+uint8_t SPI2_Send_Data(uint8_t reg, uint8_t *data, uint16_t length) {
 
-	uint8_t error =1;
+	uint8_t error = 1;
 	uint32_t timeout = 0;
 
 	SPI2_CS_on
 
-    while (!(SPI2->SR & SPI_SR_TXE)) {
-        if (++timeout > SPI_TIMEOUT) goto spi_exit;}
+	while (!(SPI2->SR & SPI_SR_TXE)) {
+		if (++timeout > SPI_TIMEOUT)
+			goto spi_exit;
+	}
 
-        SPI2->DR = reg;
+	SPI2->DR = reg;
 
+	for (size_t i = 0; i < length; i++) {
 
-    for (size_t i = 0; i < length; i++) {
+		timeout = 0;
+		while (!(SPI2->SR & SPI_SR_TXE)) {
+			if (++timeout > SPI_TIMEOUT)
+				goto spi_exit;
+		}
 
-       timeout = 0;
-       while (!(SPI2->SR & SPI_SR_TXE)){
-            if (++timeout > SPI_TIMEOUT) goto spi_exit;}
+		SPI2->DR = data[i];
 
-        SPI2->DR = data[i];
+		timeout = 0;
+		while (!(SPI2->SR & SPI_SR_RXNE)) {
+			if (++timeout > SPI_TIMEOUT)
+				goto spi_exit;
+		}
 
-        timeout = 0;
-        while (!(SPI2->SR & SPI_SR_RXNE)){
-            if (++timeout > SPI_TIMEOUT) goto spi_exit;}
+		(void) SPI2->DR;  // Чтение данных из регистра для сброса флага RXNE
+	}
 
-        (void)SPI2->DR;  // Чтение данных из регистра для сброса флага RXNE
-    }
+	error = 0;
 
-    error = 0;
+	spi_exit:
 
-spi_exit:
-
-    SPI2_CS_off;  // Деактивировать устройство
-    return error;  // Успешная передача
+	SPI2_CS_off
+	;  // Деактивировать устройство
+	return error;  // Успешная передача
 }
 
 ////////////////////        8bit    /////////////////////////
 
+uint8_t SPI2_Read_Data(uint8_t reg, uint8_t *data, uint16_t length) {
 
-uint8_t SPI2_Read_Data(uint8_t reg,uint8_t *data, uint16_t length) {
-
-	uint8_t error =1;
+	uint8_t error = 1;
 	uint32_t timeout = 0;
 
 	SPI2_CS_on
 
-    while (!(SPI2->SR & SPI_SR_TXE)) {
-        if (++timeout > SPI_TIMEOUT) goto spi_exit;}
+	while (!(SPI2->SR & SPI_SR_TXE)) {
+		if (++timeout > SPI_TIMEOUT)
+			goto spi_exit;
+	}
 
-       SPI2->DR = reg;  // Отправка адреса регистра
+	SPI2->DR = reg;  // Отправка адреса регистра
 
+	for (size_t i = 0; i < length; i++) {
 
-    for (size_t i = 0; i < length; i++) {
+		timeout = 0;
+		while (!(SPI2->SR & SPI_SR_TXE)) {
+			if (++timeout > SPI_TIMEOUT)
+				goto spi_exit;
+		}
 
-       timeout = 0;
-       while (!(SPI2->SR & SPI_SR_TXE)){
-            if (++timeout > SPI_TIMEOUT) goto spi_exit;}
+		SPI2->DR = 0;  // Отправка байта
 
-        SPI2->DR = 0;  // Отправка байта
+		timeout = 0;
+		while (!(SPI2->SR & SPI_SR_RXNE)) {
+			if (++timeout > SPI_TIMEOUT)
+				goto spi_exit;
+		}
 
-        timeout = 0;
-        while (!(SPI2->SR & SPI_SR_RXNE)){
-            if (++timeout > SPI_TIMEOUT) goto spi_exit;}
+		data[i] = SPI2->DR;  // Чтение данных из регистра для сброса флага RXNE
+	}
 
-        data[i] = SPI2->DR;  // Чтение данных из регистра для сброса флага RXNE
-    }
+	error = 0;
 
-    error = 0;
+	spi_exit:
 
-spi_exit:
-
-	SPI2_CS_off;  // Деактивировать устройство
+	SPI2_CS_off
+	;  // Деактивировать устройство
 	return error;  // Успешная передача
 }
-
 
 //////////////////////////////
 
 // Налаштування DMA для передачі та прийому 16-бітних даних
 void DMA_Init(void) {
 
-    RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN;
+	RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN;
 
-    // Налаштування DMA для передачі
-    DMA1_Channel1->CCR = DMA_CCR_DIR | DMA_CCR_MINC | DMA_CCR_PSIZE_1 | DMA_CCR_MSIZE_1; // Прямий напрямок, інкремент пам'яті, 16-бітні дані
-    DMA1_Channel1->CNDTR = 4; // Кількість 16-бітних елементів
-    DMA1_Channel1->CPAR = (uint32_t)&SPI2->DR; // Адреса периферії (SPI2 Data Register)
+	// Налаштування DMA для передачі
+	DMA1_Channel1->CCR = DMA_CCR_DIR | DMA_CCR_MINC | DMA_CCR_PSIZE_1
+			| DMA_CCR_MSIZE_1; // Прямий напрямок, інкремент пам'яті, 16-бітні дані
+	DMA1_Channel1->CNDTR = 4; // Кількість 16-бітних елементів
+	DMA1_Channel1->CPAR = (uint32_t) &SPI2->DR; // Адреса периферії (SPI2 Data Register)
 
-    // Налаштування DMA для прийому
-    DMA1_Channel2->CCR = DMA_CCR_MINC | DMA_CCR_PSIZE_1 | DMA_CCR_MSIZE_1; // Периферія в пам'ять, інкремент пам'яті, 16-бітні дані
-    DMA1_Channel2->CNDTR = 4; // Кількість 16-бітних елементів
-    DMA1_Channel2->CPAR = (uint32_t)&SPI2->DR; // Адреса периферії
+	// Налаштування DMA для прийому
+	DMA1_Channel2->CCR = DMA_CCR_MINC | DMA_CCR_PSIZE_1 | DMA_CCR_MSIZE_1; // Периферія в пам'ять, інкремент пам'яті, 16-бітні дані
+	DMA1_Channel2->CNDTR = 4; // Кількість 16-бітних елементів
+	DMA1_Channel2->CPAR = (uint32_t) &SPI2->DR; // Адреса периферії
 }
 
 // Обробник переривання для SPI
 void SPI2_IRQHandler(void) {
-    if (SPI2->SR & SPI_SR_OVR) { // Перевірка на переповнення
-        // Обробка переповнення: скидання флагу та збереження стану
-        uint32_t dummy = SPI2->DR; // Читання даних для скидання флагу
-        (void)dummy; // Попередження компілятора про невикористання змінної
-    }
+	if (SPI2->SR & SPI_SR_OVR) { // Перевірка на переповнення
+		// Обробка переповнення: скидання флагу та збереження стану
+		uint32_t dummy = SPI2->DR; // Читання даних для скидання флагу
+		(void) dummy; // Попередження компілятора про невикористання змінної
+	}
 }
 
 // Обробник переривання для DMA
 void DMA1_Channel1_IRQHandler(void) {
-    if (DMA1->ISR & DMA_ISR_TEIF1) { // Перевірка на помилку передачі
-        // Обробка помилки DMA
-        DMA1->IFCR |= DMA_IFCR_CTEIF1; // Скидання флагу помилки
-    }
+	if (DMA1->ISR & DMA_ISR_TEIF1) { // Перевірка на помилку передачі
+		// Обробка помилки DMA
+		DMA1->IFCR |= DMA_IFCR_CTEIF1; // Скидання флагу помилки
+	}
 }
 
 void DMA1_Channel2_IRQHandler(void) {
-    if (DMA1->ISR & DMA_ISR_TEIF2) { // Перевірка на помилку прийому
-        // Обробка помилки DMA
-        DMA1->IFCR |= DMA_IFCR_CTEIF2; // Скидання флагу помилки
-    }
+	if (DMA1->ISR & DMA_ISR_TEIF2) { // Перевірка на помилку прийому
+		// Обробка помилки DMA
+		DMA1->IFCR |= DMA_IFCR_CTEIF2; // Скидання флагу помилки
+	}
 }
 
 // Одночасна передача та прийом даних через DMA
 void SPI2_TransmitReceive_DMA(uint16_t *txData, uint16_t *rxData, uint16_t size) {
 
-    DMA1_Channel1->CMAR = (uint32_t)txData; // Адреса пам'яті для передачі
-    DMA1_Channel1->CNDTR = size; // Кількість 16-бітних елементів
-    DMA1_Channel1->CCR |= DMA_CCR_EN; // Увімкнення DMA каналу для передачі
+	DMA1_Channel1->CMAR = (uint32_t) txData; // Адреса пам'яті для передачі
+	DMA1_Channel1->CNDTR = size; // Кількість 16-бітних елементів
+	DMA1_Channel1->CCR |= DMA_CCR_EN; // Увімкнення DMA каналу для передачі
 
-    DMA1_Channel2->CMAR = (uint32_t)rxData; // Адреса пам'яті для прийому
-    DMA1_Channel2->CNDTR = size; // Кількість 16-бітних елементів
-    DMA1_Channel2->CCR |= DMA_CCR_EN; // Увімкнення DMA каналу для прийому
+	DMA1_Channel2->CMAR = (uint32_t) rxData; // Адреса пам'яті для прийому
+	DMA1_Channel2->CNDTR = size; // Кількість 16-бітних елементів
+	DMA1_Channel2->CCR |= DMA_CCR_EN; // Увімкнення DMA каналу для прийому
 
-    SPI2->CR2 |= SPI_CR2_TXDMAEN | SPI_CR2_RXDMAEN; // Увімкнення DMA для передачі та прийому
+	SPI2->CR2 |= SPI_CR2_TXDMAEN | SPI_CR2_RXDMAEN; // Увімкнення DMA для передачі та прийому
 }
 
+/*
+ void SPI_DMA_Config(void) {
+ // Вимкнення SPI перед налаштуванням
+ SPI2->CR1 &= ~SPI_CR1_SPE;
+
+ // Налаштування DMA для RX
+ DMA1_Channel1->CPAR = (uint32_t)&SPI2->DR; // Адреса регістру прийому
+ DMA1_Channel1->CMAR = (uint32_t)spi_rx_buffer; // Адреса буфера прийому
+ DMA1_Channel1->CNDTR = BUFFER_SIZE; // Кількість байтів для прийому
+
+ // Налаштування DMA для TX
+ DMA1_Channel2->CPAR = (uint32_t)&SPI2->DR; // Адреса регістру передачі
+ DMA1_Channel2->CMAR = (uint32_t)spi_tx_buffer; // Адреса буфера передачі
+ DMA1_Channel2->CNDTR = BUFFER_SIZE; // Кількість байтів для передачі
+
+ // Увімкнення DMA каналів
+ DMA1_Channel1->CCR |= DMA_CCR_EN; // Увімкнення DMA для прийому
+ DMA1_Channel2->CCR |= DMA_CCR_EN; // Увімкнення DMA для передачі
+
+ // Увімкнення бітів DMA у SPI
+ SPI2->CR2 |= SPI_CR2_RXDMAEN | SPI_CR2_TXDMAEN;
+
+ // Увімкнення SPI
+ SPI2->CR1 |= SPI_CR1_SPE;
+ }
 
 
-
+ */
 
 #endif /* INC_SPI_H_ */
