@@ -662,11 +662,11 @@ uint16_t imu_registr[]={
 
 		(FIFO_CONFIG  << 8)		 | 0,   // Reset value: 0x00
 		(FIFO_CONFIG1  << 8)	 | 0,	//
-		(FIFO_CONFIG2  << 8)	 | 0,
+		(FIFO_CONFIG2 << 8)	 	 | 0,
 		(FDR_CONFIG  << 8)	 	 | 0,
 
 		(INT_CONFIG << 8)	 	 | 0,
-
+		(INT_CONFIG0 << 8)	 	 | 0,
 
 
 
