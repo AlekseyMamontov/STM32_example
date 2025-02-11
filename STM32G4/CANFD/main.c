@@ -5,6 +5,7 @@
 #include "I2C.h"
 #include "SPI.h"
 #include "main.h"
+#include "IIM_42652.h"
 
 //#include "Ixm42xxxTransport.h"
 //#include "Ixm42xxxDefs.h"

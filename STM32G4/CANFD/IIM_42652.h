@@ -648,10 +648,44 @@
 #define OFFSET_USER6                        0x7D
 #define OFFSET_USER7                        0x7E
 #define OFFSET_USER8                        0x7F
+/////////////////////////////////////////////////////////
 
-uint8_t int_iim_42652() {
+int gyro_IIM42652[3] = { 0 },
+	accel_IIM42652[3] = { 0 },
+	temp_IIM42652;
 
-}
-;
+uint8_t  raw_buffer[20];
+uint16_t imu_registr[]={
+
+		(PWR_MGMT0 <<8) 	     | 0,	// Reset value: 0x00
+		(GYRO_ACCEL_CONFIG0 <<8) | 0x11,// GYRO_ACCEL_CONFIG0 Адреса: 82 (52h)(R/W) default: 0x11
+
+		(FIFO_CONFIG  << 8)		 | 0,   // Reset value: 0x00
+		(FIFO_CONFIG1  << 8)	 | 0,	//
+		(FIFO_CONFIG2  << 8)	 | 0,
+		(FDR_CONFIG  << 8)	 	 | 0,
+
+		(INT_CONFIG << 8)	 	 | 0,
+
+
+
+
+};
+
+static struct imu_data {
+
+	int *		   gyro;
+	int *		  aceel;
+	int *	temperature;
+	uint8_t *	raw_buf;
+
+	uint16_t* reg_config;
+	uint16_t* reg_status;
+
+};
+
+uint8_t int_iim_42652(void);
+
+
 
 #endif /* INC_IIM_42652_H_ */

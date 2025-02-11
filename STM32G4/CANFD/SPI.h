@@ -398,35 +398,6 @@ void SPI2_IRQHandler(void) {
 	}
 }
 
-// Обробник переривання для DMA
-void DMA1_Channel1_IRQHandler(void) {
-	if (DMA1->ISR & DMA_ISR_TEIF1) { // Перевірка на помилку передачі
-		// Обробка помилки DMA
-		DMA1->IFCR |= DMA_IFCR_CTEIF1; // Скидання флагу помилки
-	}
-}
-
-void DMA1_Channel2_IRQHandler(void) {
-	if (DMA1->ISR & DMA_ISR_TEIF2) { // Перевірка на помилку прийому
-		// Обробка помилки DMA
-		DMA1->IFCR |= DMA_IFCR_CTEIF2; // Скидання флагу помилки
-	}
-}
-
-// Одночасна передача та прийом даних через DMA
-void SPI2_TransmitReceive_DMA(uint16_t *txData, uint16_t *rxData, uint16_t size) {
-
-	DMA1_Channel1->CMAR = (uint32_t) txData; // Адреса пам'яті для передачі
-	DMA1_Channel1->CNDTR = size; // Кількість 16-бітних елементів
-	DMA1_Channel1->CCR |= DMA_CCR_EN; // Увімкнення DMA каналу для передачі
-
-	DMA1_Channel2->CMAR = (uint32_t) rxData; // Адреса пам'яті для прийому
-	DMA1_Channel2->CNDTR = size; // Кількість 16-бітних елементів
-	DMA1_Channel2->CCR |= DMA_CCR_EN; // Увімкнення DMA каналу для прийому
-
-	SPI2->CR2 |= SPI_CR2_TXDMAEN | SPI_CR2_RXDMAEN; // Увімкнення DMA для передачі та прийому
-}
-
 /*
  void SPI_DMA_Config(void) {
  // Вимкнення SPI перед налаштуванням
