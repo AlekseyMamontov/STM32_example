@@ -10,6 +10,11 @@
 
 #define SPI2_CS_on  GPIOA->BRR = 1<<10;
 #define SPI2_CS_off GPIOA->BSRR = 1<<10;
+#define SPI2_disable SPI2->CR1 &=0xFFBF;
+#define SPI2_enable  SPI2->CR1 |=0x0020;
+#define SPI2_set_DMA SPI2->CR2 |=0x03;
+#define SPI2_clr_DMA SPI2->CR2 &=0xFFFC;
+
 
 void ConfigSPI2(void) {
 
@@ -87,7 +92,13 @@ void ConfigSPI2(void) {
 	 [2] MSTR: Master selection
 	 *	0: Slave configuration
 	 *	1: Master configuration
+	 [1] CPOL: Clock polarity
+		0: CK to 0 when idle
+		1: CK to 1 when idle
 
+	[0] CPHA: Clock phase
+		0: The first clock transition is the first data capture edge
+		1: The second clock transition is the first data capture edge
 	 */
 
 	SPI2->CR1 = (1 << 2) | (3 << 3) | (3 << 8) | 0; // master | clk/8 |  SSM=1 SSI =1 CPOL0 _/
@@ -206,6 +217,9 @@ void ConfigSPI2(void) {
 	 0: Буфер Rx порожній
 	 1: Буфер Rx не порожній
 	 */
+
+	//SPI2->CR2 |= SPI_CR2_TXDMAEN | SPI_CR2_RXDMAEN;
+
 
 	SPI2->CR1 |= (1 << 6);
 
@@ -372,59 +386,26 @@ uint8_t SPI2_Read_Data(uint8_t reg, uint8_t *data, uint16_t length) {
 
 //////////////////////////////
 
-// Налаштування DMA для передачі та прийому 16-бітних даних
-void DMA_Init(void) {
+void SPI2_DMA_data(void* mData ,void* pData, uint16_t len){
 
-	RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN;
+	DMA1_Channel1->CMAR = mData;
+	DMA1_Channel1->CNDTR = len;
+	DMA1_Channel2->CMAR = pData;
+	DMA1_Channel2->CNDTR = len;
 
-	// Налаштування DMA для передачі
-	DMA1_Channel1->CCR = DMA_CCR_DIR | DMA_CCR_MINC | DMA_CCR_PSIZE_1
-			| DMA_CCR_MSIZE_1; // Прямий напрямок, інкремент пам'яті, 16-бітні дані
-	DMA1_Channel1->CNDTR = 4; // Кількість 16-бітних елементів
-	DMA1_Channel1->CPAR = (uint32_t) &SPI2->DR; // Адреса периферії (SPI2 Data Register)
+	SPI2_disable
 
-	// Налаштування DMA для прийому
-	DMA1_Channel2->CCR = DMA_CCR_MINC | DMA_CCR_PSIZE_1 | DMA_CCR_MSIZE_1; // Периферія в пам'ять, інкремент пам'яті, 16-бітні дані
-	DMA1_Channel2->CNDTR = 4; // Кількість 16-бітних елементів
-	DMA1_Channel2->CPAR = (uint32_t) &SPI2->DR; // Адреса периферії
-}
+	SPI2_enable
+};
+
+
+
+
 
 // Обробник переривання для SPI
-void SPI2_IRQHandler(void) {
-	if (SPI2->SR & SPI_SR_OVR) { // Перевірка на переповнення
-		// Обробка переповнення: скидання флагу та збереження стану
-		uint32_t dummy = SPI2->DR; // Читання даних для скидання флагу
-		(void) dummy; // Попередження компілятора про невикористання змінної
-	}
-}
-
-/*
- void SPI_DMA_Config(void) {
- // Вимкнення SPI перед налаштуванням
- SPI2->CR1 &= ~SPI_CR1_SPE;
-
- // Налаштування DMA для RX
- DMA1_Channel1->CPAR = (uint32_t)&SPI2->DR; // Адреса регістру прийому
- DMA1_Channel1->CMAR = (uint32_t)spi_rx_buffer; // Адреса буфера прийому
- DMA1_Channel1->CNDTR = BUFFER_SIZE; // Кількість байтів для прийому
-
- // Налаштування DMA для TX
- DMA1_Channel2->CPAR = (uint32_t)&SPI2->DR; // Адреса регістру передачі
- DMA1_Channel2->CMAR = (uint32_t)spi_tx_buffer; // Адреса буфера передачі
- DMA1_Channel2->CNDTR = BUFFER_SIZE; // Кількість байтів для передачі
-
- // Увімкнення DMA каналів
- DMA1_Channel1->CCR |= DMA_CCR_EN; // Увімкнення DMA для прийому
- DMA1_Channel2->CCR |= DMA_CCR_EN; // Увімкнення DMA для передачі
-
- // Увімкнення бітів DMA у SPI
- SPI2->CR2 |= SPI_CR2_RXDMAEN | SPI_CR2_TXDMAEN;
-
- // Увімкнення SPI
- SPI2->CR1 |= SPI_CR1_SPE;
- }
+void SPI2_IRQHandler(void){};
 
 
- */
+
 
 #endif /* INC_SPI_H_ */

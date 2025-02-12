@@ -276,6 +276,14 @@ void GPIO_INIT(void){
 
 }
 
+uint16_t systick_pause = 0;
+
+void SysTick_Handler(void) {
+
+	if (systick_pause) systick_pause--;
+
+}
+
 
 
 

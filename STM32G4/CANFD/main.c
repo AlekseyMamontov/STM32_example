@@ -4,6 +4,7 @@
 #include <CANFD_STM32G431.h>
 #include "I2C.h"
 #include "SPI.h"
+#include "DMA.h"
 #include "main.h"
 #include "IIM_42652.h"
 
@@ -22,6 +23,7 @@ int main(void) {
 	CAN_Config();
 	ConfigSPI2();
 	I2C2_Init();
+	DMA_Init();
 	BMP280_Init(&BMP280_sensor1);
 
 	__enable_irq();
@@ -34,11 +36,11 @@ int main(void) {
 	while (1) {
 
 		// Выключаем светодиод
-		if (!pause) {
+		if (!systick_pause) {
 
 			GPIOA->BSRR = trigger ? GPIO_BSRR_BS12 : GPIO_BSRR_BR12;
 			trigger = trigger ? 0 : 1;
-			pause = 500;
+			systick_pause = 500;
 
 		};
 
@@ -126,13 +128,7 @@ void FDCAN1_IT1_IRQHandler(void) {
 
 ///////////////////// SPI2/////////////////////
 
-void SysTick_Handler(void) {
 
-	if (pause)
-		pause--;
-
-}
-;
 
 void Error_Handler(void) {
 	// Обработка ошибок

@@ -1,16 +1,21 @@
 /*
  * IIM_42652.h
  *
- *  Created on: Feb 1, 2025
- *      Author: oleksii
- */
+ЗМІНА ЗНАЧЕНЬ РЕГІСТРІВ
+Єдині налаштування регістрів, які користувач може змінювати під час роботи сенсора, стосуються вибору ODR (частоти вибірки), вибору FSR (діапазону вимірювань) і зміни режимів роботи сенсора (параметри регістрів GYRO_ODR, ACCEL_ODR, GYRO_FS_SEL, ACCEL_FS_SEL, GYRO_MODE, ACCEL_MODE). Користувач не повинен змінювати інші значення регістрів під час роботи сенсора. Для зміни значень інших регістрів необхідно дотримуватись наступної процедури:
+
+Вимкнути акселерометр і гіроскоп.
+Змінити значення регістрів.
+Увімкнути акселерометр і/або гіроскоп.
+
+*/
 
 #ifndef INC_IIM_42652_H_
 #define INC_IIM_42652_H_
 #include <Ixm42xxxDefs.h>
 
 /*IIM_42652*/
-#define CHIP_ID 			0x6F
+#define CHIP_ID_42652 			0x6F
 
 /*User bank 0*/
 /*
@@ -260,12 +265,12 @@
 
 /*Reset value: 0x10
  [6] Тривалість імпульсу переривання:
- *	0: Тривалість імпульсу переривання становить 100 мкс. Використовувати тільки якщо ODR < 4 кГц.
- *	1: Тривалість імпульсу становить 8 мкс. Вимагається, якщо ODR ≥ 4 кГц, необов'язково для ODR < 4 кГц.
+		0: Тривалість імпульсу переривання становить 100 мкс. Використовувати тільки якщо ODR < 4 кГц.
+ 		1: Тривалість імпульсу становить 8 мкс. Вимагається, якщо ODR ≥ 4 кГц, необов'язково для ODR < 4 кГц.
  [5] Тривалість деактивації переривання:
- *	0: Тривалість деактивації переривання встановлена на мінімум 100 мкс. Використовувати тільки якщо ODR < 4 кГц.
- *	1: Вимикає тривалість деактивації. Вимагається, якщо ODR ≥ 4 кГц, необов'язково для ODR < 4 кГц.
- [4]Користувач повинен змінити налаштування з 1 на 0 для правильної роботи контактів INT1 і INT2.
+ 		0: Тривалість деактивації переривання встановлена на мінімум 100 мкс. Використовувати тільки якщо ODR < 4 кГц.
+		1: Вимикає тривалість деактивації. Вимагається, якщо ODR ≥ 4 кГц, необов'язково для ODR < 4 кГц.
+ [4] Користувач повинен змінити налаштування з 1 на 0 для правильної роботи контактів INT1 і INT2.
  * */
 #define INT_CONFIG1 		0x64
 /*
@@ -341,11 +346,11 @@
  2RTC_MODE
  1:0CLKSEL
 
- 0: Режим низького споживання енергії акселерометра використовує тактовий сигнал осцилятора Wake Up.
- 1: Режим низького споживання енергії акселерометра використовує тактовий сигнал RC-осцилятора.
+	 0: Режим низького споживання енергії акселерометра використовує тактовий сигнал осцилятора Wake Up.
+	 1: Режим низького споживання енергії акселерометра використовує тактовий сигнал RC-осцилятора.
 
- 0: Не потрібен вхідний тактовий сигнал RTC.
- 1: Потрібен вхідний тактовий сигнал RTC.
+	 0: Не потрібен вхідний тактовий сигнал RTC.
+	 1: Потрібен вхідний тактовий сигнал RTC.
 
  00: Завжди вибирати внутрішній RC-осцилятор.
  01: Вибрати PLL, коли доступно, в іншому випадку вибрати RC-осцилятор (за замовчуванням).
@@ -356,124 +361,95 @@
 #define INTF_CONFIG1 		0x4D
 
 /*Reset value: 0x10
- 6UI_FSYNC_INT1_EN
- 5PLL_RDY_INT1_EN
- 4RESET_DONE_INT1_EN
- 3UI_DRDY_INT1_EN
- 2FIFO_THS_INT1_EN
- 1FIFO_FULL_INT1_EN
- 0UI_AGC_RDY_INT1_EN
-
- 0: Переривання UI FSYNC не направлене на INT1.
- 1: Переривання UI FSYNC направлене на INT1.
-
- 0: Переривання готовності PLL не направлене на INT1.
- 1: Переривання готовності PLL направлене на INT1.
-
- 0: Переривання завершення скидання не направлене на INT1.
- 1: Переривання завершення скидання направлене на INT1.
-
- 0: Переривання готовності даних UI не направлене на INT1.
- 1: Переривання готовності даних UI направлене на INT1.
-
- 0: Переривання порогу FIFO не направлене на INT1.
- 1: Переривання порогу FIFO направлене на INT1.
-
- 0: Переривання заповненості FIFO не направлене на INT1.
- 1: Переривання заповненості FIFO направлене на INT1.
-
- 0: Переривання готовності AGC UI не направлене на INT1.
- 1: Переривання готовності AGC UI направлене на INT1.
+[6]	UI_FSYNC_INT1_EN
+	 0: Переривання UI FSYNC не направлене на INT1.
+	 1: Переривання UI FSYNC направлене на INT1.
+[5]	PLL_RDY_INT1_EN
+	 0: Переривання готовності PLL не направлене на INT1.
+	 1: Переривання готовності PLL направлене на INT1.
+[4] RESET_DONE_INT1_EN
+	 0: Переривання завершення скидання не направлене на INT1.
+	 1: Переривання завершення скидання направлене на INT1.
+[3]	UI_DRDY_INT1_EN
+	 0: Переривання готовності даних UI не направлене на INT1.
+	 1: Переривання готовності даних UI направлене на INT1.
+[2] FIFO_THS_INT1_EN
+	 0: Переривання порогу FIFO не направлене на INT1.
+	 1: Переривання порогу FIFO направлене на INT1.
+[1]	FIFO_FULL_INT1_EN
+	 0: Переривання заповненості FIFO не направлене на INT1.
+	 1: Переривання заповненості FIFO направлене на INT1.
+[0]	UI_AGC_RDY_INT1_EN
+	 0: Переривання готовності AGC UI не направлене на INT1.
+	 1: Переривання готовності AGC UI направлене на INT1.
  * */
 
 #define INT_SOURCE0 		0x65
 /*
- * I3C_PROTOCOL_ERROR_IN
- 6
- T1_EN
- 5:4 -
- 3SMD_INT1_EN
- 2WOM_Z_INT1_EN
- 1WOM_Y_INT1_EN
- 0WOM_X_INT1_EN
-
- 0: Переривання помилки протоколу I3CSM не направлене на INT1.
- 1: Переривання помилки протоколу I3CSM направлене на INT1.
-
- Резервовано.
-
- 0: Переривання SMD не направлене на INT1.
- 1: Переривання SMD направлене на INT1.
-
- 0: Переривання WOM по осі Z не направлене на INT1.
- 1: Переривання WOM по осі Z направлене на INT1.
-
- 0: Переривання WOM по осі Y не направлене на INT1.
- 1: Переривання WOM по осі Y направлене на INT1.
-
- 0: Переривання WOM по осі X не направлене на INT1.
- 1: Переривання WOM по осі X направлене на INT1.
-
+ *
+[6] T1_EN  I3C_PROTOCOL_ERROR_IN
+	 0: Переривання помилки протоколу I3CSM не направлене на INT1.
+	 1: Переривання помилки протоколу I3CSM направлене на INT1.
+[5:4] -Резервовано.
+[3]	SMD_INT1_EN
+	 0: Переривання SMD не направлене на INT1.
+	 1: Переривання SMD направлене на INT1.
+[2] WOM_Z_INT1_EN
+	 0: Переривання WOM по осі Z не направлене на INT1.
+	 1: Переривання WOM по осі Z направлене на INT1.
+[1] WOM_Y_INT1_EN
+	 0: Переривання WOM по осі Y не направлене на INT1.
+	 1: Переривання WOM по осі Y направлене на INT1.
+[0] WOM_X_INT1_EN
+	 0: Переривання WOM по осі X не направлене на INT1.
+	 1: Переривання WOM по осі X направлене на INT1.
  */
 
 #define INT_SOURCE1 		0x66
 
-/*
- * 6UI_FSYNC_INT2_EN
- 5PLL_RDY_INT2_EN
- 4RESET_DONE_INT2_EN
- 3UI_DRDY_INT2_EN
- 2FIFO_THS_INT2_EN
- 1FIFO_FULL_INT2_EN
- 0UI_AGC_RDY_INT2_EN
- 0: Переривання UI FSYNC не направлене на INT2.
- 1: Переривання UI FSYNC направлене на INT2.
-
- 0: Переривання готовності PLL не направлене на INT2.
- 1: Переривання готовності PLL направлене на INT2.
-
- 0: Переривання завершення скидання не направлене на INT2.
- 1: Переривання завершення скидання направлене на INT2.
-
- 0: Переривання готовності даних UI не направлене на INT2.
- 1: Переривання готовності даних UI направлене на INT2.
-
- 0: Переривання порогу FIFO не направлене на INT2.
- 1: Переривання порогу FIFO направлене на INT2.
-
- 0: Переривання заповненості FIFO не направлене на INT2.
- 1: Переривання заповненості FIFO направлене на INT2.
-
- 0: Переривання готовності AGC UI не направлене на INT2.
- 1: Переривання готовності AGC UI направлене на INT2.*/
+/* Reset value: 0x00
+[6]	UI_FSYNC_INT2_EN
+	 0: Переривання UI FSYNC не направлене на INT2.
+	 1: Переривання UI FSYNC направлене на INT2.
+[5]	PLL_RDY_INT2_EN
+	 0: Переривання готовності PLL не направлене на INT2.
+	 1: Переривання готовності PLL направлене на INT2.
+[4]	RESET_DONE_INT2_EN
+	 0: Переривання завершення скидання не направлене на INT2.
+	 1: Переривання завершення скидання направлене на INT2.
+[3]	UI_DRDY_INT2_EN
+	 0: Переривання готовності даних UI не направлене на INT2.
+	 1: Переривання готовності даних UI направлене на INT2.
+[2]	FIFO_THS_INT2_EN
+	 0: Переривання порогу FIFO не направлене на INT2.
+	 1: Переривання порогу FIFO направлене на INT2.
+[1]	FIFO_FULL_INT2_EN
+	 0: Переривання заповненості FIFO не направлене на INT2.
+	 1: Переривання заповненості FIFO направлене на INT2.
+[0]	UI_AGC_RDY_INT2_EN
+	 0: Переривання готовності AGC UI не направлене на INT2.
+	 1: Переривання готовності AGC UI направлене на INT2.*/
 
 #define INT_SOURCE3 		0x68
 
 /*
- I3C_PROTOCOL_ERROR_IN
- 6
- T2_EN
- 5:4 -
- 3SMD_INT2_EN
- 2WOM_Z_INT2_EN
- 1WOM_Y_INT2_EN
- 0WOM_X_INT2_EN
- 0: Переривання помилки протоколу I3CSM не направлене на INT2.
- 1: Переривання помилки протоколу I3CSM направлене на INT2.
 
- Резервовано.
+[6] T2_EN I3C_PROTOCOL_ERROR_IN
+	 0: Переривання помилки протоколу I3CSM не направлене на INT2.
+	 1: Переривання помилки протоколу I3CSM направлене на INT2.
+[3]	SMD_INT2_EN
+	 0: Переривання SMD не направлене на INT2.
+	 1: Переривання SMD направлене на INT2.
+[2] WOM_Z_INT2_EN
+	 0: Переривання WOM по осі Z не направлене на INT2.
+	 1: Переривання WOM по осі Z направлене на INT2.
+[1]WOM_Y_INT2_EN
+	 0: Переривання WOM по осі Y не направлене на INT2.
+	 1: Переривання WOM по осі Y направлене на INT2.
+[0]WOM_X_INT2_EN
+	 0: Переривання WOM по осі X не направлене на INT2.
+	 1: Переривання WOM по осі X направлене на INT2.*/
 
- 0: Переривання SMD не направлене на INT2.
- 1: Переривання SMD направлене на INT2.
-
- 0: Переривання WOM по осі Z не направлене на INT2.
- 1: Переривання WOM по осі Z направлене на INT2.
-
- 0: Переривання WOM по осі Y не направлене на INT2.
- 1: Переривання WOM по осі Y направлене на INT2.
-
- 0: Переривання WOM по осі X не направлене на INT2.
- 1: Переривання WOM по осі X направлене на INT2.*/
 #define INT_SOURCE4 		0x69
 
 /*User bank 1*/
@@ -497,6 +473,9 @@
 
 #define INTF_CONFIG6 			0x7C
 
+
+
+
 ////////////////////// TEMPERATURE //////////////////////
 
 #define TEMP_DATA1_UI 		0x1D
@@ -504,7 +483,68 @@
 
 /////////////////////// ACCEL  //////////////////////////
 
+#define SET_ACCEL_FS_SEL_16g                    (0x00 << 5)
+#define SET_ACCEL_FS_SEL_8g                     (0x01 << 5)
+#define SET_ACCEL_FS_SEL_4g                     (0x02 << 5)
+#define SET_ACCEL_FS_SEL_2g                     (0x03 << 5)
+
+#define SET_ACCEL_ODR_32kHz                     0x01
+#define SET_ACCEL_ODR_16kHz                     0x02
+#define SET_ACCEL_ODR_8kHz                      0x03
+#define SET_ACCEL_ODR_4kHz                      0x04
+#define SET_ACCEL_ODR_2kHz                      0x05
+#define SET_ACCEL_ODR_1kHz                      0x06
+#define SET_ACCEL_ODR_200Hz                     0x07
+#define SET_ACCEL_ODR_100Hz                     0x08
+#define SET_ACCEL_ODR_50Hz                      0x09
+#define SET_ACCEL_ODR_25Hz                      0x0A
+#define SET_ACCEL_ODR_12_5Hz                    0x0B
+#define SET_ACCEL_ODR_6_25HZ                    0x0C
+#define SET_ACCEL_ODR_3_125HZ                   0x0D
+#define SET_ACCEL_ODR_1_5625HZ                  0x0E
+
+/*
+ Reset value: 0x06
+ [7:5] ACCEL_FS_SEL Full scale select for accelerometer UI interface output
+		000: ±16g (default)
+		001: ±8g
+		010: ±4g
+		011: ±2g
+
+ [3:0] ACCEL_ODR	Accelerometer ODR selection for UI interface output
+		0000: Reserved
+		0001: 32kHz
+		0010: 16kHz
+		0011: 8kHz (LN mode)
+		0100: 4kHz (LN mode)
+		0101: 2kHz (LN mode)
+		0110: 1kHz (LN mode) (default)
+		0111: 200Hz (LP or LN mode)
+		1000: 100Hz (LP or LN mode)
+		1001: 50Hz (LP or LN mode)
+		1010: 25Hz (LP or LN mode)
+		1011: 12.5Hz (LP or LN mode)
+		1100: 6.25Hz (LP mode)
+		1101: 3.125Hz (LP mode)
+		1110: 1.5625Hz (LP mode)
+		1111: 500Hz (LP or LN mode)
+ */
+
 #define ACCEL_CONFIG0 		0x50
+
+/*
+ Reset value: 0x0D
+ [4:3]ACCEL_UI_FILT_ORD Selects order of ACCEL UI filter
+		00: 1st Order
+		01: 2nd Order
+		10: 3rd Order
+		11: Reserved
+ [2:1]ACCEL_DEC2_M2_ORD Order of Accelerometer DEC2_M2 filter
+		00: Reserved
+		01: Reserved
+		10: 3rd order
+		11: Reserved
+ */
 #define ACCEL_CONFIG1 		0x53
 
 #define ACCEL_DATA_X1_UI 	0x1F
@@ -522,31 +562,83 @@
 #define YA_ST_DATA 				0x3C
 #define ZA_ST_DATA 				0x3D
 
-/*Data*/
 
-#define SET_ACCEL_FS_SEL_16g                    0x00
-#define SET_ACCEL_FS_SEL_8g                     0x01
-#define SET_ACCEL_FS_SEL_4g                     0x02
-#define SET_ACCEL_FS_SEL_2g                     0x03
 
-#define SET_ACCEL_ODR_32kHz                     0x01
-#define SET_ACCEL_ODR_16kHz                     0x02
-#define SET_ACCEL_ODR_8kHz                      0x03
-#define SET_ACCEL_ODR_4kHz                      0x04
-#define SET_ACCEL_ODR_2kHz                      0x05
-#define SET_ACCEL_ODR_1kHz                      0x06
-#define SET_ACCEL_ODR_200Hz                     0x07
-#define SET_ACCEL_ODR_100Hz                     0x08
-#define SET_ACCEL_ODR_50Hz                      0x09
-#define SET_ACCEL_ODR_25Hz                      0x0A
-#define SET_ACCEL_ODR_12_5Hz                    0x0B
-#define SET_ACCEL_ODR_6_25HZ                    0x0C
-#define SET_ACCEL_ODR_3_125HZ                   0x0D
-#define SET_ACCEL_ODR_1_5625HZ                  0x0E
 
 //////////////////////  GYRO  //////////////////////////
 
+#define SET_GYRO_FS_SEL_2000_dps                (0x00 << 5)
+#define SET_GYRO_FS_SEL_1000_dps                (0x01 << 5)
+#define SET_GYRO_FS_SEL_500_dps                 (0x02 << 5)
+#define SET_GYRO_FS_SEL_250_dps                 (0x03 << 5)
+#define SET_GYRO_FS_SEL_125_dps                 (0x04 << 5)
+#define SET_GYRO_FS_SEL_62_5_dps                (0x05 << 5)
+#define SET_GYRO_FS_SEL_31_25_dps               (0x06 << 5)
+#define SET_GYRO_FS_SEL_16_625_dps              (0x07 << 5)
+
+#define SET_GYRO_ODR_32kHz                      0x01
+#define SET_GYRO_ODR_16kHz                      0x02
+#define SET_GYRO_ODR_8kHz                       0x03
+#define SET_GYRO_ODR_4kHz                       0x04
+#define SET_GYRO_ODR_2kHz                       0x05
+#define SET_GYRO_ODR_1kHz                       0x06
+#define SET_GYRO_ODR_200Hz                      0x07
+#define SET_GYRO_ODR_100Hz                      0x08
+#define SET_GYRO_ODR_50Hz                       0x09
+#define SET_GYRO_ODR_25Hz                       0x0A
+#define SET_GYRO_ODR_12_5Hz                     0x0B
+
+/*
+ Reset value: 0x06
+ [7:5] GYRO_FS_SEL  Full scale select for gyroscope UI interface output
+		000: ±2000dps (default)
+		001: ±1000dps
+		010: ±500dps
+		011: ±250dps
+		100: ±125dps
+		101: ±62.5dps
+		110: ±31.25dps
+		111: ±15.625dps
+ [3:0] GYRO_ODR
+		0000: Reserved
+		0001: 32kHz
+		0010: 16kHz
+		0011: 8kHz
+		0100: 4kHz
+		0101: 2kHz
+		0110: 1kHz (default)
+		0111: 200Hz
+		1000: 100Hz
+		1001: 50Hz
+		1010: 25Hz
+		1011: 12.5Hz
+		1100: Reserved
+		1101: Reserved
+		1110: Reserved
+		1111: 500Hz*/
 #define GYRO_CONFIG0 		0x4F
+
+/*Reset value: 0x16
+[7:5] TEMP_FILT_BW Sets the bandwidth of the temperature signal DLPF
+		000: DLPF BW = 4000Hz; DLPF Latency = 0.125ms (default)
+		001: DLPF BW = 170Hz; DLPF Latency = 1ms
+		010: DLPF BW = 82Hz; DLPF Latency = 2ms
+		011: DLPF BW = 40Hz; DLPF Latency = 4ms
+		100: DLPF BW = 20Hz; DLPF Latency = 8ms
+		101: DLPF BW = 10Hz; DLPF Latency = 16ms
+		110: DLPF BW = 5Hz; DLPF Latency = 32ms
+		111: DLPF BW = 5Hz; DLPF Latency = 32ms
+[3:2] GYRO_UI_FILT_ORD Selects order of GYRO UI filter
+		00: 1st Order
+		01: 2nd Order
+		10: 3rd Order
+		11: Reserved
+[1:0] GYRO_DEC2_M2_ORDSelects order of GYRO DEC2_M2 Filter
+		00: Reserved
+		01: Reserved
+		10: 3rd Order
+		11: Reserved
+ */
 #define GYRO_CONFIG1 		0x51
 
 #define GYRO_DATA_X1_UI 	0x25
@@ -573,26 +665,9 @@
 
 /* DATA*/
 
-#define SET_GYRO_FS_SEL_2000_dps                0x00
-#define SET_GYRO_FS_SEL_1000_dps                0x01
-#define SET_GYRO_FS_SEL_500_dps                 0x02
-#define SET_GYRO_FS_SEL_250_dps                 0x03
-#define SET_GYRO_FS_SEL_125_dps                 0x04
-#define SET_GYRO_FS_SEL_62_5_dps                0x05
-#define SET_GYRO_FS_SEL_31_25_dps               0x06
-#define SET_GYRO_FS_SEL_16_625_dps              0x07
 
-#define SET_GYRO_ODR_32kHz                      0x01
-#define SET_GYRO_ODR_16kHz                      0x02
-#define SET_GYRO_ODR_8kHz                       0x03
-#define SET_GYRO_ODR_4kHz                       0x04
-#define SET_GYRO_ODR_2kHz                       0x05
-#define SET_GYRO_ODR_1kHz                       0x06
-#define SET_GYRO_ODR_200Hz                      0x07
-#define SET_GYRO_ODR_100Hz                      0x08
-#define SET_GYRO_ODR_50Hz                       0x09
-#define SET_GYRO_ODR_25Hz                       0x0A
-#define SET_GYRO_ODR_12_5Hz                     0x0B
+
+
 
 //////////////////////////// TMST ////////////////////////////////
 
@@ -636,6 +711,29 @@
 #define ACCEL_WOM_Z_THR         0x4C
 #define INT_SOURCE6                         0x4D
 #define INT_SOURCE7                         0x4E
+
+/*
+[7:6] -
+[5] FSYNC_IBI_EN  (частота синхронизации)
+0: Прерывание FSYNC не направляется на IBI
+1: Прерывание FSYNC направляется на IBI
+[4] PLL_RDY_IBI_EN  (фаза-замкнута петля)
+0: Прерывание готовности PLL не направляется на IBI
+1: Прерывание готовности PLL направляется на IBI
+[3] UI_DRDY_IBI_EN (дані готовності)
+0: Прерывание готовности данных UI не направляется на IBI
+1: Прерывание готовности данных UI направляется на IBI
+[2] FIFO_THS_IBI_EN
+0: Прерывание порогового значения FIFO не направляется на IBI
+1: Прерывание порогового значения FIFO направляется на IBI
+[1] FIFO_FULL_IBI_EN
+0: Прерывание переполнения FIFO не направляется на IBI
+1: Прерывание переполнения FIFO направляется на IBI
+[0] AGC_RDY_IBI_EN (автоматичний контроль посилення)
+0: Прерывание готовности AGC не направляется на IBI
+*/
+
+
 #define INT_SOURCE8                         0x4F
 #define INT_SOURCE9                         0x50
 #define INT_SOURCE10                        0x51
@@ -648,43 +746,77 @@
 #define OFFSET_USER6                        0x7D
 #define OFFSET_USER7                        0x7E
 #define OFFSET_USER8                        0x7F
+
+#define READ_REG_II42xxx 							0x80
 /////////////////////////////////////////////////////////
 
 int gyro_IIM42652[3] = { 0 },
 	accel_IIM42652[3] = { 0 },
 	temp_IIM42652;
 
-uint8_t  raw_buffer[20];
+
+uint8_t  raw_fifo_buffer[20],
+		 status_IIM42652;
+
+
+
 uint16_t imu_registr[]={
 
-		(PWR_MGMT0 <<8) 	     | 0,	// Reset value: 0x00
 		(GYRO_ACCEL_CONFIG0 <<8) | 0x11,// GYRO_ACCEL_CONFIG0 Адреса: 82 (52h)(R/W) default: 0x11
-
 		(FIFO_CONFIG  << 8)		 | 0,   // Reset value: 0x00
 		(FIFO_CONFIG1  << 8)	 | 0,	//
-		(FIFO_CONFIG2 << 8)	 	 | 0,
-		(FDR_CONFIG  << 8)	 	 | 0,
+		(FIFO_CONFIG2 << 8)	 	 | 0,   //
+		(FDR_CONFIG  << 8)	 	 | 0,   //
 
 		(INT_CONFIG << 8)	 	 | 0,
 		(INT_CONFIG0 << 8)	 	 | 0,
 
+		(PWR_MGMT0 <<8) 	     | 0,	// Reset value: 0x00
 
 
 };
 
-static struct imu_data {
+uint8_t raw_buffer[(sizeof(imu_registr) / 2)+2];
 
-	int *		   gyro;
-	int *		  aceel;
-	int *	temperature;
-	uint8_t *	raw_buf;
+
+static struct imu_data{
+
+	uint8_t* 	  status;
+	int *		    gyro;
+	int *		   aceel;
+	int *	 temperature;
+	uint8_t*raw_fifo_buf;
 
 	uint16_t* reg_config;
 	uint16_t* reg_status;
+	uint16_t* reg_gyro_accel_temp;
 
 };
 
-uint8_t int_iim_42652(void);
+uint8_t init_iim42652(static struct imu_data* imu){
+
+	uint8_t data,command,*addr8bit = (uint8_t*)imu_registr;
+
+	SPI2_data(DEVICE_CONFIG, 0x01); //reset
+	systick_pause = 2;//2ms
+	while(systick_pause);
+
+	data = SPI2_data((WHO_AM_I|READ_REG_II42xxx), 0x00);
+	if(data != CHIP_ID_42652) return 1;
+
+	// init block
+
+	for(uint16_t i=0;i< (sizeof(imu_registr)/2);i++){
+
+		data = *addr8bit++;
+		command = *addr8bit++;
+		SPI2_data(command,data);
+
+	}
+
+
+
+return 0;};
 
 
 
