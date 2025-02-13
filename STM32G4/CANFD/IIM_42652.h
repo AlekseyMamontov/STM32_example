@@ -748,6 +748,8 @@
 #define OFFSET_USER8                        0x7F
 
 #define READ_REG_II42xxx 							0x80
+
+
 /////////////////////////////////////////////////////////
 
 int gyro_IIM42652[3] = { 0 },
@@ -762,10 +764,11 @@ uint8_t  raw_fifo_buffer[20],
 
 uint16_t imu_registr[]={
 
-		(GYRO_ACCEL_CONFIG0 <<8) | 0x11,// GYRO_ACCEL_CONFIG0 Адреса: 82 (52h)(R/W) default: 0x11
+		(GYRO_ACCEL_CONFIG0 <<8) | 0,// GYRO_ACCEL_CONFIG0 Адреса: 82 (52h)(R/W) default: 0x11
 		(FIFO_CONFIG  << 8)		 | 0,   // Reset value: 0x00
-		(FIFO_CONFIG1  << 8)	 | 0,	//
-		(FIFO_CONFIG2 << 8)	 	 | 0,   //
+		(FIFO_CONFIG1 << 8)	 	 | 0,	//
+		(FIFO_CONFIG2 << 8)	 	 | 0,	//
+		(FIFO_CONFIG3 << 8)	 	 | 0,
 		(FDR_CONFIG  << 8)	 	 | 0,   //
 
 		(INT_CONFIG << 8)	 	 | 0,
@@ -776,26 +779,53 @@ uint16_t imu_registr[]={
 
 };
 
+uint16_t read_data_aceel_gyro_temp[]={
+
+		(ACCEL_DATA_X0_UI <<8) | 0,// ACCEL_DATA X,Y,Z
+		(ACCEL_DATA_X1_UI <<8) | 0,
+		(ACCEL_DATA_Y0_UI <<8) | 0,
+		(ACCEL_DATA_Y1_UI <<8) | 0,
+		(ACCEL_DATA_Z0_UI <<8) | 0,
+		(ACCEL_DATA_Z1_UI <<8) | 0,
+
+		(GYRO_DATA_X0_UI <<8) | 0,// GYRO_DATA X,Y,Z
+		(GYRO_DATA_X1_UI <<8) | 0,
+		(GYRO_DATA_Y0_UI <<8) | 0,
+		(GYRO_DATA_Y1_UI <<8) | 0,
+		(GYRO_DATA_Z0_UI <<8) | 0,
+		(GYRO_DATA_Z1_UI <<8) | 0,
+
+		(TEMP_DATA0_UI <<8) | 0,// TEMperature
+		(TEMP_DATA1_UI <<8) | 0,
+
+};
+
+uint8_t data_aceel_gyro_temp[(sizeof(read_data_aceel_gyro_temp) / 2)+2];
 uint8_t raw_buffer[(sizeof(imu_registr) / 2)+2];
 
-
-static struct imu_data{
+ struct imu_data{
 
 	uint8_t* 	  status;
 	int *		    gyro;
 	int *		   aceel;
 	int *	 temperature;
-	uint8_t*raw_fifo_buf;
+
+	uint8_t*  raw_fifo_buf;
+	uint8_t*  reg_status;
 
 	uint16_t* reg_config;
-	uint16_t* reg_status;
 	uint16_t* reg_gyro_accel_temp;
+
+	uint16_t  n_raw_fifo_buf;
+	uint16_t  n_reg_config;
+	uint16_t  n_reg_status;
+	uint16_t  n_reg_gyro_accel_temp;
 
 };
 
-uint8_t init_iim42652(static struct imu_data* imu){
+uint8_t init_iim42652(struct imu_data* imu){
 
-	uint8_t data,command,*addr8bit = (uint8_t*)imu_registr;
+	uint8_t data,command,*addr8bit = (uint8_t*)imu->reg_config;
 
 	SPI2_data(DEVICE_CONFIG, 0x01); //reset
 	systick_pause = 2;//2ms
@@ -806,17 +836,63 @@ uint8_t init_iim42652(static struct imu_data* imu){
 
 	// init block
 
-	for(uint16_t i=0;i< (sizeof(imu_registr)/2);i++){
+	for(uint16_t i=0;i < imu->n_reg_config;i++){
 
 		data = *addr8bit++;
 		command = *addr8bit++;
 		SPI2_data(command,data);
-
 	}
+	return 0;
+}
+
+uint8_t load_registrs_iim42xxx(struct imu_data* imu,uint16_t* ram,uint32_t len){
+
+	uint16_t data16;
+
+	for(uint16_t i=0;i<len;i++){
+
+		data16 = (*ram) & 0xff00;
+		*ram++ = data16 | SPI2_data16(data16|0x8000);//read registrs
+	}
+	return 0;
+};
+
+uint8_t load_data_iim42xxx(struct imu_data* imu,uint16_t* ram16bit,uint8_t* ram8bit,uint32_t len){
+
+	for(uint16_t i=0;i<len;i++){*ram8bit++ = SPI2_data16((*ram16bit ++)|0x8000);}
+
+	return 0;
+};
 
 
 
-return 0;};
+
+
+
+uint8_t load_gyro_aceel_temp(struct imu_data* imu,uint8_t* ram,uint32_t len){
+
+		uint8_t* addr8bit = (uint8_t*)imu->reg_gyro_accel_temp,data,command;
+
+		for(uint16_t i=0;i<imu->n_reg_gyro_accel_temp;i++){
+
+			data = *addr8bit++;
+			command = *addr8bit++;
+
+			*ram++ = SPI2_data(command|READ_REG_II42xxx,data);
+		}
+		return 0;
+};
+
+
+
+
+
+
+
+
+
+
+
 
 
 

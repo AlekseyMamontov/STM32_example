@@ -257,9 +257,37 @@ uint8_t SPI2_data(uint8_t reg, uint8_t data) {
 
 	return SPI2->DR;
 }
-;
 
-//////////////////   16 bit check  ///////////////////
+uint8_t SPI2_data16(uint16_t data) {
+
+	uint32_t timeout = 0;
+
+	SPI2_CS_on
+
+	while (!(SPI2->SR & SPI_SR_TXE)) {
+		if (++timeout > SPI_TIMEOUT) {
+			SPI2_CS_off
+			;
+			return 0;
+		}
+	};
+
+	SPI2->DR = data;
+
+	while (!(SPI2->SR & SPI_SR_RXNE)) {
+		if (++timeout > SPI_TIMEOUT) {
+			SPI2_CS_off
+			;
+			return 0;
+		}
+	};
+
+	SPI2_CS_off
+
+	return SPI2->DR;
+}
+;
+//////////////////  Transfer 16 bit toRAM 8bit ///////////////////
 
 uint8_t SPI2_data_check(uint8_t reg, uint8_t *data) {
 
