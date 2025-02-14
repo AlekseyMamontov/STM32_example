@@ -23,9 +23,9 @@ int main(void) {
 	CAN_Config();
 	ConfigSPI2();
 	I2C2_Init();
-	DMA_Init();
+	//DMA_Init();
 	BMP280_Init(&BMP280_sensor1);
-
+	init_iim42652(&imu_iim42652);
 	__enable_irq();
 
 	// Сообщение для отправки
@@ -39,33 +39,40 @@ int main(void) {
 		if (!systick_pause) {
 
 			GPIOA->BSRR = trigger ? GPIO_BSRR_BS12 : GPIO_BSRR_BR12;
-			trigger = trigger ? 0 : 1;
-			systick_pause = 500;
 
-		};
+			//load_gyro_aceel_temp(&imu_iim42652);
 
-		if (test) {
+			imu_iim42652.raw_fifo_buf[0] = SPI2_reg_data((ACCEL_DATA_X0_UI|READ_REG_II42xxx),00);
+			imu_iim42652.raw_fifo_buf[1] = SPI2_reg_data((ACCEL_DATA_X1_UI|READ_REG_II42xxx),00);
+			imu_iim42652.raw_fifo_buf[2] = SPI2_reg_data((ACCEL_DATA_Y0_UI|READ_REG_II42xxx),00);
+			imu_iim42652.raw_fifo_buf[3] = SPI2_reg_data((ACCEL_DATA_Y1_UI|READ_REG_II42xxx),00);
+			imu_iim42652.raw_fifo_buf[4] = SPI2_reg_data((ACCEL_DATA_Z0_UI|READ_REG_II42xxx),00);
+			imu_iim42652.raw_fifo_buf[5] = SPI2_reg_data((ACCEL_DATA_Z1_UI|READ_REG_II42xxx),00);
+			imu_iim42652.raw_fifo_buf[6] = SPI2_reg_data((GYRO_DATA_X0_UI|READ_REG_II42xxx),00);
+			imu_iim42652.raw_fifo_buf[7] = SPI2_reg_data((GYRO_DATA_X1_UI|READ_REG_II42xxx),00);
 
-			SPI2_data(command, data);
-			data = 0;
-			data32[0] = SPI2_data(0x80 | 0x1E, data);
-			data32[0] |= (SPI2_data(0x80 | 0x1D, data)) << 8;
-			data32[0] |= (SPI2_data(0x80 | 0x20, data)) << 16;
-			data32[0] |= (SPI2_data(0x80 | 0x1f, data)) << 24;
-			data32[1] = SPI2_data(0x80 | 0x22, data);
-			data32[1] |= (SPI2_data(0x80 | 0x21, data)) << 8;
-			data32[1] |= (SPI2_data(0x80 | 0x24, data)) << 16;
-			data32[1] |= (SPI2_data(0x80 | 0x23, data)) << 24;
+			imu_iim42652.raw_fifo_buf[8] = SPI2_reg_data((GYRO_DATA_Y0_UI|READ_REG_II42xxx),00);
+			imu_iim42652.raw_fifo_buf[9] = SPI2_reg_data((GYRO_DATA_Y1_UI|READ_REG_II42xxx),00);
+			imu_iim42652.raw_fifo_buf[10] = SPI2_reg_data((GYRO_DATA_Z0_UI|READ_REG_II42xxx),00);
+			imu_iim42652.raw_fifo_buf[11] = SPI2_reg_data((GYRO_DATA_Z1_UI|READ_REG_II42xxx),00);
+			imu_iim42652.raw_fifo_buf[12] = SPI2_reg_data((TEMP_DATA0_UI |READ_REG_II42xxx),00);
+			imu_iim42652.raw_fifo_buf[13] = SPI2_reg_data((TEMP_DATA1_UI |READ_REG_II42xxx),00);
 
-			CAN_SendMessage(id, (uint8_t*) data32, 8); //(uint8_t*)RAM + counterRAM*4
+
+			CAN_SendMessage(id+1,imu_iim42652.raw_fifo_buf, 8); //(uint8_t*)RAM + counterRAM*4
+
+			CAN_SendMessage(id+2,(imu_iim42652.raw_fifo_buf)+8, 8);
 
 			BMP280_Read_Raw_Data(&BMP280_sensor1);
 			data32[0] = BMP280_Compensate_Temperature(&BMP280_sensor1);
 			data32[1] = BMP280_Compensate_Pressure(&BMP280_sensor1);
 			CAN_SendMessage(id, (uint8_t*) data32, 8);
+			trigger = trigger ? 0 : 1;
 
-			test = 0;
+			systick_pause = 500;
 		};
+
+		if (test){test = 0;}
 
 	}
 

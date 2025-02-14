@@ -106,7 +106,7 @@
 #define GYRO_ACCEL_CONFIG0 	0x52
 #define SELF_TEST_CONFIG 	0x70
 #define WHO_AM_I 			0x75
-#define BANK_SEL 			0x76
+#define REG_BANK_SEL 		0x76
 
 // register banks
 #define   IIM42652_REG_BANK_0      0x00
@@ -747,61 +747,178 @@
 #define OFFSET_USER7                        0x7E
 #define OFFSET_USER8                        0x7F
 
-#define READ_REG_II42xxx 							0x80
-
-
+#define READ_REG_II42xxx 		0x80
+#define READ_REG16_II42xxx 		0x8000
+#define WRITE_REG_II42xxx 		0
 /////////////////////////////////////////////////////////
 
-int gyro_IIM42652[3] = { 0 },
-	accel_IIM42652[3] = { 0 },
-	temp_IIM42652;
+uint16_t imu_config_registr[]={
+
+//		(FIFO_CONFIG  << 8)		| 0x00,//  default: 0
+//		(FIFO_CONFIG1 << 8)	 	| 0x00,	//
+//		(FIFO_CONFIG2 << 8)	 	| 0x00,	//
+//		(FIFO_CONFIG3 << 8)	 	| 0x00,
+//		(SIGNAL_PATH_RESET << 8)| 0x00,// default: 0
+//		(INT_CONFIG << 8)	 	| 0x00,// default: 0
+//		(INT_CONFIG0 << 8)	 	| 0x00,// default: 0x00
+//		(INT_CONFIG1 << 8)	 	| 0x10,// default: 0x10
+
+//		(INTF_CONFIG0 <<8)		| 0x32,// default: 0x30 i2c disabled
+//		(INTF_CONFIG1 <<8)		| 0x91,// default: 0x91
+
+//		(GYRO_CONFIG0 <<8)		| 0x06,// default: 0x06
+//		(GYRO_CONFIG1 <<8)		| 0x16,// default: 0x16
+//		(GYRO_ACCEL_CONFIG0 <<8)| 0x11,// default: 0x11
+//		(ACCEL_CONFIG0 << 8)	| 0x06,// default: 0x06
+//		(ACCEL_CONFIG1 << 8)	| 0x0D,// default: 0x0D
+//		(TMST_CONFIG << 8)		| 0x23,// default: 0x23
+//		(APEX_CONFIG0 << 8)		| 0x82,// default: 0x82
+//		(SMD_CONFIG << 8)		| 0x00,// default: 0x00
+//		(FSYNC_CONFIG << 8)		| 0x10,// default: 0x10
+//		(INT_SOURCE0 << 8)		| 0x10,// default: 0x10
+//		(INT_SOURCE1 << 8)		| 0x00,// default: 0x00
+//		(INT_SOURCE3 << 8)		| 0x00,// default: 0x00
+//		(INT_SOURCE4 << 8)		| 0x00,// default: 0x00
+
+		////////////////////bank sel 1 /////////////////////////
+
+//		(REG_BANK_SEL << 8)		| 0x01,// default: 0x00
+//		(SENSOR_CONFIG0 << 8)	| 0x80,// default: 0x80
+//		(GYRO_CONFIG_STATIC2<<8)| 0xA0,// default: 0xA0
+//		(GYRO_CONFIG_STATIC3<<8)| 0x0D,// default: 0x0D
+//		(GYRO_CONFIG_STATIC4<<8)| 0xAA,// default: 0xAA
+//		(GYRO_CONFIG_STATIC5<<8)| 0x80,// default: 0x80
+		//(GYRO_CONFIG_STATIC6<<8)| 0x00,// default: 0xXX
+		//(GYRO_CONFIG_STATIC7<<8)| 0x00,// default: 0xXX
+		//(GYRO_CONFIG_STATIC8<<8)| 0x00,// default: 0xXX
+		//(GYRO_CONFIG_STATIC9<<8)| 0x00,// default: 0xXX
+		//(GYRO_CONFIG_STATIC10<<8)| 0x00,// default: 0xXX
+//		(INTF_CONFIG4	<<8	)	| 0x03,// default: 0x03
+//		(INTF_CONFIG5	<<8	)	| 0x20,// default: 0x20
+//		(INTF_CONFIG6	<<8	)	| 0x5F,// default: 0x5F
 
 
-uint8_t  raw_fifo_buffer[20],
-		 status_IIM42652;
+		////////////////////bank sel 2 /////////////////////////
 
+//		(REG_BANK_SEL << 8)		|  0x02,// default: 0x00
+//		(ACCEL_CONFIG_STATIC2<<8)| 0x30,// default: 0x30
+//		(ACCEL_CONFIG_STATIC3<<8)| 0x40,// default: 0x40
+//		(ACCEL_CONFIG_STATIC4<<8)| 0x62,// default: 0x62
 
+		////////////////////bank sel 3 /////////////////////////
 
-uint16_t imu_registr[]={
+//		(REG_BANK_SEL << 8)		| 0x03,// default: 0x00
+//		(PU_PD_CONFIG1<<8)		| 0x88,// default: 0x88
+//		(PU_PD_CONFIG2<<8)		| 0x20,// default: 0x20
 
-		(GYRO_ACCEL_CONFIG0 <<8) | 0,// GYRO_ACCEL_CONFIG0 Адреса: 82 (52h)(R/W) default: 0x11
-		(FIFO_CONFIG  << 8)		 | 0,   // Reset value: 0x00
-		(FIFO_CONFIG1 << 8)	 	 | 0,	//
-		(FIFO_CONFIG2 << 8)	 	 | 0,	//
-		(FIFO_CONFIG3 << 8)	 	 | 0,
-		(FDR_CONFIG  << 8)	 	 | 0,   //
+		////////////////////bank sel 4 ////////////////////////
 
-		(INT_CONFIG << 8)	 	 | 0,
-		(INT_CONFIG0 << 8)	 	 | 0,
+//		(REG_BANK_SEL << 8)		| 0x04,//default: 0x00
+//		(FDR_CONFIG << 8)	 	| 0x00,//default: 0x00
+//		(APEX_CONFIG1 << 8)	 	| 0xA2,//default: 0xA2
+//		(APEX_CONFIG2 << 8)	 	| 0x85,//default: 0x85
+//		(APEX_CONFIG3 << 8)	 	| 0x51,//default: 0x51
+//		(APEX_CONFIG4 << 8)	 	| 0xA4,//default: 0xA4
+//		(APEX_CONFIG5 << 8)	 	| 0x8C,//default: 0x8C
+//		(APEX_CONFIG6 << 8)	 	| 0x5C,//default: 0x5C
+//		(APEX_CONFIG7 << 8)	 	| 0x45,//default: 0x45
+//		(APEX_CONFIG8 << 8)	 	| 0x5B,//default: 0x5B
+//		(APEX_CONFIG9 << 8)	 	| 0x00,//default: 0x00
+//		(APEX_CONFIG10 << 8)	| 0x00,//default: 0x00
+//		(ACCEL_WOM_X_THR << 8)	| 0x00,//default: 0x00
+//		(ACCEL_WOM_Y_THR << 8)	| 0x00,//default: 0x00
+//		(ACCEL_WOM_Z_THR << 8)	| 0x00,//default: 0x00
+//		(INT_SOURCE6 << 8)		| 0x00,//default: 0x00
+//		(INT_SOURCE7 << 8)		| 0x00,//default: 0x00
+//		(INT_SOURCE8 << 8)		| 0x00,//default: 0x00
+//		(INT_SOURCE9 << 8)		| 0x00,//default: 0x00
+//		(INT_SOURCE10 << 8)		| 0x00,//default: 0x00
+//		(ACCEL_WOM_X_THR << 8)	| 0x00,//default: 0x00
 
-		(PWR_MGMT0 <<8) 	     | 0,	// Reset value: 0x00
+//		(OFFSET_USER0 << 8)		| 0x00,//default: 0x00
+//		(OFFSET_USER1 << 8)		| 0x00,//default: 0x00
+//		(OFFSET_USER2 << 8)		| 0x00,//default: 0x00
+//		(OFFSET_USER3 << 8)		| 0x00,//default: 0x00
+//		(OFFSET_USER4 << 8)		| 0x00,//default: 0x00
+//		(OFFSET_USER5 << 8)		| 0x00,//default: 0x00
+//		(OFFSET_USER6 << 8)		| 0x00,//default: 0x00
+//		(OFFSET_USER7 << 8)		| 0x00,//default: 0x00
+//		(OFFSET_USER8 << 8)		| 0x00,//default: 0x00
 
+		////////////////////bank sel 0 ////////////////////////
+//		(REG_BANK_SEL << 8)		| 0x0,// default: 0x00
+		(PWR_MGMT0 << 8) 	    | 0x1f,	// Reset value: 0x00/ GYRO,ACEEL,RC enable
 
 };
 
 uint16_t read_data_aceel_gyro_temp[]={
 
-		(ACCEL_DATA_X0_UI <<8) | 0,// ACCEL_DATA X,Y,Z
-		(ACCEL_DATA_X1_UI <<8) | 0,
-		(ACCEL_DATA_Y0_UI <<8) | 0,
-		(ACCEL_DATA_Y1_UI <<8) | 0,
-		(ACCEL_DATA_Z0_UI <<8) | 0,
-		(ACCEL_DATA_Z1_UI <<8) | 0,
+		(ACCEL_DATA_X0_UI <<8)| READ_REG16_II42xxx| 0,// ACCEL_DATA X,Y,Z
+		(ACCEL_DATA_X1_UI <<8)| READ_REG16_II42xxx| 0,
+		(ACCEL_DATA_Y0_UI <<8)| READ_REG16_II42xxx| 0,
+		(ACCEL_DATA_Y1_UI <<8)| READ_REG16_II42xxx| 0,
+		(ACCEL_DATA_Z0_UI <<8)| READ_REG16_II42xxx| 0,
+		(ACCEL_DATA_Z1_UI <<8)| READ_REG16_II42xxx| 0,
 
-		(GYRO_DATA_X0_UI <<8) | 0,// GYRO_DATA X,Y,Z
-		(GYRO_DATA_X1_UI <<8) | 0,
-		(GYRO_DATA_Y0_UI <<8) | 0,
-		(GYRO_DATA_Y1_UI <<8) | 0,
-		(GYRO_DATA_Z0_UI <<8) | 0,
-		(GYRO_DATA_Z1_UI <<8) | 0,
+		(GYRO_DATA_X0_UI <<8)| READ_REG16_II42xxx | 0,// GYRO_DATA X,Y,Z
+		(GYRO_DATA_X1_UI <<8)| READ_REG16_II42xxx | 0,
+		(GYRO_DATA_Y0_UI <<8)| READ_REG16_II42xxx | 0,
+		(GYRO_DATA_Y1_UI <<8)| READ_REG16_II42xxx | 0,
+		(GYRO_DATA_Z0_UI <<8)| READ_REG16_II42xxx | 0,
+		(GYRO_DATA_Z1_UI <<8)| READ_REG16_II42xxx | 0,
 
-		(TEMP_DATA0_UI <<8) | 0,// TEMperature
-		(TEMP_DATA1_UI <<8) | 0,
+		(TEMP_DATA0_UI <<8)| READ_REG16_II42xxx | 0,// TEMperature
+		(TEMP_DATA1_UI <<8)| READ_REG16_II42xxx | 0,
 
 };
 
-uint8_t data_aceel_gyro_temp[(sizeof(read_data_aceel_gyro_temp) / 2)+2];
-uint8_t raw_buffer[(sizeof(imu_registr) / 2)+2];
+uint16_t read_reg_status[]={
+
+		(INT_STATUS <<8)  | 0,  // def 0x10
+		(FIFO_COUNTH <<8) | 0,
+		(FIFO_COUNTL <<8) | 0,
+		(APEX_DATA0 <<8)  | 0,
+		(APEX_DATA1 <<8)  | 0,
+		(APEX_DATA2 <<8)  | 0,
+		(APEX_DATA3 <<8)  | 0,
+		(APEX_DATA4 <<8)  | 0,
+		(APEX_DATA5 <<8)  | 0,
+		(INT_STATUS2 <<8) | 0,
+		(INT_STATUS3 <<8) | 0,
+		(FIFO_LOST_PKT0 <<8) | 0,
+		(FIFO_LOST_PKT1 <<8) | 0,
+
+		(WHO_AM_I <<8) 		| 0,// GYRO_DATA X,Y,Z
+		(REG_BANK_SEL <<8)  | 0,
+
+//////////////////////// bank 1////////////////////////
+
+		(XG_ST_DATA<<8)  | 0,
+		(YG_ST_DATA <<8) | 0,
+		(ZG_ST_DATA <<8) | 0,
+		(TMSTVAL0 <<8) 	 | 0,
+		(TMSTVAL1 <<8) 	 | 0,
+		(TMSTVAL2 <<8)   | 0,
+
+/////////////////////// BANK2 ///////////////////
+
+};
+
+#define OPERATION_MODE 			0x01
+#define CONFIG_MODE    			0x02
+#define DISABLED_IIM42xxx       0x80
+
+
+
+uint8_t iim_42652_status = DISABLED_IIM42xxx ;
+
+int gyro_IIM42652[3] = { 0 },
+	accel_IIM42652[3] = { 0 },
+	temp_IIM42652;
+
+uint8_t  raw_fifo_buffer[40]={0};
+
+
 
  struct imu_data{
 
@@ -811,8 +928,8 @@ uint8_t raw_buffer[(sizeof(imu_registr) / 2)+2];
 	int *	 temperature;
 
 	uint8_t*  raw_fifo_buf;
-	uint8_t*  reg_status;
 
+	uint16_t* reg_status;
 	uint16_t* reg_config;
 	uint16_t* reg_gyro_accel_temp;
 
@@ -823,76 +940,57 @@ uint8_t raw_buffer[(sizeof(imu_registr) / 2)+2];
 
 };
 
+ struct imu_data imu_iim42652 ={
+
+	.status =  &iim_42652_status,
+	.gyro 	=  gyro_IIM42652,
+	.aceel  =  accel_IIM42652,
+	.temperature = &temp_IIM42652,
+
+	.raw_fifo_buf= raw_fifo_buffer,
+	.reg_status =  read_reg_status,
+
+	.reg_config = imu_config_registr,
+	.reg_gyro_accel_temp = read_data_aceel_gyro_temp,
+
+	.n_raw_fifo_buf = sizeof(raw_fifo_buffer),
+	.n_reg_config = sizeof(imu_config_registr)/2,
+	.n_reg_status = sizeof(read_reg_status)/2,
+	.n_reg_gyro_accel_temp = sizeof(read_data_aceel_gyro_temp)/2,
+
+
+ };
+
 uint8_t init_iim42652(struct imu_data* imu){
 
-	uint8_t data,command,*addr8bit = (uint8_t*)imu->reg_config;
+	uint8_t  	data;
+	*(imu->status) |= DISABLED_IIM42xxx | CONFIG_MODE;
+	//uint16_t*	ram = imu->reg_config;
 
-	SPI2_data(DEVICE_CONFIG, 0x01); //reset
+	//SPI2_reg_data(DEVICE_CONFIG, 0x01); //reset
+	//systick_pause = 2;//2ms
+	//while(systick_pause);
+
+	data = SPI2_reg_data((WHO_AM_I|READ_REG_II42xxx), 0x00);
+	if(data != CHIP_ID_42652) return 1;
+
+	// init block write reg
+	if(SPI2_WR_reg16_check(imu->reg_config,WRITE_REG_II42xxx,imu->n_reg_config)) return 1;
+	//data = SPI2_reg_data(PWR_MGMT0, 0x1F);
+	*(imu->status) &=~DISABLED_IIM42xxx;// Ok
+
 	systick_pause = 2;//2ms
 	while(systick_pause);
 
-	data = SPI2_data((WHO_AM_I|READ_REG_II42xxx), 0x00);
-	if(data != CHIP_ID_42652) return 1;
-
-	// init block
-
-	for(uint16_t i=0;i < imu->n_reg_config;i++){
-
-		data = *addr8bit++;
-		command = *addr8bit++;
-		SPI2_data(command,data);
-	}
 	return 0;
 }
 
-uint8_t load_registrs_iim42xxx(struct imu_data* imu,uint16_t* ram,uint32_t len){
+uint8_t load_gyro_aceel_temp(struct imu_data* imu){
 
-	uint16_t data16;
+	if(imu->n_raw_fifo_buf < imu->n_reg_gyro_accel_temp) return 3;
+	return SPI2_array16to8_check(imu->reg_gyro_accel_temp,imu->raw_fifo_buf,imu->n_reg_gyro_accel_temp);
 
-	for(uint16_t i=0;i<len;i++){
-
-		data16 = (*ram) & 0xff00;
-		*ram++ = data16 | SPI2_data16(data16|0x8000);//read registrs
-	}
-	return 0;
 };
-
-uint8_t load_data_iim42xxx(struct imu_data* imu,uint16_t* ram16bit,uint8_t* ram8bit,uint32_t len){
-
-	for(uint16_t i=0;i<len;i++){*ram8bit++ = SPI2_data16((*ram16bit ++)|0x8000);}
-
-	return 0;
-};
-
-
-
-
-
-
-uint8_t load_gyro_aceel_temp(struct imu_data* imu,uint8_t* ram,uint32_t len){
-
-		uint8_t* addr8bit = (uint8_t*)imu->reg_gyro_accel_temp,data,command;
-
-		for(uint16_t i=0;i<imu->n_reg_gyro_accel_temp;i++){
-
-			data = *addr8bit++;
-			command = *addr8bit++;
-
-			*ram++ = SPI2_data(command|READ_REG_II42xxx,data);
-		}
-		return 0;
-};
-
-
-
-
-
-
-
-
-
-
-
 
 
 

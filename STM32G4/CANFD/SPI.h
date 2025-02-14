@@ -8,8 +8,8 @@
 #ifndef INC_SPI_H_
 #define INC_SPI_H_
 
-#define SPI2_CS_on  GPIOA->BRR = 1<<10;
-#define SPI2_CS_off GPIOA->BSRR = 1<<10;
+#define SPI2_CS_on   GPIOA->BRR = 1<<10;
+#define SPI2_CS_off  GPIOA->BSRR = 1<<10;
 #define SPI2_disable SPI2->CR1 &=0xFFBF;
 #define SPI2_enable  SPI2->CR1 |=0x0020;
 #define SPI2_set_DMA SPI2->CR2 |=0x03;
@@ -180,7 +180,7 @@ void ConfigSPI2(void) {
 	 *	1: DMA для буфера RX увімкнено
 	 */
 
-	SPI2->CR2 |= (0b1111 << 8) | 2; // 16 BIT / Rx DMA/ TX DMA
+	SPI2->CR2 |= (0b1111 << 8) | 0; // 16 BIT / Rx DMA/ TX DMA
 
 	/*
 	 SPI status register (SPIx_SR)
@@ -225,203 +225,229 @@ void ConfigSPI2(void) {
 
 }
 
-#define SPI_TIMEOUT 5000
 
-//////////////////   16 bit    ///////////////////
+#define SPI_TIMEOUT 50000
 
-uint8_t SPI2_data(uint8_t reg, uint8_t data) {
+//////////////  SPI 16bit -> ram 8bit //////////////
 
-	uint32_t timeout = 0;
-
-	SPI2_CS_on
-
-	while (!(SPI2->SR & SPI_SR_TXE)) {
-		if (++timeout > SPI_TIMEOUT) {
-			SPI2_CS_off
-			;
-			return 0;
-		}
-	};
-
-	SPI2->DR = (reg << 8) | data;
-
-	while (!(SPI2->SR & SPI_SR_RXNE)) {
-		if (++timeout > SPI_TIMEOUT) {
-			SPI2_CS_off
-			;
-			return 0;
-		}
-	};
-
-	SPI2_CS_off
-
-	return SPI2->DR;
-}
-
-uint8_t SPI2_data16(uint16_t data) {
+uint8_t SPI2_data(uint16_t data){
 
 	uint32_t timeout = 0;
 
 	SPI2_CS_on
-
-	while (!(SPI2->SR & SPI_SR_TXE)) {
-		if (++timeout > SPI_TIMEOUT) {
-			SPI2_CS_off
-			;
-			return 0;
-		}
+	while (!(SPI2->SR & SPI_SR_TXE)){
+		if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 0;}
 	};
-
 	SPI2->DR = data;
 
-	while (!(SPI2->SR & SPI_SR_RXNE)) {
-		if (++timeout > SPI_TIMEOUT) {
-			SPI2_CS_off
-			;
-			return 0;
-		}
+	timeout = 0;
+	while (!(SPI2->SR & SPI_SR_RXNE)){
+		if (++timeout > SPI_TIMEOUT){SPI2_CS_off ;return 0;}
 	};
 
 	SPI2_CS_off
-
 	return SPI2->DR;
+};
+
+/////////////// SPI2 reg + data //////////////////////////
+
+uint8_t SPI2_reg_data(uint8_t reg, uint8_t data){
+	return SPI2_data((reg<<8)|data);
 }
-;
-//////////////////  Transfer 16 bit toRAM 8bit ///////////////////
 
-uint8_t SPI2_data_check(uint8_t reg, uint8_t *data) {
 
-	uint8_t error = 1;
+//////////// SPI (reg+data) 16bit -> RAM16bit  //////////
+
+uint16_t SPI2_data16bit(uint16_t data){
+
 	uint32_t timeout = 0;
 
 	SPI2_CS_on
+	while (!(SPI2->SR & SPI_SR_TXE)){
+		if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 0;}
+	};
+	SPI2->DR = data;
 
-	while (!(SPI2->SR & SPI_SR_TXE)) {
-		if (++timeout > SPI_TIMEOUT)
-			goto spi_exit;
-	}
-
-	SPI2->DR = (reg << 8) | *data;
-
-	while (!(SPI2->SR & SPI_SR_RXNE)) {
-		if (++timeout > SPI_TIMEOUT)
-			goto spi_exit;
-	}
-
-	*data = SPI2->DR;
-	error = 0;
-
-	spi_exit:
+	timeout = 0;
+	while (!(SPI2->SR & SPI_SR_RXNE)){
+		if (++timeout > SPI_TIMEOUT){SPI2_CS_off ;return 0;}
+	};
 
 	SPI2_CS_off
-	return error;
-}
-;
+	return SPI2->DR;
 
-/* 8bit
- *
- Bits 11:8 DS[3:0]: Data size
- These bits configure the data length for SPI transfers.
- 0111: 8-bit  -> ON
- 1111: 16-bit
- */
+};
 
-uint8_t SPI2_Send_Data(uint8_t reg, uint8_t *data, uint16_t length) {
 
-	uint8_t error = 1;
+
+
+//////////////////  Transfer 16 bit toRAM 8bit ///////////////////
+uint8_t SPI2_data_check(uint16_t reg, uint8_t *data) {
+
 	uint32_t timeout = 0;
 
 	SPI2_CS_on
 
-	while (!(SPI2->SR & SPI_SR_TXE)) {
-		if (++timeout > SPI_TIMEOUT)
-			goto spi_exit;
+		while (!(SPI2->SR & SPI_SR_TXE)){
+			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 1;};
+		}
+
+		SPI2->DR = reg;
+
+		timeout = 0;
+		while (!(SPI2->SR & SPI_SR_RXNE)){
+			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 2;};
+		}
+
+		*data = SPI2->DR;
+
+	SPI2_CS_off
+	return 0;
+};
+////////////////////////////////////////////////////////////
+
+uint8_t SPI2_reg_data_check(uint8_t reg, uint8_t *data){
+	return SPI2_data_check ((reg<<8)|(*data),data);
+};
+
+////////////////////////////////////////////////////////////
+
+uint16_t SPI2_data16bit_check(uint16_t reg, uint16_t *data) {
+
+	uint32_t timeout = 0;
+
+	SPI2_CS_on
+
+	while (!(SPI2->SR & SPI_SR_TXE)){
+		if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 1;};
 	}
 
 	SPI2->DR = reg;
 
-	for (size_t i = 0; i < length; i++) {
-
-		timeout = 0;
-		while (!(SPI2->SR & SPI_SR_TXE)) {
-			if (++timeout > SPI_TIMEOUT)
-				goto spi_exit;
-		}
-
-		SPI2->DR = data[i];
-
-		timeout = 0;
-		while (!(SPI2->SR & SPI_SR_RXNE)) {
-			if (++timeout > SPI_TIMEOUT)
-				goto spi_exit;
-		}
-
-		(void) SPI2->DR;  // Чтение данных из регистра для сброса флага RXNE
+	timeout = 0;
+	while (!(SPI2->SR & SPI_SR_RXNE)){
+		if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 2;};
 	}
 
-	error = 0;
-
-	spi_exit:
+	*data = SPI2->DR;
 
 	SPI2_CS_off
-	;  // Деактивировать устройство
-	return error;  // Успешная передача
-}
+	return 0;
+};
 
-////////////////////        8bit    /////////////////////////
+///////////////////////  uint16-> SPI -> 8bit  //////////////////
 
-uint8_t SPI2_Read_Data(uint8_t reg, uint8_t *data, uint16_t length) {
+uint8_t SPI2_array16to8_check(uint16_t* reg, uint8_t *data, uint16_t len) {
 
-	uint8_t error = 1;
+
 	uint32_t timeout = 0;
 
 	SPI2_CS_on
 
-	while (!(SPI2->SR & SPI_SR_TXE)) {
-		if (++timeout > SPI_TIMEOUT)
-			goto spi_exit;
-	}
-
-	SPI2->DR = reg;  // Отправка адреса регистра
-
-	for (size_t i = 0; i < length; i++) {
+	while (len){
 
 		timeout = 0;
-		while (!(SPI2->SR & SPI_SR_TXE)) {
-			if (++timeout > SPI_TIMEOUT)
-				goto spi_exit;
+		while (!(SPI2->SR & SPI_SR_TXE)){
+			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 1;};
 		}
 
-		SPI2->DR = 0;  // Отправка байта
+		SPI2->DR = *reg++;
 
 		timeout = 0;
-		while (!(SPI2->SR & SPI_SR_RXNE)) {
-			if (++timeout > SPI_TIMEOUT)
-				goto spi_exit;
+		while (!(SPI2->SR & SPI_SR_RXNE)){
+			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 2;};
 		}
 
-		data[i] = SPI2->DR;  // Чтение данных из регистра для сброса флага RXNE
-	}
-
-	error = 0;
-
-	spi_exit:
+		*data++ = SPI2->DR;
+		len--;
+	};
 
 	SPI2_CS_off
-	;  // Деактивировать устройство
-	return error;  // Успешная передача
-}
+	return 0;
+};
 
-//////////////////////////////
+/////////////////////////  uint16-> SPI -> 16bit  ////////////////////
+
+uint8_t SPI2_array16to16_check(uint16_t* reg, uint16_t *data, uint16_t len) {
+
+	uint32_t timeout;
+
+	SPI2_CS_on
+
+	while (len){
+
+		timeout = 0;
+		while (!(SPI2->SR & SPI_SR_TXE)){
+			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 1;};
+		}
+		SPI2->DR = *reg++;
+
+		timeout = 0;
+		while (!(SPI2->SR & SPI_SR_RXNE)){
+			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 2;};
+		}
+
+		*data++ = SPI2->DR;
+		len--;
+	};
+
+	SPI2_CS_off
+	return 0;
+};
+
+
+/////////////////////////// specific IMU 42xxx  /////////////////////////////////////
+//  reg
+
+uint8_t SPI2_WR_reg16_check(uint16_t* reg,uint16_t dir, uint16_t len) {
+
+	uint16_t timeout;
+
+	SPI2_CS_on
+
+	while (len){
+
+		timeout = 0;
+		while (!(SPI2->SR & SPI_SR_TXE)){
+			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 1;};
+		}
+
+		SPI2->DR = (*reg) | dir;
+
+		timeout = 0;
+		while (!(SPI2->SR & SPI_SR_RXNE)){
+			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 2;};
+		}
+
+		timeout = SPI2->DR;
+		if(dir) *reg = ((*reg)&0xff00)|(timeout&0x00ff);
+		reg++;
+		len--;
+	};
+
+	SPI2_CS_off
+	return 0;
+};
+
+
+
+
+
+
+
+
+/////////////////////////////  DMA ////////////////////////////
 
 void SPI2_DMA_data(void* mData ,void* pData, uint16_t len){
 
-	DMA1_Channel1->CMAR = mData;
+	DMA1_Channel1->CMAR =(uint32_t*) mData;
 	DMA1_Channel1->CNDTR = len;
-	DMA1_Channel2->CMAR = pData;
+	DMA1_Channel2->CMAR = (uint32_t*)pData;
 	DMA1_Channel2->CNDTR = len;
 
 	SPI2_disable
+
+
 
 	SPI2_enable
 };
