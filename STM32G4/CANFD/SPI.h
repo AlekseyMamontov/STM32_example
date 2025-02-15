@@ -8,10 +8,13 @@
 #ifndef INC_SPI_H_
 #define INC_SPI_H_
 
-#define SPI2_CS_on   GPIOA->BRR = 1<<10;
+#define SPI2_CS_on   GPIOA->BRR =  1<<10;
 #define SPI2_CS_off  GPIOA->BSRR = 1<<10;
+#define SPI1_CS_on   GPIOB->BRR =  1;
+#define SPI1_CS_off  GPIOB->BSRR = 1;
+
 #define SPI2_disable SPI2->CR1 &=0xFFBF;
-#define SPI2_enable  SPI2->CR1 |=0x0020;
+#define SPI2_enable  SPI2->CR1 |=0x0040;
 #define SPI2_set_DMA SPI2->CR2 |=0x03;
 #define SPI2_clr_DMA SPI2->CR2 &=0xFFFC;
 
@@ -19,7 +22,7 @@
 void ConfigSPI2(void) {
 
 	RCC->APB1ENR1 |= RCC_APB1ENR1_SPI2EN;
-
+	RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
 	/*
 	 SPI control register 1 (SPIx_CR1) Address offset: 0x00 Reset value: 0x0000
 
@@ -102,7 +105,7 @@ void ConfigSPI2(void) {
 	 */
 
 	SPI2->CR1 = (1 << 2) | (3 << 3) | (3 << 8) | 0; // master | clk/8 |  SSM=1 SSI =1 CPOL0 _/
-
+	SPI1->CR1 = (1 << 2) | (5 << 3) | (3 << 8) | 0; // master | clk/64 |  SSM=1 SSI =1 CPOL0 _/
 	/*
 	 SPI control register 2 (SPIx_CR2) Address offset: 0x04 Reset value: 0x0700 (8 bit)
 	 Регістровий опис SPI_CR2
@@ -181,6 +184,7 @@ void ConfigSPI2(void) {
 	 */
 
 	SPI2->CR2 |= (0b1111 << 8) | 0; // 16 BIT / Rx DMA/ TX DMA
+	SPI1->CR2 |= (0b1111 << 8) | 0; // 16 BIT / Rx DMA/ TX DMA
 
 	/*
 	 SPI status register (SPIx_SR)
@@ -221,13 +225,31 @@ void ConfigSPI2(void) {
 	//SPI2->CR2 |= SPI_CR2_TXDMAEN | SPI_CR2_RXDMAEN;
 
 
-	SPI2->CR1 |= (1 << 6);
-
+	SPI2->CR1 |= (1 << 6);// EN SP2
+	SPI1->CR1 |= (1 << 6);// EN SP1
 }
 
 
 #define SPI_TIMEOUT 50000
+//////////////  SPI 16bit -> ram 8bit //////////////
 
+uint8_t SPI1_data(uint16_t data){
+
+	uint32_t timeout = 0;
+
+	SPI1_CS_on
+	while (!(SPI1->SR & SPI_SR_TXE)){
+		if (++timeout > SPI_TIMEOUT){SPI1_CS_off;return 0;}};
+
+	SPI1->DR = data;
+
+	timeout = 0;
+	while (!(SPI1->SR & SPI_SR_RXNE)){
+		if (++timeout > SPI_TIMEOUT){SPI1_CS_off ;return 0;}};
+
+	SPI1_CS_off
+	return SPI1->DR;
+};
 //////////////  SPI 16bit -> ram 8bit //////////////
 
 uint8_t SPI2_data(uint16_t data){

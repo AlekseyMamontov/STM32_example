@@ -108,8 +108,13 @@ void GPIO_INIT(void){
       PA5  SPI1 _SCK
       PA6  SPI1 _MISO
       PA7  SPI1 _MOSI
+      PB0  SPI1_CS
+      PB1  INT_ReadyOK
+      PB2  INT_Warning
 
 	 */
+
+
 
 	RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN | RCC_AHB2ENR_GPIOBEN;
 
@@ -191,7 +196,7 @@ void GPIO_INIT(void){
 	     //-------------  151413121110 9 8 7 6 5 4 3 2 1 0
 		 GPIOA->PUPDR = 0b01100100000000000000000000000000; // General purpose output mode
 	     //-------------  151413121110 9 8 7 6 5 4 3 2 1 0
-		 GPIOB->PUPDR = 0b00000001010000010000000000000000; // General purpose output mode
+		 GPIOB->PUPDR = 0b00000001010000010000000000010100; // General purpose output mode
 
 	/*
 

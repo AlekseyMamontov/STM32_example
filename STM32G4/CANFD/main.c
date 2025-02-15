@@ -12,7 +12,7 @@
 //#include "Ixm42xxxDefs.h"
 //#include "Ixm42xxxDriver_HL.h"
 
-uint8_t test = 1, trigger = 0, command = 0xEF, data = 0,readyINT1 =1,sendACC=0;
+uint8_t test = 1, trigger = 0, command = 0xEF, data = 0,readyINT1 =1,sendACC=0,lis3m=0;
 uint32_t pause = 500;
 
 int main(void) {
@@ -28,7 +28,10 @@ int main(void) {
 	init_iim42652(&imu_iim42652);
 	__enable_irq();
 
-	// Сообщение для отправки
+
+	lis3m  = SPI1_data(0x8F00);
+
+
 
 	uint32_t data32[18] = { 0 };
 	uint32_t id = 0x222;  // Стандартный идентификатор CAN
@@ -40,13 +43,14 @@ int main(void) {
 			SPI2_data((INT_STATUS|READ_REG_II42xxx)<<8 | 0x00);
 			load_gyro_aceel_temp(&imu_iim42652);}
 
-		
+
 		if (!systick_pause) {
 
 			GPIOA->BSRR = trigger ? GPIO_BSRR_BS12 : GPIO_BSRR_BR12;
 
 			if(sendACC){
 				sendACC =0;
+				*(imu_iim42652.raw_fifo_buf +15) = lis3m;
 				CAN_SendMessage(id+1,imu_iim42652.raw_fifo_buf, 8); //(uint8_t*)RAM + counterRAM*4
 				CAN_SendMessage(id+2,(imu_iim42652.raw_fifo_buf)+8, 8);
 			};
