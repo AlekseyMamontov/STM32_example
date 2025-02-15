@@ -12,7 +12,7 @@
 //#include "Ixm42xxxDefs.h"
 //#include "Ixm42xxxDriver_HL.h"
 
-uint8_t test = 1, trigger = 0, command = 0xEF, data = 0;
+uint8_t test = 1, trigger = 0, command = 0xEF, data = 0,readyINT1 =1,sendACC=0;
 uint32_t pause = 500;
 
 int main(void) {
@@ -23,7 +23,7 @@ int main(void) {
 	CAN_Config();
 	ConfigSPI2();
 	I2C2_Init();
-	//DMA_Init();
+	DMA_Init();
 	BMP280_Init(&BMP280_sensor1);
 	init_iim42652(&imu_iim42652);
 	__enable_irq();
@@ -35,34 +35,21 @@ int main(void) {
 
 	while (1) {
 
+		if(readyINT1){
+			readyINT1 = 0;sendACC = 1;
+			SPI2_data((INT_STATUS|READ_REG_II42xxx)<<8 | 0x00);
+			load_gyro_aceel_temp(&imu_iim42652);}
+
 		// Выключаем светодиод
 		if (!systick_pause) {
 
 			GPIOA->BSRR = trigger ? GPIO_BSRR_BS12 : GPIO_BSRR_BR12;
 
-			//load_gyro_aceel_temp(&imu_iim42652);
-
-			imu_iim42652.raw_fifo_buf[0] = SPI2_reg_data((ACCEL_DATA_X0_UI|READ_REG_II42xxx),00);
-			imu_iim42652.raw_fifo_buf[1] = SPI2_reg_data((ACCEL_DATA_X1_UI|READ_REG_II42xxx),00);
-			imu_iim42652.raw_fifo_buf[2] = SPI2_reg_data((ACCEL_DATA_Y0_UI|READ_REG_II42xxx),00);
-			imu_iim42652.raw_fifo_buf[3] = SPI2_reg_data((ACCEL_DATA_Y1_UI|READ_REG_II42xxx),00);
-			imu_iim42652.raw_fifo_buf[4] = SPI2_reg_data((ACCEL_DATA_Z0_UI|READ_REG_II42xxx),00);
-			imu_iim42652.raw_fifo_buf[5] = SPI2_reg_data((ACCEL_DATA_Z1_UI|READ_REG_II42xxx),00);
-			imu_iim42652.raw_fifo_buf[6] = SPI2_reg_data((GYRO_DATA_X0_UI|READ_REG_II42xxx),00);
-			imu_iim42652.raw_fifo_buf[7] = SPI2_reg_data((GYRO_DATA_X1_UI|READ_REG_II42xxx),00);
-
-			imu_iim42652.raw_fifo_buf[8] = SPI2_reg_data((GYRO_DATA_Y0_UI|READ_REG_II42xxx),00);
-			imu_iim42652.raw_fifo_buf[9] = SPI2_reg_data((GYRO_DATA_Y1_UI|READ_REG_II42xxx),00);
-			imu_iim42652.raw_fifo_buf[10] = SPI2_reg_data((GYRO_DATA_Z0_UI|READ_REG_II42xxx),00);
-			imu_iim42652.raw_fifo_buf[11] = SPI2_reg_data((GYRO_DATA_Z1_UI|READ_REG_II42xxx),00);
-			imu_iim42652.raw_fifo_buf[12] = SPI2_reg_data((TEMP_DATA0_UI |READ_REG_II42xxx),00);
-			imu_iim42652.raw_fifo_buf[13] = SPI2_reg_data((TEMP_DATA1_UI |READ_REG_II42xxx),00);
-
-
-			CAN_SendMessage(id+1,imu_iim42652.raw_fifo_buf, 8); //(uint8_t*)RAM + counterRAM*4
-
-			CAN_SendMessage(id+2,(imu_iim42652.raw_fifo_buf)+8, 8);
-
+			if(sendACC){
+				sendACC =0;
+				CAN_SendMessage(id+1,imu_iim42652.raw_fifo_buf, 8); //(uint8_t*)RAM + counterRAM*4
+				CAN_SendMessage(id+2,(imu_iim42652.raw_fifo_buf)+8, 8);
+			};
 			BMP280_Read_Raw_Data(&BMP280_sensor1);
 			data32[0] = BMP280_Compensate_Temperature(&BMP280_sensor1);
 			data32[1] = BMP280_Compensate_Pressure(&BMP280_sensor1);
@@ -127,16 +114,28 @@ void FDCAN1_IT1_IRQHandler(void) {
 
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////
+/*
 
-// Настройка CAN
+PB12 IMU_int1  EXTI 12 configuration bits
+PB11 IMU int2
+*/
 
-//void FDCAN1_IT0_IRQHandler(void){test = 1;};
+void EXTI15_10_IRQHandler(void) {
 
-///////////////////// SPI2/////////////////////
+    if (EXTI->PR1 & (1 << 12)) { // PB12 INT1
+
+    	if(!readyINT1){readyINT1=1;};
+
+    	EXTI->PR1 |= (1 << 12); // Сброс флага
+    }
+
+    if (EXTI->PR1 & (1 << 11)) { //PB11  INT2
 
 
 
+        EXTI->PR1 |= (1 << 11); // Сброс флага
+   }
+}
 void Error_Handler(void) {
 	// Обработка ошибок
 	__disable_irq();
