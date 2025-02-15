@@ -278,9 +278,6 @@ uint16_t SPI2_data16bit(uint16_t data){
 
 };
 
-
-
-
 //////////////////  Transfer 16 bit toRAM 8bit ///////////////////
 uint8_t SPI2_data_check(uint16_t reg, uint8_t *data) {
 
@@ -342,27 +339,24 @@ uint8_t SPI2_array16to8_check(uint16_t* reg, uint8_t *data, uint16_t len) {
 
 	uint32_t timeout = 0;
 
-	SPI2_CS_on
+	while (len--){
 
-	while (len){
+		SPI2_CS_on
 
 		timeout = 0;
 		while (!(SPI2->SR & SPI_SR_TXE)){
-			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 1;};
-		}
+			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 1;};}
 
 		SPI2->DR = *reg++;
 
 		timeout = 0;
 		while (!(SPI2->SR & SPI_SR_RXNE)){
-			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 2;};
-		}
+			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 2;};}
 
-		*data++ = SPI2->DR;
-		len--;
+		SPI2_CS_off
+
+		*data++ = (uint8_t)(SPI2->DR & 0xFF);
 	};
-
-	SPI2_CS_off
 	return 0;
 };
 
@@ -372,10 +366,9 @@ uint8_t SPI2_array16to16_check(uint16_t* reg, uint16_t *data, uint16_t len) {
 
 	uint32_t timeout;
 
-	SPI2_CS_on
+	while (len--){
 
-	while (len){
-
+		SPI2_CS_on
 		timeout = 0;
 		while (!(SPI2->SR & SPI_SR_TXE)){
 			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 1;};
@@ -386,26 +379,86 @@ uint8_t SPI2_array16to16_check(uint16_t* reg, uint16_t *data, uint16_t len) {
 		while (!(SPI2->SR & SPI_SR_RXNE)){
 			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 2;};
 		}
-
+		SPI2_CS_off
 		*data++ = SPI2->DR;
-		len--;
 	};
 
-	SPI2_CS_off
+
 	return 0;
 };
 
 
 /////////////////////////// specific IMU 42xxx  /////////////////////////////////////
-//  reg
+//MSB LSB
+uint8_t SPI2_read_reg_to_array8_check(uint16_t reg, uint8_t *data, uint16_t len) {
 
+	if(!len) return 0;
+
+	uint32_t timeout = 0;
+
+	SPI2_CS_on
+
+////////  registr
+
+	while (!(SPI2->SR & SPI_SR_TXE)){
+			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 1;};
+		}
+
+	SPI2->DR = reg;
+	timeout = 0;
+
+//////// data
+
+	while (!(SPI2->SR & SPI_SR_RXNE)){
+		if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 2;};
+	}
+
+	*data++ = SPI2->DR & 0xFF;
+
+	len--;
+
+	while (len--){
+
+		timeout = 0;
+
+		while (!(SPI2->SR & SPI_SR_TXE)){
+			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 1;};
+		}
+
+		SPI2->DR = 0;
+
+		timeout = 0;
+		while (!(SPI2->SR & SPI_SR_RXNE)){
+			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 2;};
+		}
+
+		timeout = SPI2->DR;
+
+		*data++ = timeout >> 8 & 0xFF;
+		*data++ = timeout & 0xFF;
+
+	};
+
+	SPI2_CS_off
+
+	return 0;
+};
+
+/*  uint16_t block[] ={
+ *  ((reg<<8) | dir | data),
+ *  ((reg<<8) | dir | data),
+ *  ((banksel)| dir | N),
+ *  ((reg<<8) | dir | data),
+ *  ,,, }
+
+*/
 uint8_t SPI2_WR_reg16_check(uint16_t* reg,uint16_t dir, uint16_t len) {
 
 	uint16_t timeout;
 
-	SPI2_CS_on
+	while (len--){
 
-	while (len){
+		SPI2_CS_on
 
 		timeout = 0;
 		while (!(SPI2->SR & SPI_SR_TXE)){
@@ -419,21 +472,16 @@ uint8_t SPI2_WR_reg16_check(uint16_t* reg,uint16_t dir, uint16_t len) {
 			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 2;};
 		}
 
+		SPI2_CS_off
+
 		timeout = SPI2->DR;
-		if(dir) *reg = ((*reg)&0xff00)|(timeout&0x00ff);
+		if(dir) *reg = ((*reg)&0xff00)|(timeout&0x00ff);// read
 		reg++;
-		len--;
 	};
 
-	SPI2_CS_off
+
 	return 0;
 };
-
-
-
-
-
-
 
 
 /////////////////////////////  DMA ////////////////////////////

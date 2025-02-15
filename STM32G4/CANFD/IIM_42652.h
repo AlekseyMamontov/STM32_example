@@ -241,12 +241,11 @@
 #define INT_CONFIG 			0x14
 
 /*
- Ось переклад на українську мову з розбитими реченнями:
 
  [5:4] DRDY_INT_CLEAR Опція скидання переривання "Дані готові" (замкнутий режим):
  *		00: Скидання при читанні статусного біта (за замовчуванням)
  *		01: Скидання при читанні статусного біта
- *		10: Скидання при читанні реєстру сенсора
+ *		10: Скидання при читанні регістру сенсора
  *		11: Скидання при читанні статусного біта І при читанні реєстру сенсора
 
  [3:2]FIFO_THS_INT_CLEAR Опція скидання переривання "Поріг FIFO" (замкнутий режим):
@@ -754,16 +753,18 @@
 
 uint16_t imu_config_registr[]={
 
-//		(FIFO_CONFIG  << 8)		| 0x00,//  default: 0
-//		(FIFO_CONFIG1 << 8)	 	| 0x00,	//
-//		(FIFO_CONFIG2 << 8)	 	| 0x00,	//
-//		(FIFO_CONFIG3 << 8)	 	| 0x00,
+ 		(FIFO_CONFIG  << 8)		| 0x00,//  default: 0  | [7:6] 01: Stream-to-FIFO Mode
+		(FIFO_CONFIG1 << 8)	 	| 0x57,	//FIFO TEMP_EN FIFO_GYRO_EN FIFO_ACCEL_EN
+		(FIFO_CONFIG2 << 8)	 	| 0x28,	//
+		(FIFO_CONFIG3 << 8)	 	| 0x00,
 //		(SIGNAL_PATH_RESET << 8)| 0x00,// default: 0
 //		(INT_CONFIG << 8)	 	| 0x00,// default: 0
 //		(INT_CONFIG0 << 8)	 	| 0x00,// default: 0x00
 //		(INT_CONFIG1 << 8)	 	| 0x10,// default: 0x10
 
-//		(INTF_CONFIG0 <<8)		| 0x32,// default: 0x30 i2c disabled
+
+
+		(INTF_CONFIG0 <<8)		| 0b11110011,// default: 0x30 /  i2c disabled
 //		(INTF_CONFIG1 <<8)		| 0x91,// default: 0x91
 
 //		(GYRO_CONFIG0 <<8)		| 0x06,// default: 0x06
@@ -775,7 +776,7 @@ uint16_t imu_config_registr[]={
 //		(APEX_CONFIG0 << 8)		| 0x82,// default: 0x82
 //		(SMD_CONFIG << 8)		| 0x00,// default: 0x00
 //		(FSYNC_CONFIG << 8)		| 0x10,// default: 0x10
-//		(INT_SOURCE0 << 8)		| 0x10,// default: 0x10
+		(INT_SOURCE0 << 8)		| 0x08,// default: 0x10
 //		(INT_SOURCE1 << 8)		| 0x00,// default: 0x00
 //		(INT_SOURCE3 << 8)		| 0x00,// default: 0x00
 //		(INT_SOURCE4 << 8)		| 0x00,// default: 0x00
@@ -853,6 +854,8 @@ uint16_t imu_config_registr[]={
 
 uint16_t read_data_aceel_gyro_temp[]={
 
+		(TEMP_DATA0_UI <<8)| READ_REG16_II42xxx | 0,
+		(TEMP_DATA1_UI <<8)| READ_REG16_II42xxx | 0,
 		(ACCEL_DATA_X0_UI <<8)| READ_REG16_II42xxx| 0,// ACCEL_DATA X,Y,Z
 		(ACCEL_DATA_X1_UI <<8)| READ_REG16_II42xxx| 0,
 		(ACCEL_DATA_Y0_UI <<8)| READ_REG16_II42xxx| 0,
@@ -866,9 +869,6 @@ uint16_t read_data_aceel_gyro_temp[]={
 		(GYRO_DATA_Y1_UI <<8)| READ_REG16_II42xxx | 0,
 		(GYRO_DATA_Z0_UI <<8)| READ_REG16_II42xxx | 0,
 		(GYRO_DATA_Z1_UI <<8)| READ_REG16_II42xxx | 0,
-
-		(TEMP_DATA0_UI <<8)| READ_REG16_II42xxx | 0,// TEMperature
-		(TEMP_DATA1_UI <<8)| READ_REG16_II42xxx | 0,
 
 };
 
@@ -988,10 +988,15 @@ uint8_t init_iim42652(struct imu_data* imu){
 uint8_t load_gyro_aceel_temp(struct imu_data* imu){
 
 	if(imu->n_raw_fifo_buf < imu->n_reg_gyro_accel_temp) return 3;
-	return SPI2_array16to8_check(imu->reg_gyro_accel_temp,imu->raw_fifo_buf,imu->n_reg_gyro_accel_temp);
-
+	return  SPI2_read_reg_to_array8_check(((TEMP_DATA1_UI <<8)| READ_REG16_II42xxx),
+											imu->raw_fifo_buf,
+											imu->n_reg_gyro_accel_temp);
 };
+uint8_t load_gyro_aceel_temp2(struct imu_data* imu){
 
+	if(imu->n_raw_fifo_buf < imu->n_reg_gyro_accel_temp) return 3;
+	return  SPI2_array16to8_check(imu->reg_gyro_accel_temp,imu->raw_fifo_buf,imu->n_reg_gyro_accel_temp);
+};
 
 
 #endif /* INC_IIM_42652_H_ */
