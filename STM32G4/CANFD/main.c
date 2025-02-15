@@ -40,7 +40,7 @@ int main(void) {
 			SPI2_data((INT_STATUS|READ_REG_II42xxx)<<8 | 0x00);
 			load_gyro_aceel_temp(&imu_iim42652);}
 
-		// Выключаем светодиод
+		
 		if (!systick_pause) {
 
 			GPIOA->BSRR = trigger ? GPIO_BSRR_BS12 : GPIO_BSRR_BR12;
