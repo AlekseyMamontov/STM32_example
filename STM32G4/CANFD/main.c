@@ -7,6 +7,7 @@
 #include "DMA.h"
 #include "main.h"
 #include "IIM_42652.h"
+#include "LIS3MD.h"
 
 //#include "Ixm42xxxTransport.h"
 //#include "Ixm42xxxDefs.h"
@@ -26,11 +27,8 @@ int main(void) {
 	DMA_Init();
 	BMP280_Init(&BMP280_sensor1);
 	init_iim42652(&imu_iim42652);
+	init_lis3md(&mag_lis3md);
 	__enable_irq();
-
-
-	lis3m  = SPI1_data(0x8F00);
-
 
 
 	uint32_t data32[18] = { 0 };
@@ -42,7 +40,7 @@ int main(void) {
 			readyINT1 = 0;sendACC = 1;
 			SPI2_data((INT_STATUS|READ_REG_II42xxx)<<8 | 0x00);
 			load_gyro_aceel_temp(&imu_iim42652);}
-
+//test
 
 		if (!systick_pause) {
 
@@ -50,7 +48,7 @@ int main(void) {
 
 			if(sendACC){
 				sendACC =0;
-				*(imu_iim42652.raw_fifo_buf +15) = lis3m;
+				//*(imu_iim42652.raw_fifo_buf +15) = lis3m;
 				CAN_SendMessage(id+1,imu_iim42652.raw_fifo_buf, 8); //(uint8_t*)RAM + counterRAM*4
 				CAN_SendMessage(id+2,(imu_iim42652.raw_fifo_buf)+8, 8);
 			};
@@ -58,6 +56,10 @@ int main(void) {
 			data32[0] = BMP280_Compensate_Temperature(&BMP280_sensor1);
 			data32[1] = BMP280_Compensate_Pressure(&BMP280_sensor1);
 			CAN_SendMessage(id, (uint8_t*) data32, 8);
+
+			load_mag_lis3mdtr(&mag_lis3md);
+			CAN_SendMessage(id+3,mag_lis3md.raw_fifo_buffer, 8);
+
 			trigger = trigger ? 0 : 1;
 
 			systick_pause = 500;

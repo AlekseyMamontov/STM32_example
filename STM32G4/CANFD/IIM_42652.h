@@ -904,8 +904,8 @@ uint16_t read_reg_status[]={
 
 };
 
-#define OPERATION_MODE 			0x01
-#define CONFIG_MODE    			0x02
+#define OPERATION_MODE_IIM42xxx 0x01
+#define CONFIG_MODE_IIM42xxx    0x02
 #define DISABLED_IIM42xxx       0x80
 
 
@@ -964,7 +964,7 @@ uint8_t  raw_fifo_buffer[40]={0};
 uint8_t init_iim42652(struct imu_data* imu){
 
 	uint8_t  	data;
-	*(imu->status) |= DISABLED_IIM42xxx | CONFIG_MODE;
+	*(imu->status) = DISABLED_IIM42xxx | CONFIG_MODE_IIM42xxx ;
 	//uint16_t*	ram = imu->reg_config;
 
 	//SPI2_reg_data(DEVICE_CONFIG, 0x01); //reset

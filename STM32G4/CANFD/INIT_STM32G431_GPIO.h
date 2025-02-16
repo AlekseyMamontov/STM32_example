@@ -268,7 +268,7 @@ void GPIO_INIT(void){
    PB12 IMU_int1  EXTI 12 configuration bits
    PB11 IMU int2
   */
-  SYSCFG->EXTICR[3] |= 0b0000000000000001;  // PB12 виьір порту
+  SYSCFG->EXTICR[3] |= 0b0000000000000001;  // PB12 вибір порту
   SYSCFG->EXTICR[2] |= 0b0001000000000000;  // PB11
 
   EXTI->IMR1  |= 0b0001100000000000;// On interput EXTI1

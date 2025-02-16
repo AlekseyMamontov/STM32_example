@@ -250,6 +250,11 @@ uint8_t SPI1_data(uint16_t data){
 	SPI1_CS_off
 	return SPI1->DR;
 };
+/////////////// SPI1 reg + data //////////////////////////
+
+uint8_t SPI1_reg_data(uint8_t reg, uint8_t data){
+	return SPI1_data((reg<<8)|data);
+}
 //////////////  SPI 16bit -> ram 8bit //////////////
 
 uint8_t SPI2_data(uint16_t data){
@@ -353,8 +358,34 @@ uint16_t SPI2_data16bit_check(uint16_t reg, uint16_t *data) {
 	SPI2_CS_off
 	return 0;
 };
+///////////////////////  uint16-> SPI1 -> 8bit  //////////////////
 
-///////////////////////  uint16-> SPI -> 8bit  //////////////////
+uint8_t SPI1_array16to8_check(uint16_t* reg, uint8_t *data, uint16_t len) {
+
+
+	uint32_t timeout = 0;
+
+	while (len--){
+
+		SPI1_CS_on
+
+		timeout = 0;
+		while (!(SPI1->SR & SPI_SR_TXE)){
+			if (++timeout > SPI_TIMEOUT){SPI1_CS_off;return 1;};}
+
+		SPI1->DR = *reg++;
+
+		timeout = 0;
+		while (!(SPI1->SR & SPI_SR_RXNE)){
+			if (++timeout > SPI_TIMEOUT){SPI1_CS_off;return 2;};}
+
+		SPI1_CS_off
+
+		*data++ = (uint8_t)(SPI1->DR & 0xFF);
+	};
+	return 0;
+};
+///////////////////////  uint16-> SPI2 -> 8bit  //////////////////
 
 uint8_t SPI2_array16to8_check(uint16_t* reg, uint8_t *data, uint16_t len) {
 
@@ -409,6 +440,61 @@ uint8_t SPI2_array16to16_check(uint16_t* reg, uint16_t *data, uint16_t len) {
 	return 0;
 };
 
+/////////////////////////// specific LIS3M  /////////////////////////////////////
+// LSB MSB
+uint8_t SPI1_read_reg_to_array8_check(uint16_t reg, uint8_t *data, uint16_t len) {
+
+	if(!len) return 0;
+
+	uint32_t timeout = 0;
+
+	SPI1_CS_on
+
+////////  registr
+
+	while (!(SPI1->SR & SPI_SR_TXE)){
+			if (++timeout > SPI_TIMEOUT){SPI1_CS_off;return 1;};
+		}
+
+	SPI1->DR = reg;
+	timeout = 0;
+
+//////// data
+
+	while (!(SPI1->SR & SPI_SR_RXNE)){
+		if (++timeout > SPI_TIMEOUT){SPI1_CS_off;return 2;};
+	}
+
+	*data++ = SPI1->DR & 0xFF;
+
+	len--;
+
+	while (len--){
+
+		timeout = 0;
+
+		while (!(SPI1->SR & SPI_SR_TXE)){
+			if (++timeout > SPI_TIMEOUT){SPI1_CS_off;return 1;};
+		}
+
+		SPI1->DR = 0;
+
+		timeout = 0;
+		while (!(SPI1->SR & SPI_SR_RXNE)){
+			if (++timeout > SPI_TIMEOUT){SPI1_CS_off;return 2;};
+		}
+
+		timeout = SPI1->DR;
+
+		*data++ = timeout >> 8 & 0xFF;
+		*data++ = timeout & 0xFF;
+
+	};
+
+	SPI1_CS_off
+
+	return 0;
+};
 
 /////////////////////////// specific IMU 42xxx  /////////////////////////////////////
 //MSB LSB
@@ -505,7 +591,36 @@ uint8_t SPI2_WR_reg16_check(uint16_t* reg,uint16_t dir, uint16_t len) {
 	return 0;
 };
 
+uint8_t SPI1_WR_reg16_check(uint16_t* reg,uint16_t dir, uint16_t len) {
 
+	uint16_t timeout;
+
+	while (len--){
+
+		SPI1_CS_on
+
+		timeout = 0;
+		while (!(SPI1->SR & SPI_SR_TXE)){
+			if (++timeout > SPI_TIMEOUT){SPI1_CS_off;return 1;};
+		}
+
+		SPI1->DR = (*reg) | dir;
+
+		timeout = 0;
+		while (!(SPI1->SR & SPI_SR_RXNE)){
+			if (++timeout > SPI_TIMEOUT){SPI1_CS_off;return 2;};
+		}
+
+		SPI1_CS_off
+
+		timeout = SPI1->DR;
+		if(dir) *reg = ((*reg)&0xff00)|(timeout&0x00ff);// read
+		reg++;
+	};
+
+
+	return 0;
+};
 /////////////////////////////  DMA ////////////////////////////
 
 void SPI2_DMA_data(void* mData ,void* pData, uint16_t len){
