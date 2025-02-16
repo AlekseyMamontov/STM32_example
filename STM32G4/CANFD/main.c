@@ -1,5 +1,6 @@
 
 #include "stm32g4xx.h"
+#include <math.h>
 #include "INIT_STM32G431_GPIO.h"
 #include <CANFD_STM32G431.h>
 #include "I2C.h"
@@ -13,7 +14,7 @@
 //#include "Ixm42xxxDefs.h"
 //#include "Ixm42xxxDriver_HL.h"
 
-uint8_t test = 1, trigger = 0, command = 0xEF, data = 0,readyINT1 =1,sendACC=0,lis3m=0;
+uint8_t test = 1, trigger = 0, command = 0xEF, data = 0,readyINT1 =1,sendACC=0,lis3m=1,sendMAG=0;
 uint32_t pause = 500;
 
 int main(void) {
@@ -40,6 +41,12 @@ int main(void) {
 			readyINT1 = 0;sendACC = 1;
 			SPI2_data((INT_STATUS|READ_REG_II42xxx)<<8 | 0x00);
 			load_gyro_aceel_temp(&imu_iim42652);}
+
+		if(lis3m){
+			lis3m = 0;sendMAG = 1;
+			load_mag_lis3mdtr(&mag_lis3md);
+		};
+
 //test
 
 		if (!systick_pause) {
@@ -57,8 +64,8 @@ int main(void) {
 			data32[1] = BMP280_Compensate_Pressure(&BMP280_sensor1);
 			CAN_SendMessage(id, (uint8_t*) data32, 8);
 
-			load_mag_lis3mdtr(&mag_lis3md);
-			CAN_SendMessage(id+3,mag_lis3md.raw_fifo_buffer, 8);
+			if(sendMAG){CAN_SendMessage(id+3,mag_lis3md.raw_fifo_buffer, 8);
+						sendMAG=0;}
 
 			trigger = trigger ? 0 : 1;
 
@@ -142,6 +149,16 @@ void EXTI15_10_IRQHandler(void) {
         EXTI->PR1 |= (1 << 11); // Сброс флага
    }
 }
+
+void EXTI1_IRQHandler(void){
+
+	if(!lis3m)lis3m = 1;
+
+	EXTI->PR1 |= 2;
+
+};
+
+
 void Error_Handler(void) {
 	// Обработка ошибок
 	__disable_irq();
