@@ -278,7 +278,7 @@ void GPIO_INIT(void){
   EXTI->FTSR1 |= 0b0001100000000000;// \_
   EXTI->RTSR1 |= 0b0000000000000010;// _/
 
-  NVIC_EnableIRQ(EXTI15_10_IRQn);
+  //NVIC_EnableIRQ(EXTI15_10_IRQn);
   NVIC_EnableIRQ(EXTI1_IRQn);
   //NVIC_SetPriority(EXTI15_10_IRQHandler, 0);
 

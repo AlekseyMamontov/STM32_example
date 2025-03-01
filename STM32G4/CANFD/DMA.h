@@ -179,46 +179,43 @@
 
 // Налаштування DMA для передачі та прийому
 
-#define DMA1_Ch1_enable  DMA1_Channel1->CCR |= DMA_CCR_EN;
-#define DMA1_Ch1_disable DMA1_Channel1->CCR &=0xFFFE;
+// Настройка DMA и DMAMUX
 
-#define DMA1_Ch2_enable  DMA1_Channel2->CCR |= DMA_CCR_EN;
-#define DMA1_Ch2_disable DMA1_Channel2->CCR &=0xFFFE;
+void DMA_Init_SPI2(void *rxBuffer, void *txBuffer, uint16_t rxSIZE, uint16_t txSIZE) {
 
+    RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN | RCC_AHB1ENR_DMAMUX1EN;
 
-/////////////////// INIT //////////////////////////////////////
+    // DMA1 Channel 2 для SPI2_RX (Peripheral-to-Memory)
 
-void DMA_Init(void) {
+    DMA1_Channel1->CCR = DMA_CCR_MINC |        // Увеличение адреса памяти
+                         DMA_CCR_TCIE |        // Прерывание по завершению
+                         DMA_CCR_PSIZE_0 |     // 16-битный размер данных периферии
+                         DMA_CCR_MSIZE_0 |
+                         DMA_CCR_CIRC
+                         ;
+    // 16-битный размер данных памяти
+                         // DIR = 0 по умолчанию (Peripheral-to-Memory)
+    DMA1_Channel1->CNDTR = rxSIZE;             // Количество слов для приема
+    DMA1_Channel1->CPAR = (uint32_t)&(SPI2->DR); // Адрес регистра SPI
+    DMA1_Channel1->CMAR = (uint32_t)rxBuffer;  // Адрес буфера приема
+    DMAMUX1_Channel0->CCR = 12 ;                // SPI2_RX (Table 91)
 
-	RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN;
+    // DMA1 Channel 3 для SPI2_TX (Memory-to-Peripheral)
+    DMA1_Channel2->CCR = DMA_CCR_MINC 	 |     // Увеличение адреса памяти
+                         DMA_CCR_DIR     |     // Memory-to-Peripheral
+                         DMA_CCR_PSIZE_0 |     // 16-битный размер данных периферии
+                         DMA_CCR_MSIZE_0
+                         ;
+    // 16-битный размер данных памяти
+    DMA1_Channel2->CNDTR = txSIZE;             // Количество слов для передачи
+    DMA1_Channel2->CPAR = (uint32_t)&(SPI2->DR); // Адрес регистра SPI
+    DMA1_Channel2->CMAR = (uint32_t)txBuffer;  // Адрес буфера передачи
+    DMAMUX1_Channel1->CCR = 13;                // SPI2_TX (Table 91)
 
-	// SPI2 TX DMA для передачі RAM -> SPI2
-	DMA1_Channel1->CCR = (1 << 4) 	|// DIR=1
-						 (1 << 7) 	|// RAM++
-						 (10 << 12)	|// PL Very_High
-						 (1 << 8)	|// SPI2_16bit
-						 (1 << 10)	;// RAM_16bit
-
-	DMA1_Channel1->CPAR = (uint32_t) &SPI2->DR;
-	DMA1_Channel1->CMAR =  0; // CMAR -> CPAR
-	DMA1_Channel1->CNDTR = 0; // size (uint16_t)
-
-
-
-
-	// SPI2 RX DMA для передачі DIR=0 RAM <- SPI2
-
-	DMA1_Channel1->CCR = (0 << 4) 	|// DIR=0
-						 (1 << 7) 	|// RAM++
-						 (11 << 12)	|// PL Very_High
-						 (1 << 8)	|// SPI2_16bit
-						 (0 << 10)	;// RAM_8bit
-
-	DMA1_Channel2->CPAR = (uint32_t) &SPI2->DR;
-	DMA1_Channel1->CMAR =  0; // CMAR <- CPAR
-	DMA1_Channel2->CNDTR = 0; // size 8 bit
 
 }
+
+
 
  /*
  //////////  DMA interrupt status register (DMA_ISR) //////////////
@@ -242,7 +239,7 @@ void DMA_Init(void) {
 */
 // Обробник переривання для DMA
 
-void DMA1_Channel1_IRQHandler(void) {
+void DMA1_Channelxx1_IRQHandler(void) {
 
 	if (DMA1->ISR & DMA_ISR_GIF1){
 
@@ -262,28 +259,7 @@ void DMA1_Channel1_IRQHandler(void) {
 	DMA1->IFCR |= DMA_IFCR_CGIF1;
 }
 
-
-void DMA1_Channel2_IRQHandler(void) {
-
-
-	if (DMA1->ISR & DMA_ISR_GIF2){
-
-		// Перевірка на помилку передачі
-		if (DMA1->ISR & DMA_ISR_TEIF2) {
-			DMA1->IFCR |= DMA_IFCR_CTEIF2;// Скидання флагу помилки
-		// Перевірка половинної передачі
-		}else if(DMA1->ISR & DMA_ISR_HTIF2){
-			DMA1->IFCR |= DMA_IFCR_CHTIF2;//половинної передачі
-
-		// Перевірка завершення передачі
-		}else if(DMA1->ISR & DMA_ISR_TCIF2){
-
-
-			DMA1->IFCR |= DMA_IFCR_CTCIF2;}
-	};
-
-	DMA1->IFCR |= DMA_IFCR_CGIF2;
-}
+//////////////////////////////////////////////////////////
 
 
 

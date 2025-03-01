@@ -218,7 +218,7 @@ struct data_magnit{
 		uint16_t* reg_status;
 		uint16_t* reg_raw_mag;
 
-		uint16_t  n_raw_fifo_buf;
+		uint16_t  n_raw_fifo_buffer;
 		uint16_t  n_reg_config;
 		uint16_t  n_reg_status;
 		uint16_t  n_reg_raw_mag;
@@ -240,7 +240,7 @@ struct data_magnit mag_lis3md ={
 		.reg_status = NULL,
 		.reg_raw_mag = read_raw_data_magnit,
 
-		.n_raw_fifo_buf =sizeof(lis3mdl_buffer),
+		.n_raw_fifo_buffer =sizeof(lis3mdl_buffer),
 		.n_reg_config =  sizeof(magnit_config_registr)/2,
 		.n_reg_status =0,
 		.n_reg_raw_mag = sizeof(read_raw_data_magnit)/2,
@@ -265,12 +265,12 @@ return 0;
 
 uint8_t load_mag_lis3md(struct data_magnit* mag){
 
-	if(mag->n_raw_fifo_buf < mag->n_reg_raw_mag) return 3;
+	if(mag->n_raw_fifo_buffer < mag->n_reg_raw_mag) return 3;
 	return  SPI1_array16to8_check(mag->reg_raw_mag,mag->raw_fifo_buffer,mag->n_reg_raw_mag);
 };
 uint8_t load_mag_lis3mdtr(struct data_magnit* mag){
 
-	if(mag->n_raw_fifo_buf < mag->n_reg_raw_mag) return 3;
+	if(mag->n_raw_fifo_buffer < mag->n_reg_raw_mag) return 3;
 	SPI1_read_reg_to_array8_check(((LIS3M_OUT_X_L|INC_REG_LIS3M |READ_REG_LIS3M)<<8|0),
 											mag->raw_fifo_buffer,5);
 	*(mag->raw_fifo_buffer+6) = SPI1_data((LIS3M_TEMP_OUT_LR|READ_REG_LIS3M)<<8|0x00);

@@ -1,21 +1,42 @@
 
 #include "stm32g4xx.h"
+
 #include <math.h>
+#include "Fusion.h"
 #include "INIT_STM32G431_GPIO.h"
 #include <CANFD_STM32G431.h>
 #include "I2C.h"
-#include "SPI.h"
 #include "DMA.h"
-#include "main.h"
+#include "SPI.h"
 #include "IIM_42652.h"
 #include "LIS3MD.h"
+#include "main.h"
 
-//#include "Ixm42xxxTransport.h"
-//#include "Ixm42xxxDefs.h"
-//#include "Ixm42xxxDriver_HL.h"
 
-uint8_t test = 1, trigger = 0, command = 0xEF, data = 0,readyINT1 =1,sendACC=0,lis3m=1,sendMAG=0;
+
+
+uint8_t test = 1, trigger = 0, command = 0xEF, data = 0,sendACC=0,lis3m=1,sendMAG=0;
 uint32_t pause = 500;
+
+
+
+FusionAhrs ahrs;
+FusionQuaternion quaternion;
+FusionVector acc,gyro,mag;
+float heading;
+#define SAMPLE_RATE 1000.0f
+#define DELTA_TIME (1.0f / SAMPLE_RATE)
+#define ACCEL_SCALE 2048.0f  // ±16g
+#define GYRO_SCALE 16.384f   // ±2000 dps
+#define MAG_SCALE 0.15f      // Пример (настройте под ваш магнитометр)
+
+uint16_t spi2_rx_buf[30]={0},spi2rxsize = 12,
+		 spi2_tx_buf[30]={0},spi2txsize = 12;
+
+uint8_t  spi2_rx_data[30]={0},*fdata, dmaComplete=0,readyINT1 =0;
+
+
+
 
 int main(void) {
 	// Настройка системного тактирования
@@ -23,53 +44,130 @@ int main(void) {
 	SystemClock_Config();
 	GPIO_INIT();
 	CAN_Config();
-	ConfigSPI2();
 	I2C2_Init();
-	DMA_Init();
+	Init_SPI_STM32();
+
 	BMP280_Init(&BMP280_sensor1);
 	init_iim42652(&imu_iim42652);
 	init_lis3md(&mag_lis3md);
+
 	__enable_irq();
+/*
+    FusionAhrsInitialise(&ahrs);
+    FusionAhrsSetSettings(&ahrs, &(FusionAhrsSettings){
+        .gain = 0.5f,
+        .accelerationRejection = 10.0f,
+        .magneticRejection = 20.0f
+        // Убрано rejectionTimeout, так как его нет в вашей версии
+    });
+*/
 
 
-	uint32_t data32[18] = { 0 };
-	uint32_t id = 0x222;  // Стандартный идентификатор CAN
+
+    int16_t* dt16 =(int16_t*)mag_lis3md.raw_fifo_buffer, *buf16;
+
+	uint32_t data_block[8] = {0};
+	float ft32[8]= {0};
+	uint32_t id = 1003;  // Стандартный идентификатор CAN
+
+
+//	SPI2->CR2 |= SPI_CR2_TXDMAEN;    // Включение DMA для передачи (TX)
+//	SPI2->CR2 |= SPI_CR2_RXDMAEN;    // Включение DMA для приема (RX)
+
+
+
+
+
+
 
 	while (1) {
 
-		if(readyINT1){
-			readyINT1 = 0;sendACC = 1;
-			SPI2_data((INT_STATUS|READ_REG_II42xxx)<<8 | 0x00);
-			load_gyro_aceel_temp(&imu_iim42652);}
+/////////////////////////////////
+
+		if(*(imu_iim42652.status) & DMA_OK_IIM42xxx ){ *(imu_iim42652.status) = 0;
+
+				if((*imu_iim42652.raw_RX_fifo_buf) &0x0C){
+
+				sendACC = 1;
+
+				fdata = (uint8_t*) imu_iim42652.raw_RX_fifo_buf;
+				spi2_rx_data[0] = *fdata ;
+				spi2_rx_data[1] = *(fdata+3);
+				spi2_rx_data[2] = *(fdata+2);
+				spi2_rx_data[3] = *(fdata+5);
+
+				spi2_rx_data[4] = *(fdata+4);
+				spi2_rx_data[5] = *(fdata+7);
+
+				spi2_rx_data[6] = *(fdata+6);
+				spi2_rx_data[7] = *(fdata+9);
+
+				spi2_rx_data[8] = *(fdata+8);
+				spi2_rx_data[9] = *(fdata+11);
+
+				spi2_rx_data[10] = *(fdata+10);
+				spi2_rx_data[11] = *(fdata+13);
+
+				spi2_rx_data[12] = *(fdata+12);
+				spi2_rx_data[13] = *(fdata+15);
+
+				spi2_rx_data[14] = *(fdata+14);
+				spi2_rx_data[15] = *(fdata+17);
+
+				spi2_rx_data[16] = *(fdata+16);
+
+
+			}
+		}
+
+//////////////////////////////
 
 		if(lis3m){
 			lis3m = 0;sendMAG = 1;
 			load_mag_lis3mdtr(&mag_lis3md);
+
+			mag.axis.x = *dt16;
+			mag.axis.y =*(dt16+1);
+			mag.axis.z =*(dt16+2);
 		};
 
-//test
+/////////////////////////////
 
-		if (!systick_pause) {
+ 		if (!systick_pause) {
 
 			GPIOA->BSRR = trigger ? GPIO_BSRR_BS12 : GPIO_BSRR_BR12;
 
-			if(sendACC){
-				sendACC =0;
-				//*(imu_iim42652.raw_fifo_buf +15) = lis3m;
-				CAN_SendMessage(id+1,imu_iim42652.raw_fifo_buf, 8); //(uint8_t*)RAM + counterRAM*4
-				CAN_SendMessage(id+2,(imu_iim42652.raw_fifo_buf)+8, 8);
-			};
-			BMP280_Read_Raw_Data(&BMP280_sensor1);
-			data32[0] = BMP280_Compensate_Temperature(&BMP280_sensor1);
-			data32[1] = BMP280_Compensate_Pressure(&BMP280_sensor1);
-			CAN_SendMessage(id, (uint8_t*) data32, 8);
+			 //FusionAhrsUpdateNoMagnetometer(&ahrs, gyro, acc, DELTA_TIME);
+			 //heading = FusionCompassCalculateHeading(FusionConventionNwu, acc, mag);
+			 //FusionAhrsSetHeading(&ahrs, heading);
+			 //quaternion = FusionAhrsGetQuaternion(&ahrs);
 
-			if(sendMAG){CAN_SendMessage(id+3,mag_lis3md.raw_fifo_buffer, 8);
-						sendMAG=0;}
+			if(sendACC){sendACC =0;
+						CAN_SendMessage(id+1,(uint8_t*) spi2_rx_data, 8);
+					    CAN_SendMessage(id+2,(uint8_t*) spi2_rx_data+8, 8);
+//				CAN_SendMessage(id+1, imu_iim42652.raw_fifo_buf, 8);
+//				CAN_SendMessage(id+2,(imu_iim42652.raw_fifo_buf)+8, 8);
+			};
+
+
+			//BMP280_Read_Raw_Data(&BMP280_sensor1);
+			//data32[0] = BMP280_Compensate_Temperature(&BMP280_sensor1);
+			//data32[1] = BMP280_Compensate_Pressure(&BMP280_sensor1);
+			//CAN_SendMessage(id, (uint8_t*) data32, 8);
+/*
+			ft32[0] = quaternion.element.w;
+			ft32[1] = quaternion.element.x;
+			CAN_SendMessage(id+1, (uint8_t*)ft32,8);
+			ft32[2] = quaternion.element.y;
+			ft32[3] = quaternion.element.z;
+			CAN_SendMessage(id+2, (uint8_t*)ft32+2,8);
+*/
+
+	if(sendMAG){CAN_SendMessage(id+3,mag_lis3md.raw_fifo_buffer, 8); sendMAG=0;}
 
 			trigger = trigger ? 0 : 1;
 
-			systick_pause = 500;
+			systick_pause = 20;
 		};
 
 		if (test){test = 0;}
@@ -127,28 +225,6 @@ void FDCAN1_IT1_IRQHandler(void) {
 
 }
 
-/*
-
-PB12 IMU_int1  EXTI 12 configuration bits
-PB11 IMU int2
-*/
-
-void EXTI15_10_IRQHandler(void) {
-
-    if (EXTI->PR1 & (1 << 12)) { // PB12 INT1
-
-    	if(!readyINT1){readyINT1=1;};
-
-    	EXTI->PR1 |= (1 << 12); // Сброс флага
-    }
-
-    if (EXTI->PR1 & (1 << 11)) { //PB11  INT2
-
-
-
-        EXTI->PR1 |= (1 << 11); // Сброс флага
-   }
-}
 
 void EXTI1_IRQHandler(void){
 

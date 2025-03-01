@@ -139,21 +139,7 @@
  */
 #define	FIFO_CONFIG 		0x16
 
-/*  Регістр FIFO_CONFIG1
- [7] Резерв
- [6] FIFO_WM_GT_TH
- * 	  0: Часткове читання FIFO вимкнено, потрібно повторно читати весь FIFO.
- * 	  1: Читання FIFO може бути частковим і відновлюється з останньої точки читання.
- [5] Триггерити переривання по рівню FIFO на кожному ODR (DMA запису), якщо FIFO_COUNT ≥ FIFO_WM_TH.
- [4] FIFO_HIRES_EN
- *	  0: Значення за замовчуванням; дані сенсора мають звичайну роздільну здатність.
- *	  1: Дані сенсора в FIFO матимуть розширену роздільну здатність, що дозволяє 20-байтовий пакет.
- [3] FIFO_TMST_FSYNC_EN
- [2] FIFO_TEMP_EN Увімкнути пакети з температурного сенсора для запису в FIFO.
- [1] FIFO_GYRO_EN Увімкнути пакети з гіроскопа для запису в FIFO.
- [0] FIFO_ACCEL_EN Увімкнути пакети з акселерометра для запису в FIFO.
- */
-#define FIFO_CONFIG1 		0x5F
+
 
 /*FIFO_WM[7:0]
  Функція: Нижні біти рівня FIFO.
@@ -272,72 +258,7 @@
  [4] Користувач повинен змінити налаштування з 1 на 0 для правильної роботи контактів INT1 і INT2.
  * */
 #define INT_CONFIG1 		0x64
-/*
- Reset value: 0x30
- Встановлення цього біта в 0:
- Щоб сигналізувати про недійсний зразок і відрізнити його від дійсного зразка на основі значень:
 
- Реєстри сенсора:
-
- Не отримують недійсні зразки. Вони зберігають останній дійсний зразок. Повторне зчитування перед отриманням нового зразка буде давати копії останнього дійсного зразка.
- Дійсні зразки значень -32768, -32767 замінюються на -32766.
- Тегування FSYNC може змінити найменший значущий біт і додатково обмежити значення (див. розділ 12.8).
- FIFO:
-
- 16-бітний пакет FIFO: Такі ж, як реєстри сенсора, за винятком:
- Тегування FSYNC не застосовується до даних у FIFO.
- 20-бітний пакет FIFO:
- Недійсні зразки позначаються значенням -524288.
- Дійсні зразки в {-524288 до -524258} замінюються на -524256.
- Дійсні зразки гіроскопа: Всі парні числа в {-524256 до +524286}.
- Дійсні зразки акселерометра: Всі числа, які діляться на 4 в {-524256 до +524284}.
- Тегування FSYNC не застосовується до даних у FIFO.
- Встановлення цього біта в 1:
- Реєстри сенсора:
-
- Не отримують недійсні зразки. Вони зберігають останній дійсний зразок. Повторне зчитування перед отриманням нового зразка буде давати копії останнього дійсного зразка.
- Тегування FSYNC може змінити найменший значущий біт і додатково обмежити значення (див. розділ 12.8).
- FIFO:
-
-
- FIFO_COUNT_REC
- 5FIFO_COUNT_ENDIAN
- 4SENSOR_DATA_ENDIAN
- 3:2-
- 1:0UI_SIFS_CFG
-
-
- Недійсний зразок отримає копію останнього дійсного зразка.
- 16-бітний пакет FIFO: Такі ж, як реєстри сенсора, за винятком:
- Тегування FSYNC не застосовується до даних у FIFO.
- 20-бітний пакет FIFO:
- Дійсні зразки гіроскопа: Всі парні числа в {-524288 до +524286}.
- Дійсні зразки акселерометра: Всі числа, які діляться на 4 в {-524288 до +524284}.
-
- 0: Кількість у FIFO звітується в байтах.
- 1: Кількість у FIFO звітується в записах (1 запис = 16 байтів для заголовка + дані гіроскопа + дані акселерометра + дані температурного датчика + мітка часу, або 8 байтів для заголовка + дані гіроскопа/акселерометра + дані температурного датчика).
-
- 0: Кількість у FIFO звітується в форматі Little Endian.
- 1: Кількість у FIFO звітується в форматі Big Endian (за замовчуванням).
-
- 0: Дані сенсора звітуються в форматі Little Endian.
- 1: Дані сенсора звітуються в форматі Big Endian (за замовчуванням).
-
- Резервовано.
-
- 0x: Резервовано.
- 10: Вимкнути SPI.
- 11: Вимкнути I2C.
-
-
- Генерація недійсних даних: FIFO/реєстри сенсора можуть містити недійсні дані за наступних умов:
- a) Від моменту скидання живлення до першого зразка ODR будь-якого сенсора (акселерометра, гіроскопа, температурного сенсора).
- b) Коли будь-який сенсор вимкнено (акселерометр, гіроскоп, температурний сенсор).
- c) Коли акселерометр і гіроскоп увімкнені з різними ODR. У цьому випадку сенсор з нижчим ODR буде генерувати недійсні зразки, коли не має нових даних.
-
- Недійсні дані можуть мати спеціальні значення або зберігати останній дійсний зразок, отриманий. Для використання значення -32768 як прапорця для недійсних зразків акселерометра/гіроскопа, діапазон дійсних зразків акселерометра/гіроскопа також обмежується. Біт 7 INTF_CONFIG0 контролює, які значення можуть приймати недійсні (та дійсні) зразки, як показано вище.
- * */
-#define INTF_CONFIG0 		0x4C
 
 /* Reset value: 0x91
  *
@@ -359,31 +280,7 @@
 
 #define INTF_CONFIG1 		0x4D
 
-/*Reset value: 0x10
-[6]	UI_FSYNC_INT1_EN
-	 0: Переривання UI FSYNC не направлене на INT1.
-	 1: Переривання UI FSYNC направлене на INT1.
-[5]	PLL_RDY_INT1_EN
-	 0: Переривання готовності PLL не направлене на INT1.
-	 1: Переривання готовності PLL направлене на INT1.
-[4] RESET_DONE_INT1_EN
-	 0: Переривання завершення скидання не направлене на INT1.
-	 1: Переривання завершення скидання направлене на INT1.
-[3]	UI_DRDY_INT1_EN
-	 0: Переривання готовності даних UI не направлене на INT1.
-	 1: Переривання готовності даних UI направлене на INT1.
-[2] FIFO_THS_INT1_EN
-	 0: Переривання порогу FIFO не направлене на INT1.
-	 1: Переривання порогу FIFO направлене на INT1.
-[1]	FIFO_FULL_INT1_EN
-	 0: Переривання заповненості FIFO не направлене на INT1.
-	 1: Переривання заповненості FIFO направлене на INT1.
-[0]	UI_AGC_RDY_INT1_EN
-	 0: Переривання готовності AGC UI не направлене на INT1.
-	 1: Переривання готовності AGC UI направлене на INT1.
- * */
 
-#define INT_SOURCE0 		0x65
 /*
  *
 [6] T1_EN  I3C_PROTOCOL_ERROR_IN
@@ -749,34 +646,142 @@
 #define READ_REG_II42xxx 		0x80
 #define READ_REG16_II42xxx 		0x8000
 #define WRITE_REG_II42xxx 		0
-/////////////////////////////////////////////////////////
+//////////////////////function///////////////////////////////////
 
+
+////////////////////////////////////////////////////////
 uint16_t imu_config_registr[]={
 
- 		(FIFO_CONFIG  << 8)		| 0x00,//  default: 0  | [7:6] 01: Stream-to-FIFO Mode
-		(FIFO_CONFIG1 << 8)	 	| 0x57,	//FIFO TEMP_EN FIFO_GYRO_EN FIFO_ACCEL_EN
-		(FIFO_CONFIG2 << 8)	 	| 0x28,	//
+ 		(FIFO_CONFIG  << 8)		| 0b01000000,			//  default: 0  | [7:6] 01: Stream-to-FIFO Mode
+
+#define FIFO_CONFIG1 		0x5F
+
+ 		/*  Регістр FIFO_CONFIG1
+ 		 [7] Резерв
+ 		 [6] FIFO_WM_GT_TH
+ 		 * 	  0: Часткове читання FIFO вимкнено, потрібно повторно читати весь FIFO.
+ 		 * 	  1: Читання FIFO може бути частковим і відновлюється з останньої точки читання.
+ 		 [5] Триггерити переривання по рівню FIFO на кожному ODR (DMA запису), якщо FIFO_COUNT ≥ FIFO_WM_TH.
+ 		 [4] FIFO_HIRES_EN
+ 		 *	  0: Значення за замовчуванням; дані сенсора мають звичайну роздільну здатність.
+ 		 *	  1: Дані сенсора в FIFO матимуть розширену роздільну здатність, що дозволяє 20-байтовий пакет.
+ 		 [3] FIFO_TMST_FSYNC_EN
+ 		 [2] FIFO_TEMP_EN Увімкнути пакети з температурного сенсора для запису в FIFO.
+ 		 [1] FIFO_GYRO_EN Увімкнути пакети з гіроскопа для запису в FIFO.
+ 		 [0] FIFO_ACCEL_EN Увімкнути пакети з акселерометра для запису в FIFO.
+ 		 */
+ 		(FIFO_CONFIG1 << 8)	 	| 0b01110111,	//FIFO TEMP_EN FIFO_GYRO_EN FIFO_ACCEL_EN
+
+
+
+		(FIFO_CONFIG2 << 8)	 	| 0x14,	//
 		(FIFO_CONFIG3 << 8)	 	| 0x00,
+
+
+
 //		(SIGNAL_PATH_RESET << 8)| 0x00,// default: 0
 //		(INT_CONFIG << 8)	 	| 0x00,// default: 0
 //		(INT_CONFIG0 << 8)	 	| 0x00,// default: 0x00
 //		(INT_CONFIG1 << 8)	 	| 0x10,// default: 0x10
 
 
+#define INTF_CONFIG0 		0x4C
+		/*
+		 Reset value: 0x30
+		 Встановлення цього біта в 0:
+		 Щоб сигналізувати про недійсний зразок і відрізнити його від дійсного зразка на основі значень:
 
-		(INTF_CONFIG0 <<8)		| 0b11110011,// default: 0x30 /  i2c disabled
+	 [7] FIFO_HOLD_LAST_DATA_EN
+
+	   0:
+		 16-бітний пакет FIFO: Такі ж, як реєстри сенсора, за винятком:
+		 Тегування FSYNC не застосовується до даних у FIFO.
+		 20-бітний пакет FIFO:
+		 Недійсні зразки позначаються значенням -524288.
+		 Дійсні зразки в {-524288 до -524258} замінюються на -524256.
+		 Дійсні зразки гіроскопа: Всі парні числа в {-524256 до +524286}.
+		 Дійсні зразки акселерометра: Всі числа, які діляться на 4 в {-524256 до +524284}.
+		 Тегування FSYNC не застосовується до даних у FIFO.
+		 Встановлення цього біта в 1:
+		 Реєстри сенсора:
+
+
+		1: Недійсний зразок отримає копію останнього дійсного зразка.
+		  16-бітний пакет FIFO: Такі ж, як реєстри сенсора, за винятком:
+		  Тегування FSYNC не застосовується до даних у FIFO.
+		  20-бітний пакет FIFO:
+		  Дійсні зразки гіроскопа: Всі парні числа в {-524288 до +524286}.
+		  Дійсні зразки акселерометра: Всі числа, які діляться на 4 в {-524288 до +524284}.
+
+
+	 [6] FIFO_COUNT_REC
+		 0: Кількість у FIFO звітується в байтах.
+		 1: Кількість у FIFO звітується в записах (
+			 1 запис = 16 байтів для заголовка
+			  + дані гіроскопа + дані акселерометра
+			  + дані температурного датчика
+			  + мітка часу,
+			  або 8 байтів для заголовка + дані гіроскопа/акселерометра + дані температурного датчика).
+
+	 [5] FIFO_COUNT_ENDIAN
+		 0: Кількість у FIFO звітується в форматі Little Endian.
+		 1: Кількість у FIFO звітується в форматі Big Endian (за замовчуванням).
+
+	 [4] SENSOR_DATA_ENDIAN
+		 0: Дані сенсора звітуються в форматі Little Endian.
+		 1: Дані сенсора звітуються в форматі Big Endian (за замовчуванням).
+
+	[3l2] Резервовано.
+
+	[0:1] UI_SIFS_CFG
+
+		 10: Вимкнути SPI.
+		 11: Вимкнути I2C.
+*/
+		(INTF_CONFIG0 <<8)		| 0b10000011,// default: 0x30 /  i2c disabled
+
+
+
 //		(INTF_CONFIG1 <<8)		| 0x91,// default: 0x91
 
-//		(GYRO_CONFIG0 <<8)		| 0x06,// default: 0x06
+		(GYRO_CONFIG0 <<8)		| 0b00000111,// default: 0x06
 //		(GYRO_CONFIG1 <<8)		| 0x16,// default: 0x16
 //		(GYRO_ACCEL_CONFIG0 <<8)| 0x11,// default: 0x11
-//		(ACCEL_CONFIG0 << 8)	| 0x06,// default: 0x06
+		(ACCEL_CONFIG0 << 8)	| 0b00000111,// default: 0x06
 //		(ACCEL_CONFIG1 << 8)	| 0x0D,// default: 0x0D
 //		(TMST_CONFIG << 8)		| 0x23,// default: 0x23
 //		(APEX_CONFIG0 << 8)		| 0x82,// default: 0x82
 //		(SMD_CONFIG << 8)		| 0x00,// default: 0x00
-//		(FSYNC_CONFIG << 8)		| 0x10,// default: 0x10
-		(INT_SOURCE0 << 8)		| 0x08,// default: 0x10
+
+#define INT_SOURCE0 		0x65
+
+/*Reset value: 0x10
+		[6]	UI_FSYNC_INT1_EN
+			 0: Переривання UI FSYNC не направлене на INT1.
+			 1: Переривання UI FSYNC направлене на INT1.
+		[5]	PLL_RDY_INT1_EN
+			 0: Переривання готовності PLL не направлене на INT1.
+			 1: Переривання готовності PLL направлене на INT1.
+		[4] RESET_DONE_INT1_EN
+			 0: Переривання завершення скидання не направлене на INT1.
+			 1: Переривання завершення скидання направлене на INT1.
+		[3]	UI_DRDY_INT1_EN
+			 0: Переривання готовності даних UI не направлене на INT1.
+			 1: Переривання готовності даних UI направлене на INT1.
+		[2] FIFO_THS_INT1_EN
+			 0: Переривання порогу FIFO не направлене на INT1.
+			 1: Переривання порогу FIFO направлене на INT1.
+		[1]	FIFO_FULL_INT1_EN
+			 0: Переривання заповненості FIFO не направлене на INT1.
+			 1: Переривання заповненості FIFO направлене на INT1.
+		[0]	UI_AGC_RDY_INT1_EN
+			 0: Переривання готовності AGC UI не направлене на INT1.
+			 1: Переривання готовності AGC UI направлене на INT1.
+		 * */
+		(INT_SOURCE0 << 8)		| 0b00000110,// default: 0x10
+
+
+
 //		(INT_SOURCE1 << 8)		| 0x00,// default: 0x00
 //		(INT_SOURCE3 << 8)		| 0x00,// default: 0x00
 //		(INT_SOURCE4 << 8)		| 0x00,// default: 0x00
@@ -907,18 +912,19 @@ uint16_t read_reg_status[]={
 #define OPERATION_MODE_IIM42xxx 0x01
 #define CONFIG_MODE_IIM42xxx    0x02
 #define DISABLED_IIM42xxx       0x80
+#define INT_FIFO_IIM42xxx       0x40
+#define DMA_OK_IIM42xxx       	0x20
 
+uint8_t iim_42652_status = DISABLED_IIM42xxx, n_16bit_packet_fifo =12 ;// 20byte
 
-
-uint8_t iim_42652_status = DISABLED_IIM42xxx ;
-
-int gyro_IIM42652[3] = { 0 },
+int gyro_IIM42652[3]  = { 0 },
 	accel_IIM42652[3] = { 0 },
-	temp_IIM42652;
+	temp_IIM42652,
+	timestamp_IIM42652;
 
-uint8_t  raw_fifo_buffer[40]={0};
-
-
+uint8_t   raw_fifo_buffer[40]={0};
+uint16_t  raw_RX_buf_iim42652[40] = {0};
+uint16_t  raw_TX_buf_iim42652[40] = {0};
 
  struct imu_data{
 
@@ -926,8 +932,12 @@ uint8_t  raw_fifo_buffer[40]={0};
 	int *		    gyro;
 	int *		   aceel;
 	int *	 temperature;
+	int *	 timestamp;
 
-	uint8_t*  raw_fifo_buf;
+	uint8_t *  raw_fifo_buf;
+	uint16_t*  raw_RX_fifo_buf;
+	uint16_t*  raw_TX_fifo_buf;
+	uint8_t *  n_16bit_packet_fifo;
 
 	uint16_t* reg_status;
 	uint16_t* reg_config;
@@ -942,30 +952,125 @@ uint8_t  raw_fifo_buffer[40]={0};
 
  struct imu_data imu_iim42652 ={
 
-	.status =  &iim_42652_status,
-	.gyro 	=  gyro_IIM42652,
-	.aceel  =  accel_IIM42652,
+	.status 	 = &iim_42652_status,
+	.gyro 		 = gyro_IIM42652,
+	.aceel  	 = accel_IIM42652,
 	.temperature = &temp_IIM42652,
 
-	.raw_fifo_buf= raw_fifo_buffer,
-	.reg_status =  read_reg_status,
+	.raw_fifo_buf    = raw_fifo_buffer,
+	.raw_RX_fifo_buf = raw_RX_buf_iim42652,
+	.raw_TX_fifo_buf = raw_TX_buf_iim42652,
+	.n_16bit_packet_fifo = &n_16bit_packet_fifo,
 
-	.reg_config = imu_config_registr,
+	.reg_status   	 = read_reg_status,
+
+	.reg_config 		 = imu_config_registr,
 	.reg_gyro_accel_temp = read_data_aceel_gyro_temp,
 
-	.n_raw_fifo_buf = sizeof(raw_fifo_buffer),
-	.n_reg_config = sizeof(imu_config_registr)/2,
-	.n_reg_status = sizeof(read_reg_status)/2,
+	.n_raw_fifo_buf 	= sizeof(raw_fifo_buffer),
+	.n_reg_config 		= sizeof(imu_config_registr)/2,
+	.n_reg_status 		= sizeof(read_reg_status)/2,
 	.n_reg_gyro_accel_temp = sizeof(read_data_aceel_gyro_temp)/2,
 
-
  };
+
+//////////////////// func communication
+
+void DMA_Init_SPI2_IIM42652(struct imu_data* imu, uint16_t n_16bit) {
+
+    RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN | RCC_AHB1ENR_DMAMUX1EN;
+
+    // DMA1 Channel 1 для SPI2_RX (Peripheral-to-Memory)
+
+    DMA1_Channel1->CCR = DMA_CCR_MINC |        // RAM++
+                         DMA_CCR_TCIE |        // IRQ_RXNE
+                         DMA_CCR_PSIZE_0 |     // 16 bit
+                         DMA_CCR_MSIZE_0 |     // 16 bit
+                         DMA_CCR_CIRC;
+                         				         // DIR = 0 (Peripheral-to-Memory)
+    DMA1_Channel1->CNDTR = n_16bit;               // n__16bit
+    DMA1_Channel1->CPAR = (uint32_t)&(SPI2->DR); // SPI data
+    DMA1_Channel1->CMAR = (uint32_t)imu->raw_RX_fifo_buf;
+    DMAMUX1_Channel0->CCR = 12 ;                // SPI2_RX (Table 91)
+
+
+    // DMA1 Channel 2 для SPI2_TX  DIR=1 (Memory-to-Peripheral)
+
+    DMA1_Channel2->CCR = DMA_CCR_MINC 	 |     // RAM++
+                         DMA_CCR_DIR     |     // Memory-to-Peripheral
+                         DMA_CCR_PSIZE_0 |     // 16-bit
+                         DMA_CCR_MSIZE_0 ;	   // 16-bit
+
+    DMA1_Channel2->CNDTR = n_16bit;             // Количество слов для передачи
+    DMA1_Channel2->CPAR = (uint32_t)&(SPI2->DR); // Адрес регистра SPI
+    DMA1_Channel2->CMAR = (uint32_t)imu->raw_TX_fifo_buf;  // Адрес буфера передачи
+
+    DMAMUX1_Channel1->CCR = 13;                // SPI2_TX (Table 91)
+
+
+}
+
+void DMA1_Channel1_IRQHandler(void) {
+
+    if (DMA1->ISR & DMA_ISR_TCIF1) {
+
+        DMA1->IFCR = DMA_IFCR_CTCIF1;
+
+        //DMA1_Channel1->CCR &= ~DMA_CCR_EN;
+
+         DMA1_Channel2->CCR &= ~DMA_CCR_EN;
+         SPI2_CS_off
+         iim_42652_status &= ~INT_FIFO_IIM42xxx;
+         iim_42652_status |= DMA_OK_IIM42xxx;
+
+    }
+
+  DMA1->IFCR |= DMA_IFCR_CGIF1;
+}
+
+/*
+
+PB12 IMU_int1  EXTI 12 configuration bits
+PB11 IMU int2
+*/
+
+void EXTI15_10_IRQHandler(void) {
+
+    if (EXTI->PR1 & (1 << 12)) { // PB12 INT1
+
+    	if((iim_42652_status & INT_FIFO_IIM42xxx) == 0){
+
+    	  iim_42652_status |= INT_FIFO_IIM42xxx;
+          SPI2_CS_on
+          raw_TX_buf_iim42652[0] = 0xAD00; // READ INT_STATUS0,FL,FH,FIFO (packet)
+
+          //SPI2_TX_DMA_enable
+
+    	  DMA1_Channel2->CNDTR = 12; //24 byte
+    	  DMA1_Channel2->CMAR = (uint32_t)raw_TX_buf_iim42652;
+    	  DMA1_Channel2->CCR |= DMA_CCR_EN;
+    	}
+
+    	EXTI->PR1 |= (1 << 12); // Сброс флага
+
+    }
+
+
+    if (EXTI->PR1 & (1 << 11)) { //PB11  INT2
+
+
+
+        EXTI->PR1 |= (1 << 11); // Сброс флага
+   }
+}
+
+/////// init IIM42652
 
 uint8_t init_iim42652(struct imu_data* imu){
 
 	uint8_t  	data;
 	*(imu->status) = DISABLED_IIM42xxx | CONFIG_MODE_IIM42xxx ;
-	//uint16_t*	ram = imu->reg_config;
+
 
 	//SPI2_reg_data(DEVICE_CONFIG, 0x01); //reset
 	//systick_pause = 2;//2ms
@@ -975,9 +1080,20 @@ uint8_t init_iim42652(struct imu_data* imu){
 	if(data != CHIP_ID_42652) return 1;
 
 	// init block write reg
+
 	if(SPI2_WR_reg16_check(imu->reg_config,WRITE_REG_II42xxx,imu->n_reg_config)) return 1;
-	//data = SPI2_reg_data(PWR_MGMT0, 0x1F);
+
 	*(imu->status) &=~DISABLED_IIM42xxx;// Ok
+
+	 DMA_Init_SPI2_IIM42652(imu,(uint16_t)*(imu->n_16bit_packet_fifo));
+
+	 SPI2_DMA_enable					  //SPI dma 16bit
+     DMA1_Channel1->CCR |= DMA_CCR_EN;
+     NVIC_EnableIRQ(DMA1_Channel1_IRQn); //RX_buffer_circle
+     NVIC_EnableIRQ(EXTI15_10_IRQn);     //INT_fifo_ready EN
+
+     *(imu->status) &= CONFIG_MODE_IIM42xxx;
+     *(imu->status) |= OPERATION_MODE_IIM42xxx;
 
 	systick_pause = 2;//2ms
 	while(systick_pause);
@@ -985,6 +1101,100 @@ uint8_t init_iim42652(struct imu_data* imu){
 	return 0;
 }
 
+///////////// DATA - OPERATION_MODE
+
+uint8_t Data_fifo_pack20byte_IIM42xxx(struct imu_data* imu){
+
+	uint8_t  error= 1;
+	uint8_t *data8 = (uint8_t*)imu->raw_RX_fifo_buf;
+
+	if( ((*data8) & 0x04) == 0)return 1;
+
+/*
+ [7]	HEADER_MSG
+		 1: FIFO порожній<br>
+		 0: Пакет містить дані сенсорів
+
+ [6]	HEADER_ACCEL
+		 1: Пакет має розмір, щоб дані акселерометра мали місце в пакеті, FIFO_ACCEL_EN має бути 1
+         0: Пакет не містить вибірки акселерометра
+[5]		HEADER_GYRO
+		 1: Пакет має розмір, щоб дані гіроскопа мали місце в пакеті, FIFO_GYRO_EN має бути 1
+		 0: Пакет не містить вибірки гіроскопа
+[4]	    HEADER_20
+		 1: Пакет містить новий і дійсний зразок розширених 20-бітних даних для гіроскопа і/або акселерометра
+		 0: Пакет не містить нового і дійсного розширеного 20-бітного даних
+
+[3:2]	HEADER_TIMESTAMP_FSYNC
+		00: Пакет не містить часові мітки або дані часу FSYNC
+		01: Зарезервовано<br>
+		10: Пакет містить часову мітку ODR<br>11: Пакет містить час FSYNC, і цей пакет позначений як перший
+		    ODR після FSYNC (тільки якщо FIFO_TMST_FSYNC_EN дорівнює 1)
+[1]	HEADER_ODR_ACCEL
+		1: ODR для акселерометра відрізняється для цього пакета даних акселерометра в порівнянні з попереднім пакетом
+		0: ODR для акселерометра такий же, як і в попередньому пакеті з акселерометром
+[0]	HEADER_ODR_GYRO
+		1: ODR для гіроскопа відрізняється для цього пакета даних гіроскопа в порівнянні з попереднім пакетом гіроскопа
+		0: ODR для гіроскопа такий же, як і в попередньому пакеті з гіроскопом
+
+20bytes [5] FIFO_COUNT_ENDIAN =1 :  0
+[0]FIFO Header[]					[0]FIFO Header[]
+[1]Accel X [19:12]					[1]Accel X [11:4]
+[2]Accel X [11:4]					[2]Accel X [19:12]
+[3]Accel Y [19:12]
+[4]Accel Y [11:4]
+[5]Accel Z [19:12]
+[6]Accel Z [11:4]
+[7]Gyro X [19:12]
+[8]Gyro X [11:4]
+[9Gyro Y [19:12]
+[10]Gyro Y [11:4]
+[11]Gyro Z [19:12]
+[12]Gyro Z [11:4]
+[13]Temperature[15:8]
+[14]Temperature[7:0]
+[15]TimeStamp[15:8]
+[16]TimeStamp[7:0]
+[17]Accel X [3:0] | Gyro X [3:0]
+[18]Accel Y [3:0] | Gyro Y [3:0]
+[19]Accel Z [3:0] | Gyro Z [3:0]
+
+*/
+
+	if( ((*data8+5)&0x80))return 2; //HEADER_MSG ? new msg
+
+	if( ((*data8+5)&0x40)){ 		//HEADER_ACCE FIFO_COUNT_ENDIAN  0
+
+		imu->aceel[0] = *(data8+7) << 12 | *(data8+4) <<4 | (*(data8+20)&0xf0) >> 4;
+		imu->aceel[1] = *(data8+9) << 12 | *(data8+6) <<4 | (*(data8+23)&0xf0) >> 4; //X
+		imu->aceel[2] = *(data8+11)<< 12 | *(data8+8) <<4 | (*(data8+22)&0xf0) >> 4; //X
+	};
+
+	if( ((*data8+5)&0x20)){
+
+		imu->gyro [0] = *(data8+13)<<12	 | *(data8+10) << 4| (*(data8+20)&0x0f); //X
+		imu->gyro [1] = *(data8+15)<<12  | *(data8+12) << 4| (*(data8+23)&0x0f); //X
+		imu->gyro [2] = *(data8+17)<<12  | *(data8+14) << 4| (*(data8+22)&0x0f); //X
+
+		*imu->temperature  = *(data8+19)<<8 | *(data8+16); //X
+		*imu->timestamp    = *(data8+21)<<8 | *(data8+18); //X
+
+  };
+
+
+
+
+return 0;
+}
+
+
+
+
+
+
+
+
+/*
 uint8_t load_gyro_aceel_temp(struct imu_data* imu){
 
 	if(imu->n_raw_fifo_buf < imu->n_reg_gyro_accel_temp) return 3;
@@ -997,6 +1207,6 @@ uint8_t load_gyro_aceel_temp2(struct imu_data* imu){
 	if(imu->n_raw_fifo_buf < imu->n_reg_gyro_accel_temp) return 3;
 	return  SPI2_array16to8_check(imu->reg_gyro_accel_temp,imu->raw_fifo_buf,imu->n_reg_gyro_accel_temp);
 };
-
+*/
 
 #endif /* INC_IIM_42652_H_ */

@@ -19,7 +19,7 @@
 #define SPI2_clr_DMA SPI2->CR2 &=0xFFFC;
 
 
-void ConfigSPI2(void) {
+void Init_SPI_STM32(void) {
 
 	RCC->APB1ENR1 |= RCC_APB1ENR1_SPI2EN;
 	RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
@@ -71,9 +71,11 @@ void ConfigSPI2(void) {
 	 This bit has an effect only when the SSM bit is set. The value of this bit is forced onto the
 	 NSS pin and the I/O value of the NSS pin is ignored.
 	 Note: This bit is not used in I2S mode and SPI TI mode.
+
 	 [7] LSBFIRST: Frame format
 	 *	0: data is transmitted / received with the MSB first
 	 *	1: data is transmitted / received with the LSB first
+	 *
 	 Note: 1. This bit should not be changed when communication is ongoing.
 	 2. This bit is not used in I2S mode and SPI TI mode.
 
@@ -104,7 +106,7 @@ void ConfigSPI2(void) {
 		1: The second clock transition is the first data capture edge
 	 */
 
-	SPI2->CR1 = (1 << 2) | (3 << 3) | (3 << 8) | 0; // master | clk/8 |  SSM=1 SSI =1 CPOL0 _/
+	SPI2->CR1 = (1 << 2) | (2 << 3) | (3 << 8) | 0; // master | clk/8 |  SSM=1 SSI =1 CPOL0 _/
 	SPI1->CR1 = (1 << 2) | (5 << 3) | (3 << 8) | 0; // master | clk/64 |  SSM=1 SSI =1 CPOL0 _/
 	/*
 	 SPI control register 2 (SPIx_CR2) Address offset: 0x04 Reset value: 0x0700 (8 bit)
@@ -183,8 +185,8 @@ void ConfigSPI2(void) {
 	 *	1: DMA для буфера RX увімкнено
 	 */
 
-	SPI2->CR2 |= (0b1111 << 8) | 0; // 16 BIT / Rx DMA/ TX DMA
-	SPI1->CR2 |= (0b1111 << 8) | 0; // 16 BIT / Rx DMA/ TX DMA
+	SPI2->CR2 |= (0b1111 << 8) | 0; // 16 BIT /
+	SPI1->CR2 |= (0b1111 << 8) | 0; // 16 BIT /
 
 	/*
 	 SPI status register (SPIx_SR)
@@ -623,19 +625,56 @@ uint8_t SPI1_WR_reg16_check(uint16_t* reg,uint16_t dir, uint16_t len) {
 };
 /////////////////////////////  DMA ////////////////////////////
 
-void SPI2_DMA_data(void* mData ,void* pData, uint16_t len){
+#define SPI2_DMA_enable   SPI2->CR2 |=  3; // 16 BIT
+#define SPI2_DMA_disabled SPI2->CR2 |= ~3;
 
-	DMA1_Channel1->CMAR =(uint32_t*) mData;
-	DMA1_Channel1->CNDTR = len;
-	DMA1_Channel2->CMAR = (uint32_t*)pData;
-	DMA1_Channel2->CNDTR = len;
+uint8_t SPI2dmaComplete;
 
-	SPI2_disable
+void ReadSPI2_DMA(uint8_t startReadCommand,uint16_t* ram,uint16_t* ram2,uint16_t size) {
+
+	SPI2dmaComplete=0;
+
+    ram[0] = (uint16_t)startReadCommand << 8; // 0xAD00
+
+    SPI2_CS_on
+
+    //SPI2_DMA_enable
+
+    DMA1_Channel2->CNDTR = size;
+    DMA1_Channel2->CPAR = (uint32_t)&(SPI2->DR);
+    DMA1_Channel2->CMAR = (uint32_t)ram;
+    DMA1_Channel2->CCR |= DMA_CCR_EN;
+
+    DMA1_Channel2->CNDTR = size;
+    DMA1_Channel2->CPAR = (uint32_t)&(SPI2->DR);
+    DMA1_Channel2->CMAR = (uint32_t)ram2;
+    DMA1_Channel2->CCR |= DMA_CCR_EN;
+
+   while (!SPI2dmaComplete){};
+
+    SPI2_DMA_disabled
+    DMA1_Channel2->CCR &= ~DMA_CCR_EN;
+    SPI2_CS_off
 
 
 
-	SPI2_enable
-};
+}
+void DMA1_Channelxx_IRQHandler(void) {
+
+    if (DMA1->ISR & DMA_ISR_TCIF1) {
+
+        DMA1->IFCR = DMA_IFCR_CTCIF1;
+
+        //DMA1_Channel1->CCR &= ~DMA_CCR_EN;
+
+         DMA1_Channel2->CCR &= ~DMA_CCR_EN;
+         SPI2_CS_off
+         SPI2dmaComplete =1;
+
+  }
+
+  DMA1->IFCR |= DMA_IFCR_CGIF1;
+}
 
 
 
