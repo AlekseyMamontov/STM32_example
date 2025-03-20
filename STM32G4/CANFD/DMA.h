@@ -181,26 +181,30 @@
 
 // Настройка DMA и DMAMUX
 
-void DMA_Init_SPI2(void *rxBuffer, void *txBuffer, uint16_t rxSIZE, uint16_t txSIZE) {
+void DMA_Init(void *rxBuffer, void *txBuffer, uint16_t rxSIZE, uint16_t txSIZE) {
 
     RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN | RCC_AHB1ENR_DMAMUX1EN;
 
-    // DMA1 Channel 2 для SPI2_RX (Peripheral-to-Memory)
+
+
+////// SPI2
+
+    // DMA1 Channel 1 для SPI2_RX (Peripheral-to-Memory)
 
     DMA1_Channel1->CCR = DMA_CCR_MINC |        // Увеличение адреса памяти
                          DMA_CCR_TCIE |        // Прерывание по завершению
                          DMA_CCR_PSIZE_0 |     // 16-битный размер данных периферии
                          DMA_CCR_MSIZE_0 |
-                         DMA_CCR_CIRC
-                         ;
-    // 16-битный размер данных памяти
-                         // DIR = 0 по умолчанию (Peripheral-to-Memory)
+                         DMA_CCR_CIRC ;       // 16-битный размер данных памяти
+											 // DIR = 0 по умолчанию (Peripheral-to-Memory)
+
     DMA1_Channel1->CNDTR = rxSIZE;             // Количество слов для приема
     DMA1_Channel1->CPAR = (uint32_t)&(SPI2->DR); // Адрес регистра SPI
     DMA1_Channel1->CMAR = (uint32_t)rxBuffer;  // Адрес буфера приема
     DMAMUX1_Channel0->CCR = 12 ;                // SPI2_RX (Table 91)
 
-    // DMA1 Channel 3 для SPI2_TX (Memory-to-Peripheral)
+    // DMA1 Channel 2 для SPI2_TX (Memory-to-Peripheral)
+
     DMA1_Channel2->CCR = DMA_CCR_MINC 	 |     // Увеличение адреса памяти
                          DMA_CCR_DIR     |     // Memory-to-Peripheral
                          DMA_CCR_PSIZE_0 |     // 16-битный размер данных периферии
@@ -213,11 +217,97 @@ void DMA_Init_SPI2(void *rxBuffer, void *txBuffer, uint16_t rxSIZE, uint16_t txS
     DMAMUX1_Channel1->CCR = 13;                // SPI2_TX (Table 91)
 
 
-}
+
+  ////// SPI1
+
+        // DMA1 Channel 1 для SPI2_RX (Peripheral-to-Memory)
+
+        DMA1_Channel3->CCR = DMA_CCR_MINC |        // Увеличение адреса памяти
+                             DMA_CCR_TCIE |        // Прерывание по завершению
+                             DMA_CCR_PSIZE_0 |     // 16-битный размер данных периферии
+                             DMA_CCR_MSIZE_0 |
+                             DMA_CCR_CIRC ;       // 16-битный размер данных памяти
+    											 // DIR = 0 по умолчанию (Peripheral-to-Memory)
+
+        DMA1_Channel3->CNDTR = rxSIZE;             // Количество слов для приема
+        DMA1_Channel3->CPAR = (uint32_t)&(SPI1->DR); // Адрес регистра SPI
+        DMA1_Channel3->CMAR = (uint32_t)rxBuffer;  // Адрес буфера приема
+        DMAMUX1_Channel2->CCR = 10 ;                // SPI2_RX (Table 91)
+
+        // DMA1 Channel 2 для SPI2_TX (Memory-to-Peripheral)
+
+        DMA1_Channel4->CCR = DMA_CCR_MINC 	 |     // Увеличение адреса памяти
+                             DMA_CCR_DIR     |     // Memory-to-Peripheral
+                             DMA_CCR_PSIZE_0 |     // 16-битный размер данных периферии
+                             DMA_CCR_MSIZE_0
+                             ;
+        // 16-битный размер данных памяти
+        DMA1_Channel4->CNDTR = txSIZE;             // Количество слов для передачи
+        DMA1_Channel4->CPAR = (uint32_t)&(SPI1->DR); // Адрес регистра SPI
+        DMA1_Channel4->CMAR = (uint32_t)txBuffer;  // Адрес буфера передачи
+        DMAMUX1_Channel3->CCR = 11;                // SPI2_TX (Table 91)
 
 
 
- /*
+
+        return 0;
+
+
+
+
+
+
+
+
+////// USART1
+
+
+    // DMA1 Channel 5 (USART1_RX) с кольцевым буфером
+
+    DMA1_Channel5->CCR = 0;      // Сбрасываем конфигурацию
+    DMA1_Channel5->CCR |= DMA_CCR_MINC | DMA_CCR_CIRC; // Увеличивать адрес памяти, циклический режим
+    DMA1_Channel5->CPAR = (uint32_t)&USART1->RDR; // Адрес периферии (UART3 RDR)
+    DMA1_Channel5->CMAR = (uint32_t)rxBuffer; // Адрес памяти (буфер RX)
+
+    //DMA1_Channel5->CNDTR = RX_BUFFER_SIZE; // Размер буфера
+
+    // DMAMUX для Channel 4
+
+    DMAMUX1_Channel4->CCR  = 24; // 24 -> USART1_RX
+    DMAMUX1_Channel4->CCR |= DMAMUX_CxCR_EGE; // Включаем канал DMAMUX
+
+    //DMA1_Channel3->CCR |= DMA_CCR_EN; // Включаем канал DMA
+
+
+
+    // DMA1 Channel 6 (USART1_TX)
+    DMA1_Channel6->CCR = 0; // Сбрасываем конфигурацию
+    DMA1_Channel6->CCR |= DMA_CCR_MINC | DMA_CCR_DIR; // Увеличивать адрес памяти, память → периферия
+    DMA1_Channel6->CPAR = (uint32_t)&USART1->TDR; // Адрес периферии (UART3 TDR)
+    DMA1_Channel6->CMAR = (uint32_t)txBuffer; // Адрес памяти (буфер TX)
+    DMA1_Channel6->CNDTR = sizeof(txBuffer) - 1; // Количество байт для передачи
+
+    // DMAMUX для Channel 5
+    DMAMUX1_Channel5->CCR  = 25; // 24 -> USART1_TX
+    DMAMUX1_Channel5->CCR |= DMAMUX_CxCR_EGE; // Включаем канал DMAMUX
+    //DMA1_Channel4->CCR |= DMA_CCR_EN; // Включаем канал DMA
+
+
+ }
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
  //////////  DMA interrupt status register (DMA_ISR) //////////////
 
 	   Reset value: 0x0000 0000
