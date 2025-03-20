@@ -1161,33 +1161,79 @@ uint8_t Data_fifo_pack20byte_IIM42xxx(struct imu_data* imu){
 
 */
 
-	if( ((*data8+5)&0x80))return 2; //HEADER_MSG ? new msg
+	if( ((*data8+5)&0x80))return 2; //HEADER_MSG ? new msg == 0
 
-	if( ((*data8+5)&0x40)){ 		//HEADER_ACCE FIFO_COUNT_ENDIAN  0
+	if( ((*data8+5)&0x40)){ //HEADER_ACCE
 
 		imu->aceel[0] = *(data8+7) << 12 | *(data8+4) <<4 | (*(data8+20)&0xf0) >> 4;
 		imu->aceel[1] = *(data8+9) << 12 | *(data8+6) <<4 | (*(data8+23)&0xf0) >> 4; //X
 		imu->aceel[2] = *(data8+11)<< 12 | *(data8+8) <<4 | (*(data8+22)&0xf0) >> 4; //X
 	};
 
-	if( ((*data8+5)&0x20)){
+	if( ((*data8+5)&0x20)){ //GYRO
 
 		imu->gyro [0] = *(data8+13)<<12	 | *(data8+10) << 4| (*(data8+20)&0x0f); //X
 		imu->gyro [1] = *(data8+15)<<12  | *(data8+12) << 4| (*(data8+23)&0x0f); //X
 		imu->gyro [2] = *(data8+17)<<12  | *(data8+14) << 4| (*(data8+22)&0x0f); //X
 
-		*imu->temperature  = *(data8+19)<<8 | *(data8+16); //X
-		*imu->timestamp    = *(data8+21)<<8 | *(data8+18); //X
 
-  };
+    };
 
-
-
+	*imu->temperature  = *(data8+19)<<8 | *(data8+16);
+	*imu->timestamp    = *(data8+21)<<8 | *(data8+18);
 
 return 0;
 }
 
+uint8_t Data_fifo_pack16byte_IIM42xxx(struct imu_data* imu){
 
+	uint8_t  error= 1;
+	uint8_t *data8 = (uint8_t*)imu->raw_RX_fifo_buf;
+
+	if( ((*data8) & 0x04) == 0)return 1;
+
+/*
+0x00Заголовок FIFO
+0x01Accel X       [15:8]
+0x02Прискорення X [7:0]
+0x03Прискорення Y [15:8]
+0x04Прискорення Y [7:0]
+0x05Accel Z [15:8]
+0x06Accel Z [7:0]
+0x07Г роскоп X [15:8]
+0x08Gyro X [7:0]
+0x09Г роскоп Y [15:8]
+0x0AГ роскоп Y [7:0]
+0x0BГ роскоп Z [15:8]
+0x0CGyro Z [7:0]
+0x0DТемпература[7:0]
+0x0EМ тка часу[15:8]
+0x0FМ тка часу[7:0]
+*/
+
+	if( ((*data8+5)&0x80))return 2; //HEADER_MSG ? new msg == 0
+
+	if( ((*data8+5)&0x40)){ //HEADER_ACCE
+
+		imu->aceel[0] = *(data8+7) << 8 | *(data8+4);
+		imu->aceel[1] = *(data8+9) << 8 | *(data8+6);
+		imu->aceel[2] = *(data8+11)<< 8 | *(data8+8);
+	};
+
+	if( ((*data8+5)&0x20)){ //GYRO
+
+		imu->gyro [0] = *(data8+13)<<8	| *(data8+10);
+		imu->gyro [1] = *(data8+15)<<8  | *(data8+12);
+		imu->gyro [2] = *(data8+17)<<8  | *(data8+14);
+
+
+    };
+
+	*imu->temperature  = *(data8+16);
+	*imu->timestamp    = *(data8+21)<<8 | *(data8+18);
+
+return 0;
+}
 
 
 
