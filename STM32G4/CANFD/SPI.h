@@ -380,6 +380,15 @@ uint8_t SPI_array16to16_check(SPI_TypeDef * spi,uint16_t* reg, uint16_t *data, u
 	return 0;
 };
 
+
+
+
+
+
+
+
+
+
 /////////////////////////// specific LIS3M  /////////////////////////////////////
 // LSB MSB
 uint8_t SPI1_read_reg_to_array8_check(uint16_t reg, uint8_t *data, uint16_t len) {
@@ -500,38 +509,8 @@ uint8_t SPI2_read_reg_to_array8_check(uint16_t reg, uint8_t *data, uint16_t len)
  *  ,,, }
 
 */
-uint8_t SPI2_WR_reg16_check(uint16_t* reg,uint16_t dir, uint16_t len) {
 
-	uint16_t timeout;
-
-	while (len--){
-
-		SPI2_CS_on
-
-		timeout = 0;
-		while (!(SPI2->SR & SPI_SR_TXE)){
-			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 1;};
-		}
-
-		SPI2->DR = (*reg) | dir;
-
-		timeout = 0;
-		while (!(SPI2->SR & SPI_SR_RXNE)){
-			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 2;};
-		}
-
-		SPI2_CS_off
-
-		timeout = SPI2->DR;
-		if(dir) *reg = ((*reg)&0xff00)|(timeout&0x00ff);// read
-		reg++;
-	};
-
-
-	return 0;
-};
-
-uint8_t SPI1_WR_reg16_check(uint16_t* reg,uint16_t dir, uint16_t len) {
+uint8_t SPI1x_WR_reg16_check(uint16_t* reg,uint16_t dir, uint16_t len) {
 
 	uint16_t timeout;
 

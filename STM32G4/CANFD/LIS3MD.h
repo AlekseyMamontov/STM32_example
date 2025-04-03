@@ -123,6 +123,13 @@
 #ifndef INC_LIS3MD_H_
 #define INC_LIS3MD_H_
 
+#define LIS3M_CS_on   GPIOB->BRR =  1;
+#define LIS3M_CS_off  GPIOB->BSRR = 1;
+
+#define LIS3M_SPI     SPI1
+
+
+
 
 #define LIS3M_WHO_AM_I  0x0F
 #define LIS3MDL 		0x3D
@@ -253,7 +260,7 @@ uint8_t init_lis3md (struct data_magnit* mag){
 	uint8_t data;
 	*(mag->status) = DISABLED_LIS3MXX | CONFIG_MODE_LIS3MXX;
 
-	data = SPI1_reg_data((LIS3M_WHO_AM_I|READ_REG_LIS3M), 0x00);
+	data = SPI_reg_data(LIS3M_SPI,(LIS3M_WHO_AM_I|READ_REG_LIS3M), 0x00);
 	if(data != LIS3MDL) return 1;
 
 	if(SPI1_WR_reg16_check(mag->reg_config,0,mag->n_reg_config)) return 2;
