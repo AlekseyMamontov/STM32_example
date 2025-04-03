@@ -14,6 +14,11 @@
 #define INC_IIM_42652_H_
 #include <Ixm42xxxDefs.h>
 
+#define IIM42XXX_CS_on   GPIOA->BRR =  1<<10;
+#define IIM42XXX_CS_off  GPIOA->BSRR = 1<<10;
+#define SPI_IIM42XXX     SPI2
+
+
 /*IIM_42652*/
 #define CHIP_ID_42652 			0x6F
 
@@ -1010,6 +1015,8 @@ void DMA_Init_SPI2_IIM42652(struct imu_data* imu, uint16_t n_16bit) {
 
 }
 
+
+
 void DMA1_Channel1_IRQHandler(void) {
 
     if (DMA1->ISR & DMA_ISR_TCIF1) {
@@ -1019,7 +1026,9 @@ void DMA1_Channel1_IRQHandler(void) {
         //DMA1_Channel1->CCR &= ~DMA_CCR_EN;
 
          DMA1_Channel2->CCR &= ~DMA_CCR_EN;
-         SPI2_CS_off
+
+         IIM42XXX_CS_off
+
          iim_42652_status &= ~INT_FIFO_IIM42xxx;
          iim_42652_status |= DMA_OK_IIM42xxx;
 
@@ -1041,7 +1050,9 @@ void EXTI15_10_IRQHandler(void) {
     	if((iim_42652_status & INT_FIFO_IIM42xxx) == 0){
 
     	  iim_42652_status |= INT_FIFO_IIM42xxx;
-          SPI2_CS_on
+
+    	  IIM42XXX_CS_on
+
           raw_TX_buf_iim42652[0] = 0xAD00; // READ INT_STATUS0,FL,FH,FIFO (packet)
 
           //SPI2_TX_DMA_enable
@@ -1076,7 +1087,7 @@ uint8_t init_iim42652(struct imu_data* imu){
 	//systick_pause = 2;//2ms
 	//while(systick_pause);
 
-	data = SPI2_reg_data((WHO_AM_I|READ_REG_II42xxx), 0x00);
+	data = SPI_reg_data(SPI_IIM42XXX,(WHO_AM_I|READ_REG_II42xxx), 0x00);
 	if(data != CHIP_ID_42652) return 1;
 
 	// init block write reg
