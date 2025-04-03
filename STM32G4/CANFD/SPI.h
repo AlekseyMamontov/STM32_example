@@ -233,209 +233,147 @@ void Init_SPI_STM32(void) {
 
 
 #define SPI_TIMEOUT 50000
-//////////////  SPI 16bit -> ram 8bit //////////////
 
-uint8_t SPI1_data(uint16_t data){
+///////////// spi 8bit
+
+uint8_t SPI_data8(SPI_TypeDef * spi, uint8_t data){
 
 	uint32_t timeout = 0;
 
-	SPI1_CS_on
-	while (!(SPI1->SR & SPI_SR_TXE)){
-		if (++timeout > SPI_TIMEOUT){SPI1_CS_off;return 0;}};
+	while (!(spi->SR & SPI_SR_TXE)){
+		if (++timeout > SPI_TIMEOUT)return 0;};
 
-	SPI1->DR = data;
+	spi->DR = data;
 
 	timeout = 0;
-	while (!(SPI1->SR & SPI_SR_RXNE)){
-		if (++timeout > SPI_TIMEOUT){SPI1_CS_off ;return 0;}};
 
-	SPI1_CS_off
-	return SPI1->DR;
+	while (!(spi->SR & SPI_SR_RXNE)){
+		if (++timeout > SPI_TIMEOUT)return 0;};
+
+	return spi->DR;
 };
-/////////////// SPI1 reg + data //////////////////////////
 
-uint8_t SPI1_reg_data(uint8_t reg, uint8_t data){
-	return SPI1_data((reg<<8)|data);
+///////////// spi 16bit
+
+uint16_t SPI_data16(SPI_TypeDef * spi, uint16_t data){
+
+	uint32_t timeout = 0;
+
+	while (!(spi->SR & SPI_SR_TXE)){
+		if (++timeout > SPI_TIMEOUT)return 0;};
+
+	spi->DR = data;
+
+	timeout = 0;
+
+	while (!(spi->SR & SPI_SR_RXNE)){
+		if (++timeout > SPI_TIMEOUT)return 0;};
+
+	return spi->DR;
+};
+
+
+
+///////////  SPI 16bit -> data 8bit , for sensor data (reg (MSB) | data (LSB))
+
+uint8_t SPI_sensor_reg_data(SPI_TypeDef * spi,uint16_t data){
+
+	uint32_t timeout = 0;
+
+	while (!(spi->SR & SPI_SR_TXE)){
+		if (++timeout > SPI_TIMEOUT)return 0;};
+
+	spi->DR = data;
+
+	timeout = 0;
+	while (!(spi->SR & SPI_SR_RXNE)){
+		if (++timeout > SPI_TIMEOUT)return 0;};
+
+	return spi->DR;
+};
+
+///////////// SPI1 reg + data
+
+
+uint8_t SPI_reg_data(SPI_TypeDef * spi,uint8_t reg, uint8_t data){
+	return SPI_sensor_reg_data(spi,(reg<<8)|data);
 }
-//////////////  SPI 16bit -> ram 8bit //////////////
-
-uint8_t SPI2_data(uint16_t data){
-
-	uint32_t timeout = 0;
-
-	SPI2_CS_on
-	while (!(SPI2->SR & SPI_SR_TXE)){
-		if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 0;}
-	};
-	SPI2->DR = data;
-
-	timeout = 0;
-	while (!(SPI2->SR & SPI_SR_RXNE)){
-		if (++timeout > SPI_TIMEOUT){SPI2_CS_off ;return 0;}
-	};
-
-	SPI2_CS_off
-	return SPI2->DR;
-};
-
-/////////////// SPI2 reg + data //////////////////////////
-
-uint8_t SPI2_reg_data(uint8_t reg, uint8_t data){
-	return SPI2_data((reg<<8)|data);
-}
 
 
-//////////// SPI (reg+data) 16bit -> RAM16bit  //////////
+///////////////  SPI 16 bit to RAM 8bit
 
-uint16_t SPI2_data16bit(uint16_t data){
+uint8_t SPI_sensor_reg_data_check(SPI_TypeDef * spi, uint16_t reg, uint8_t *data) {
 
 	uint32_t timeout = 0;
 
-	SPI2_CS_on
-	while (!(SPI2->SR & SPI_SR_TXE)){
-		if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 0;}
-	};
-	SPI2->DR = data;
+		while (!(spi->SR & SPI_SR_TXE)){
+			if (++timeout > SPI_TIMEOUT)return 1;};
 
-	timeout = 0;
-	while (!(SPI2->SR & SPI_SR_RXNE)){
-		if (++timeout > SPI_TIMEOUT){SPI2_CS_off ;return 0;}
-	};
 
-	SPI2_CS_off
-	return SPI2->DR;
-
-};
-
-//////////////////  Transfer 16 bit toRAM 8bit ///////////////////
-uint8_t SPI2_data_check(uint16_t reg, uint8_t *data) {
-
-	uint32_t timeout = 0;
-
-	SPI2_CS_on
-
-		while (!(SPI2->SR & SPI_SR_TXE)){
-			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 1;};
-		}
-
-		SPI2->DR = reg;
+		spi->DR = reg;
 
 		timeout = 0;
-		while (!(SPI2->SR & SPI_SR_RXNE)){
-			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 2;};
-		}
+		while (!(spi->SR & SPI_SR_RXNE)){
+			if (++timeout > SPI_TIMEOUT)return 2;};
 
-		*data = SPI2->DR;
 
-	SPI2_CS_off
+		*data = spi->DR;
+
 	return 0;
 };
-////////////////////////////////////////////////////////////
 
-uint8_t SPI2_reg_data_check(uint8_t reg, uint8_t *data){
-	return SPI2_data_check ((reg<<8)|(*data),data);
+
+///////////////////
+
+uint8_t SPI_reg_data_check(SPI_TypeDef * spi,uint8_t reg, uint8_t *data){
+	return SPI_sensor_reg_data_check (spi,(reg<<8)|(*data),data);
 };
 
-////////////////////////////////////////////////////////////
 
-uint16_t SPI2_data16bit_check(uint16_t reg, uint16_t *data) {
+////////////////// 16 bit  (Reg|Data) -> data (8bit)
 
-	uint32_t timeout = 0;
-
-	SPI2_CS_on
-
-	while (!(SPI2->SR & SPI_SR_TXE)){
-		if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 1;};
-	}
-
-	SPI2->DR = reg;
-
-	timeout = 0;
-	while (!(SPI2->SR & SPI_SR_RXNE)){
-		if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 2;};
-	}
-
-	*data = SPI2->DR;
-
-	SPI2_CS_off
-	return 0;
-};
-///////////////////////  uint16-> SPI1 -> 8bit  //////////////////
-
-uint8_t SPI1_array16to8_check(uint16_t* reg, uint8_t *data, uint16_t len) {
+uint8_t SPI_sensor_regdata16_to_data8_check(SPI_TypeDef * spi,uint16_t* reg, uint8_t *data, uint16_t len) {
 
 
 	uint32_t timeout = 0;
 
 	while (len--){
 
-		SPI1_CS_on
+		timeout = 0;
+		while (!(spi->SR & SPI_SR_TXE)){
+			if (++timeout > SPI_TIMEOUT)return 1;}
+
+		spi->DR = *reg++;
 
 		timeout = 0;
-		while (!(SPI1->SR & SPI_SR_TXE)){
-			if (++timeout > SPI_TIMEOUT){SPI1_CS_off;return 1;};}
+		while (!(spi->SR & SPI_SR_RXNE)){
+			if (++timeout > SPI_TIMEOUT)return 2;}
 
-		SPI1->DR = *reg++;
-
-		timeout = 0;
-		while (!(SPI1->SR & SPI_SR_RXNE)){
-			if (++timeout > SPI_TIMEOUT){SPI1_CS_off;return 2;};}
-
-		SPI1_CS_off
-
-		*data++ = (uint8_t)(SPI1->DR & 0xFF);
+		*data++ = (uint8_t)(spi->DR & 0xFF);
 	};
-	return 0;
-};
-///////////////////////  uint16-> SPI2 -> 8bit  //////////////////
 
-uint8_t SPI2_array16to8_check(uint16_t* reg, uint8_t *data, uint16_t len) {
-
-
-	uint32_t timeout = 0;
-
-	while (len--){
-
-		SPI2_CS_on
-
-		timeout = 0;
-		while (!(SPI2->SR & SPI_SR_TXE)){
-			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 1;};}
-
-		SPI2->DR = *reg++;
-
-		timeout = 0;
-		while (!(SPI2->SR & SPI_SR_RXNE)){
-			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 2;};}
-
-		SPI2_CS_off
-
-		*data++ = (uint8_t)(SPI2->DR & 0xFF);
-	};
 	return 0;
 };
 
-/////////////////////////  uint16-> SPI -> 16bit  ////////////////////
+///////////////// 16 bit  RAM 16bit > 16bit
 
-uint8_t SPI2_array16to16_check(uint16_t* reg, uint16_t *data, uint16_t len) {
+uint8_t SPI_array16to16_check(SPI_TypeDef * spi,uint16_t* reg, uint16_t *data, uint16_t len) {
 
 	uint32_t timeout;
 
 	while (len--){
 
-		SPI2_CS_on
 		timeout = 0;
-		while (!(SPI2->SR & SPI_SR_TXE)){
-			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 1;};
-		}
-		SPI2->DR = *reg++;
+		while (!(spi->SR & SPI_SR_TXE)){
+			if (++timeout > SPI_TIMEOUT)return 1;}
+
+		spi->DR = *reg++;
 
 		timeout = 0;
-		while (!(SPI2->SR & SPI_SR_RXNE)){
-			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 2;};
-		}
-		SPI2_CS_off
-		*data++ = SPI2->DR;
+		while (!(spi->SR & SPI_SR_RXNE)){
+			if (++timeout > SPI_TIMEOUT)return 2;};
+
+		*data++ = spi->DR;
 	};
 
 
