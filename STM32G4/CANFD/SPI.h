@@ -8,8 +8,7 @@
 #ifndef INC_SPI_H_
 #define INC_SPI_H_
 
-#define SPI2_CS_on   GPIOA->BRR =  1<<10;
-#define SPI2_CS_off  GPIOA->BSRR = 1<<10;
+
 #define SPI1_CS_on   GPIOB->BRR =  1;
 #define SPI1_CS_off  GPIOB->BSRR = 1;
 
@@ -381,122 +380,42 @@ uint8_t SPI_array16to16_check(SPI_TypeDef * spi,uint16_t* reg, uint16_t *data, u
 };
 
 
-
-
-
-
-
-
-
-
-/////////////////////////// specific LIS3M  /////////////////////////////////////
+/////////////////////////// specific sensor  LIS3M,IMU 42xxx /////////////////////////////////////
 // LSB MSB
-uint8_t SPI1_read_reg_to_array8_check(uint16_t reg, uint8_t *data, uint16_t len) {
+uint8_t SPI_read_reg_to_array8_check(SPI_TypeDef * spi,uint16_t reg, uint8_t *data, uint16_t len) {
 
 	if(!len) return 0;
 
 	uint32_t timeout = 0;
 
-	SPI1_CS_on
-
 ////////  registr
 
-	while (!(SPI1->SR & SPI_SR_TXE)){
-			if (++timeout > SPI_TIMEOUT){SPI1_CS_off;return 1;};
-		}
-
-	SPI1->DR = reg;
+	while (!(spi->SR & SPI_SR_TXE)){if (++timeout > SPI_TIMEOUT)return 1;}
+	spi->DR = reg;
 	timeout = 0;
 
 //////// data
 
-	while (!(SPI1->SR & SPI_SR_RXNE)){
-		if (++timeout > SPI_TIMEOUT){SPI1_CS_off;return 2;};
-	}
-
-	*data++ = SPI1->DR & 0xFF;
-
+	while (!(spi->SR & SPI_SR_RXNE)){if (++timeout > SPI_TIMEOUT)return 2;}
+	*data++ = spi->DR & 0xFF;
 	len--;
 
 	while (len--){
 
 		timeout = 0;
 
-		while (!(SPI1->SR & SPI_SR_TXE)){
-			if (++timeout > SPI_TIMEOUT){SPI1_CS_off;return 1;};
-		}
+		while (!(spi->SR & SPI_SR_TXE)){if (++timeout > SPI_TIMEOUT)return 1;}
 
-		SPI1->DR = 0;
-
+		spi->DR = 0;
 		timeout = 0;
-		while (!(SPI1->SR & SPI_SR_RXNE)){
-			if (++timeout > SPI_TIMEOUT){SPI1_CS_off;return 2;};
-		}
 
-		timeout = SPI1->DR;
+		while (!(spi->SR & SPI_SR_RXNE)){if (++timeout > SPI_TIMEOUT)return 2;}
 
+		timeout = spi->DR;
 		*data++ = timeout >> 8 & 0xFF;
 		*data++ = timeout & 0xFF;
 
 	};
-
-	SPI1_CS_off
-
-	return 0;
-};
-
-/////////////////////////// specific IMU 42xxx  /////////////////////////////////////
-//MSB LSB
-uint8_t SPI2_read_reg_to_array8_check(uint16_t reg, uint8_t *data, uint16_t len) {
-
-	if(!len) return 0;
-
-	uint32_t timeout = 0;
-
-	SPI2_CS_on
-
-////////  registr
-
-	while (!(SPI2->SR & SPI_SR_TXE)){
-			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 1;};
-		}
-
-	SPI2->DR = reg;
-	timeout = 0;
-
-//////// data
-
-	while (!(SPI2->SR & SPI_SR_RXNE)){
-		if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 2;};
-	}
-
-	*data++ = SPI2->DR & 0xFF;
-
-	len--;
-
-	while (len--){
-
-		timeout = 0;
-
-		while (!(SPI2->SR & SPI_SR_TXE)){
-			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 1;};
-		}
-
-		SPI2->DR = 0;
-
-		timeout = 0;
-		while (!(SPI2->SR & SPI_SR_RXNE)){
-			if (++timeout > SPI_TIMEOUT){SPI2_CS_off;return 2;};
-		}
-
-		timeout = SPI2->DR;
-
-		*data++ = timeout >> 8 & 0xFF;
-		*data++ = timeout & 0xFF;
-
-	};
-
-	SPI2_CS_off
 
 	return 0;
 };
@@ -510,37 +429,35 @@ uint8_t SPI2_read_reg_to_array8_check(uint16_t reg, uint8_t *data, uint16_t len)
 
 */
 
-uint8_t SPI1x_WR_reg16_check(uint16_t* reg,uint16_t dir, uint16_t len) {
+uint8_t SPI_WR_reg16_check(SPI_TypeDef * spi,uint16_t* reg,uint16_t dir) {
 
-	uint16_t timeout;
+	uint16_t timeout = 0;
 
-	while (len--){
+		while (!(spi->SR & SPI_SR_TXE)){if (++timeout > SPI_TIMEOUT)return 1;}
 
-		SPI1_CS_on
-
-		timeout = 0;
-		while (!(SPI1->SR & SPI_SR_TXE)){
-			if (++timeout > SPI_TIMEOUT){SPI1_CS_off;return 1;};
-		}
-
-		SPI1->DR = (*reg) | dir;
+		spi->DR = (*reg) | dir;
 
 		timeout = 0;
-		while (!(SPI1->SR & SPI_SR_RXNE)){
-			if (++timeout > SPI_TIMEOUT){SPI1_CS_off;return 2;};
-		}
+		while (!(spi->SR & SPI_SR_RXNE)){if (++timeout > SPI_TIMEOUT)return 2;}
 
-		SPI1_CS_off
-
-		timeout = SPI1->DR;
+		timeout = spi->DR;
 		if(dir) *reg = ((*reg)&0xff00)|(timeout&0x00ff);// read
-		reg++;
-	};
-
 
 	return 0;
 };
-/////////////////////////////  DMA ////////////////////////////
+
+
+
+
+
+
+
+// Обробник переривання для SPI
+void SPI2_IRQHandler(void){};
+
+/*old code
+ *
+ /////////////////////////////  DMA ////////////////////////////
 
 #define SPI2_DMA_enable   SPI2->CR2 |=  3; // 16 BIT
 #define SPI2_DMA_disabled SPI2->CR2 |= ~3;
@@ -592,15 +509,10 @@ void DMA1_Channelxx_IRQHandler(void) {
 
   DMA1->IFCR |= DMA_IFCR_CGIF1;
 }
-
-
-
-
-
-// Обробник переривання для SPI
-void SPI2_IRQHandler(void){};
-
-
+ *
+ *
+ *
+ * */
 
 
 #endif /* INC_SPI_H_ */

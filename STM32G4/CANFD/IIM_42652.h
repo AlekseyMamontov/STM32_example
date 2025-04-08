@@ -17,8 +17,8 @@
 #define IIM42XXX_CS_on   GPIOA->BRR =  1<<10;
 #define IIM42XXX_CS_off  GPIOA->BSRR = 1<<10;
 #define SPI_IIM42XXX     SPI2
-#define DMA_enable_IIM42xxx  SPI_IIM42XXX->CR2 |=0x03
-#define DMA_disable_IIM42xxx SPI_IIM42XXX->CR2 &=0xFFFC
+#define DMA_SPIenable_IIM42xxx  SPI_IIM42XXX->CR2 |=0x03
+#define DMA_SPIdisable_IIM42xxx SPI_IIM42XXX->CR2 &=0xFFFC
 
 #define DMArx_IIM42XXX     DMA1_Channel1
 #define DMAtx_IIM42XXX	   DMA1_Channel2
@@ -953,7 +953,7 @@ uint16_t  raw_TX_buf_iim42652[40] = {0};
 	int *		    gyro;
 	int *		   aceel;
 	int *	 temperature;
-	int *	 timestamp;
+	int *	   timestamp;
 
 	uint8_t *  raw_fifo_buf;
 	uint16_t*  raw_RX_fifo_buf;
@@ -997,7 +997,7 @@ uint16_t  raw_TX_buf_iim42652[40] = {0};
 
 //////////////////// func communication
 
-void DMA_init_IIM42xxx(struct imu_data* imu, uint16_t n_16bit) {
+void DMA_init_IIM42xxx(struct imu_data* imu) {
 
 	InitRCC_DMA_IIM42XXX // RCC
 
@@ -1008,7 +1008,8 @@ void DMA_init_IIM42xxx(struct imu_data* imu, uint16_t n_16bit) {
                           DMA_CCR_PSIZE_0 |   // 16 bit
                           DMA_CCR_MSIZE_0 |   // 16 bit
                           DMA_CCR_CIRC;
-    DMArx_IIM42XXX->CNDTR = n_16bit;               // n__16bit
+
+    DMArx_IIM42XXX->CNDTR = *(imu->n_16bit_packet_fifo);               // n__16bit
     DMArx_IIM42XXX->CPAR = (uint32_t)&(SPI_IIM42XXX->DR); // SPI data
     DMArx_IIM42XXX->CMAR = (uint32_t)imu->raw_RX_fifo_buf;
     DMAMUXrx_IIM42XXX->CCR = DMAMUXrx_id_device_IIM42XXX ;//SPI2_RX (Table 91)
@@ -1021,9 +1022,9 @@ void DMA_init_IIM42xxx(struct imu_data* imu, uint16_t n_16bit) {
                           DMA_CCR_PSIZE_0 |     // 16-bit
                           DMA_CCR_MSIZE_0 ;	   // 16-bit
 
-    DMAtx_IIM42XXX->CNDTR = n_16bit;             // Количество слов для передачи
+    DMAtx_IIM42XXX->CNDTR = *(imu->n_16bit_packet_fifo);  // Количество слов для передачи
     DMAtx_IIM42XXX->CPAR = (uint32_t)&(SPI_IIM42XXX->DR); // Адрес регистра SPI
-    DMAtx_IIM42XXX->CMAR = (uint32_t)imu->raw_TX_fifo_buf;  // Адрес буфера передачи
+    DMAtx_IIM42XXX->CMAR = (uint32_t)imu->raw_TX_fifo_buf;// Адрес буфера передачи
 
     DMAMUXtx_IIM42XXX->CCR = DMAMUXtx_id_device_IIM42XXX ;// SPI2_TX (Table 91)
 
@@ -1068,11 +1069,10 @@ void EXTI15_10_IRQHandler(void) {
 
           raw_TX_buf_iim42652[0] = 0xAD00; // READ INT_STATUS0,FL,FH,FIFO (packet)
 
-          //SPI2_TX_DMA_enable
 
     	  DMAtx_IIM42XXX->CNDTR = 12; //24 byte
     	  DMAtx_IIM42XXX->CMAR = (uint32_t)raw_TX_buf_iim42652;
-    	  DMAtx_IIM42XXX->CCR |= DMA_CCR_EN;
+    	  DMAtx_IIM42XXX->CCR |= DMA_CCR_EN;// enable tx dma
     	}
 
     	EXTI->PR1 |= (1 << 12); // Сброс флага
@@ -1104,12 +1104,11 @@ uint8_t RW_REG_IIM42xxx(uint16_t* reg,uint16_t dir, uint16_t len) {
 
 	while (len--){
 
-		SPI_IIM42XXX->DR = (*reg) | dir;
 		IIM42XXX_CS_on
 		error = SPI_sensor_reg_data_check(SPI_IIM42XXX,(*reg)|(dir),&data);
 		IIM42XXX_CS_off
 		if(error) break;
-		if(dir) *reg = ((*reg)&0xff00)|data;// read
+		if(dir) *reg = ((*reg)&0xff00)|data;// read 1, write 0
 		reg++;
 	};
 
@@ -1136,14 +1135,14 @@ uint8_t init_iim42652(struct imu_data* imu){
 
 	*(imu->status) &=~DISABLED_IIM42xxx;// Ok
 
-	DMA_init_IIM42xxx(imu,(uint16_t)*(imu->n_16bit_packet_fifo));
+	DMA_init_IIM42xxx(imu);
 
-	 DMA_enable_IIM42xxx;			     //SPI dma 16bit
+	 DMA_SPIenable_IIM42xxx;			     //SPI dma 16bit
 	 DMArx_IIM42XXX->CCR |= DMA_CCR_EN;
      NVIC_EnableIRQ(IRQ_DMArx_IIM42XXX); //RX_buffer_circle
      NVIC_EnableIRQ(IRQ_pin_IIM42XXX);   //INT_fifo_ready EN
 
-     *(imu->status) &= CONFIG_MODE_IIM42xxx;
+     *(imu->status) &= ~CONFIG_MODE_IIM42xxx;
      *(imu->status) |= OPERATION_MODE_IIM42xxx;
 
 	systick_pause = 2;//2ms
@@ -1238,7 +1237,7 @@ return 0;
 
 uint8_t Data_fifo_pack16byte_IIM42xxx(struct imu_data* imu){
 
-	uint8_t  error= 1;
+//	uint8_t  error= 1;
 	uint8_t *data8 = (uint8_t*)imu->raw_RX_fifo_buf;
 
 	if( ((*data8) & 0x04) == 0)return 1;

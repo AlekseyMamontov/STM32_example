@@ -127,7 +127,18 @@
 #define LIS3M_CS_off  GPIOB->BSRR = 1;
 
 #define LIS3M_SPI     SPI1
+#define DMA_SPIenable_LIS3M  LIS3M_SPI->CR2 |=0x03
+#define DMA_SPIdisable_LIS3M LIS3M_SPI->CR2 &=0xFFFC
 
+#define DMArx_LIS3M    DMA1_Channel3
+#define DMAtx_LIS3M	   DMA1_Channel4
+#define DMAMUXrx_LIS3M  DMAMUX1_Channel2
+#define DMAMUXtx_LIS3M  DMAMUX1_Channel3
+#define DMAMUXrx_id_device_LIS3M 10    // STM32G4  SPI2 12 (tab 91)
+#define DMAMUXtx_id_device_LIS3M 11    // ---
+#define InitRCC_DMA_LIS3M  RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN | RCC_AHB1ENR_DMAMUX1EN;
+#define IRQ_DMArx_LIS3M    DMA1_Channel3_IRQn
+#define IRQ_pin_LIS3M     EXTI1_IRQn  //INT_fifo_ready EN
 
 
 
@@ -167,7 +178,7 @@
 
 #define READ_REG_LIS3M   0x80
 #define INC_REG_LIS3M    0x40
-
+#define WRITE_REG_LIS3M   0x00
 
 #define OPERATION_MODE_LIS3MXX 0x01
 #define CONFIG_MODE_LIS3MXX    0x02
@@ -216,14 +227,18 @@ uint16_t read_raw_data_magnit[]={
 
 struct data_magnit{
 
-		int* 	 mag;
+		int* 	  mag;
 		uint8_t*  status;
 
-
-		uint8_t*  raw_fifo_buffer;
 		uint16_t* reg_config;
 		uint16_t* reg_status;
 		uint16_t* reg_raw_mag;
+
+		uint8_t*   raw_fifo_buffer;
+		uint16_t*  raw_RX_fifo_buf;
+		uint16_t*  raw_TX_fifo_buf;
+		uint8_t*   n_16bit_packet_fifo;
+
 
 		uint16_t  n_raw_fifo_buffer;
 		uint16_t  n_reg_config;
@@ -235,7 +250,11 @@ struct data_magnit{
 
 int 	mag_data_lis3md [3];
 uint8_t lis3mdl_buffer[40],
-	    lis3md_status;
+	    lis3md_status,
+	    lis3md_dma_packet = 4;
+
+uint16_t lis3mdl_bufferRX[5],
+		 lis3mdl_bufferTX[5];
 
 struct data_magnit mag_lis3md ={
 
@@ -243,6 +262,9 @@ struct data_magnit mag_lis3md ={
 		.status = &lis3md_status,
 
 		.raw_fifo_buffer = lis3mdl_buffer,
+		.raw_RX_fifo_buf = lis3mdl_bufferRX,
+		.raw_TX_fifo_buf = lis3mdl_bufferTX,
+		.n_16bit_packet_fifo = &lis3md_dma_packet,
 		.reg_config = magnit_config_registr,
 		.reg_status = NULL,
 		.reg_raw_mag = read_raw_data_magnit,
@@ -254,34 +276,118 @@ struct data_magnit mag_lis3md ={
 
 };
 
-uint8_t init_lis3md (struct data_magnit* mag){
 
+uint8_t RW_REG_LIS3M(uint16_t* reg,uint16_t dir, uint16_t len) {
+
+	uint8_t data, error = 0;
+
+	while (len--){
+
+		IIM42XXX_CS_on
+		error = SPI_sensor_reg_data_check(LIS3M_SPI,(*reg)|(dir),&data);
+		IIM42XXX_CS_off
+		if(error) break;
+		if(dir) *reg = ((*reg)&0xff00)|data;// read 1, write 0
+		reg++;
+	};
+
+	return error;
+};
+void DMA_init_LIS3M(struct data_magnit* mag) {
+
+	InitRCC_DMA_LIS3M // RCC
+
+    // SPI_RX  DIR = 0 (Peripheral-to-Memory)
+
+    DMArx_LIS3M->CCR = DMA_CCR_MINC   |    // RAM++
+                       DMA_CCR_TCIE    |   // IRQ_RXNE
+                       DMA_CCR_PSIZE_0 |   // 16 bit
+                       DMA_CCR_MSIZE_0 |   // 16 bit
+                       DMA_CCR_CIRC;
+
+	DMArx_LIS3M->CNDTR = *(mag->n_16bit_packet_fifo);               // n__16bit
+    DMArx_LIS3M->CPAR = (uint32_t)&(LIS3M_SPI->DR); // SPI data
+    DMArx_LIS3M->CMAR = (uint32_t)mag->raw_RX_fifo_buf;
+    DMAMUXrx_LIS3M->CCR = DMAMUXrx_id_device_LIS3M ;//SPI2_RX (Table 91)
+
+    //SPI_TX  DIR=1 (Memory-to-Peripheral)
+
+    DMAtx_LIS3M->CCR = DMA_CCR_MINC 	  |     // RAM++
+                       DMA_CCR_DIR     |     // Memory-to-Peripheral
+                       DMA_CCR_PSIZE_0 |     // 16-bit
+                       DMA_CCR_MSIZE_0 ;	   // 16-bit
+
+    DMAtx_LIS3M->CNDTR = *(mag->n_16bit_packet_fifo);  // Количество слов для передачи
+    DMAtx_LIS3M->CPAR = (uint32_t)&(LIS3M_SPI->DR); // Адрес регистра SPI
+    DMAtx_LIS3M->CMAR = (uint32_t)mag->raw_TX_fifo_buf;// Адрес буфера передачи
+    DMAMUXtx_LIS3M->CCR = DMAMUXtx_id_device_LIS3M ;// SPI2_TX (Table 91)
+
+}
+
+uint8_t init_lis3md (struct data_magnit* mag){
 
 	uint8_t data;
 	*(mag->status) = DISABLED_LIS3MXX | CONFIG_MODE_LIS3MXX;
 
+	LIS3M_CS_on
 	data = SPI_reg_data(LIS3M_SPI,(LIS3M_WHO_AM_I|READ_REG_LIS3M), 0x00);
+	LIS3M_CS_off
 	if(data != LIS3MDL) return 1;
 
-	if(SPI1_WR_reg16_check(mag->reg_config,0,mag->n_reg_config)) return 2;
+	// init block write reg
+
+	data = RW_REG_LIS3M(mag->reg_config,WRITE_REG_LIS3M,mag->n_reg_config);
+	if(data)return data;
 
 	*(mag->status) &=~DISABLED_LIS3MXX;// Ok
+
+	//DMA_init_LIS3M(mag);
+
+	// DMA_SPIenable_LIS3M;			  //SPI dma 16bit
+	// DMArx_LIS3M->CCR |= DMA_CCR_EN;
+    // NVIC_EnableIRQ(IRQ_DMArx_LIS3M); //RX_buffer_circle
+     NVIC_EnableIRQ(IRQ_pin_LIS3M);  //INT_fifo_ready EN
+
+     *(mag->status) &= CONFIG_MODE_LIS3MXX;
+     *(mag->status) |= OPERATION_MODE_LIS3MXX;
+
+	systick_pause = 2;//2ms
+	while(systick_pause);
 
 return 0;
 };
 
+///////// READ MAG
+
 uint8_t load_mag_lis3md(struct data_magnit* mag){
 
+	uint8_t  data, *mem = mag->raw_fifo_buffer;
+	uint16_t *mem16 = mag->reg_raw_mag;
+
 	if(mag->n_raw_fifo_buffer < mag->n_reg_raw_mag) return 3;
-	return  SPI1_array16to8_check(mag->reg_raw_mag,mag->raw_fifo_buffer,mag->n_reg_raw_mag);
+
+	for(uint8_t i=0;i < mag->n_reg_raw_mag;i++){
+
+		LIS3M_CS_on;
+		data = SPI_sensor_reg_data_check(LIS3M_SPI,*(mem16 + i),mem+i);
+		if(data)break;
+	    LIS3M_CS_off;
+
+	}
+return data;
 };
+
+
+
+
+
 uint8_t load_mag_lis3mdtr(struct data_magnit* mag){
 
 	if(mag->n_raw_fifo_buffer < mag->n_reg_raw_mag) return 3;
-	SPI1_read_reg_to_array8_check(((LIS3M_OUT_X_L|INC_REG_LIS3M |READ_REG_LIS3M)<<8|0),
-											mag->raw_fifo_buffer,5);
-	*(mag->raw_fifo_buffer+6) = SPI1_data((LIS3M_TEMP_OUT_LR|READ_REG_LIS3M)<<8|0x00);
-	*(mag->raw_fifo_buffer+7) = SPI1_data((LIS3M_TEMP_OUT_HR|READ_REG_LIS3M)<<8|0x00);
+	//SPI1_read_reg_to_array8_check(((LIS3M_OUT_X_L|INC_REG_LIS3M |READ_REG_LIS3M)<<8|0),
+	//										mag->raw_fifo_buffer,5);
+	//*(mag->raw_fifo_buffer+6) = SPI1_data((LIS3M_TEMP_OUT_LR|READ_REG_LIS3M)<<8|0x00);
+	//*(mag->raw_fifo_buffer+7) = SPI1_data((LIS3M_TEMP_OUT_HR|READ_REG_LIS3M)<<8|0x00);
 	return 0;
 };
 

@@ -47,9 +47,9 @@ int main(void) {
 	I2C2_Init();
 	Init_SPI_STM32();
 
-	BMP280_Init(&BMP280_sensor1);
+	BMP280_Init  (&BMP280_sensor1);
 	init_iim42652(&imu_iim42652);
-	init_lis3md(&mag_lis3md);
+	init_lis3md	 (&mag_lis3md);
 
 	__enable_irq();
 /*
