@@ -39,7 +39,8 @@ uint8_t  spi2_rx_data[30]={0},*fdata, dmaComplete=0,readyINT1 =0;
 
 
 int main(void) {
-	// Настройка системного тактирования
+
+///////  Настройка системного тактирования
 
 	SystemClock_Config();
 	GPIO_INIT();
@@ -47,9 +48,13 @@ int main(void) {
 	I2C2_Init();
 	Init_SPI_STM32();
 
+///////  Sensors
+
 	BMP280_Init  (&BMP280_sensor1);
 	init_iim42652(&imu_iim42652);
 	init_lis3md	 (&mag_lis3md);
+
+
 
 	__enable_irq();
 /*
@@ -86,11 +91,11 @@ int main(void) {
 
 		if(*(imu_iim42652.status) & DMA_OK_IIM42xxx ){ *(imu_iim42652.status) = 0;
 
-				if((*imu_iim42652.raw_RX_fifo_buf) &0x0C){
+				if((*imu_iim42652.DMA_RX_fifo_buf) &0x0C){
 
 				sendACC = 1;
 
-				fdata = (uint8_t*) imu_iim42652.raw_RX_fifo_buf;
+				fdata = (uint8_t*) imu_iim42652.DMA_RX_fifo_buf;
 				spi2_rx_data[0] = *fdata ;
 				spi2_rx_data[1] = *(fdata+3);
 				spi2_rx_data[2] = *(fdata+2);
@@ -123,12 +128,16 @@ int main(void) {
 //////////////////////////////
 
 		if(lis3m){
-			lis3m = 0;sendMAG = 1;
+
+			lis3m =   0;
+			sendMAG = 1;
+
 			load_mag_lis3mdtr(&mag_lis3md);
 
-			mag.axis.x = *dt16;
+			mag.axis.x =	*dt16;
 			mag.axis.y =*(dt16+1);
 			mag.axis.z =*(dt16+2);
+
 		};
 
 /////////////////////////////
@@ -176,12 +185,10 @@ int main(void) {
 
 }
 ;
-///////
+///////////// IRQ block CANFD
 
-// Функция для отправки классического сообщения CAN
 
 // Message FIFO 0
-
 void FDCAN1_IT1_IRQHandler(void) {
 
 	uint32_t index_rxfifo = 0, rxHeader0, rxHeader1, id, dlc;
@@ -225,14 +232,107 @@ void FDCAN1_IT1_IRQHandler(void) {
 
 }
 
+///////////// IRQ IIM42652
+
+void DMA1_Channel1_IRQHandler(void) {
+
+    if (DMA1->ISR & DMA_ISR_TCIF1) {
+
+        DMA1->IFCR = DMA_IFCR_CTCIF1;
+
+        //DMA1_Channel1->CCR &= ~DMA_CCR_EN;
+
+        DMAtx_IIM42XXX->CCR &= ~DMA_CCR_EN;
+
+         IIM42XXX_CS_off
+
+         iim_42652_status &= ~INT_FIFO_IIM42xxx;
+         iim_42652_status |= DMA_OK_IIM42xxx;
+
+    }
+
+  DMA1->IFCR |= DMA_IFCR_CGIF1;
+}
+/*
+
+PB12 IMU_int1  EXTI 12 configuration bits
+PB11 IMU int2
+*/
+
+void EXTI15_10_IRQHandler(void) {
+
+    if (EXTI->PR1 & (1 << 12)) { // PB12 INT1
+
+    	if((iim_42652_status & INT_FIFO_IIM42xxx) == 0){
+
+    	  iim_42652_status |= INT_FIFO_IIM42xxx;
+
+    	  IIM42XXX_CS_on
+
+          DMA_TX_buf_iim42652[0] = 0xAD00; // READ INT_STATUS0,FL,FH,FIFO (packet)
+
+
+    	  DMAtx_IIM42XXX->CNDTR = 12; //24 byte
+    	  DMAtx_IIM42XXX->CMAR = (uint32_t)DMA_TX_buf_iim42652;
+    	  DMAtx_IIM42XXX->CCR |= DMA_CCR_EN;// enable tx dma
+    	}
+
+    	EXTI->PR1 |= (1 << 12); // Сброс флага
+
+    }
+
+
+    if (EXTI->PR1 & (1 << 11)) { //PB11  INT2
+
+    	EXTI->PR1 |= (1 << 11); // Сброс флага
+   }
+}
+
+
+///////////// IRQ LISM3D
+
+void DMA1_Channel3_IRQHandler(void) {
+
+    if (DMA1->ISR & DMA_ISR_TCIF3) {
+
+        DMA1->IFCR = DMA_IFCR_CTCIF3;
+
+        //DMA1_Channel1->CCR &= ~DMA_CCR_EN;
+
+        DMArx_LIS3M->CCR &= ~DMA_CCR_EN;
+
+        LIS3M_CS_off
+
+        lis3md_status &= ~INT_FIFO_LIS3MXX;
+        lis3md_status |= DMA_OK_LIS3MXX;
+
+    }
+
+  DMA1->IFCR |= DMA_IFCR_CGIF3;
+}
+
 
 void EXTI1_IRQHandler(void){
 
-	if(!lis3m)lis3m = 1;
+	if((lis3md_status & INT_FIFO_LIS3MXX) == 0){
 
-	EXTI->PR1 |= 2;
+		lis3md_status |= INT_FIFO_LIS3MXX;
+
+		LIS3M_CS_on;
+
+		mag_lis3md.DMA_TX_fifo_buf[0]= ((LIS3M_STATUS_REG|INC_REG_LIS3M |READ_REG_LIS3M)<<8|0);
+
+		 DMAtx_LIS3M->CNDTR = *(mag_lis3md.n_16bit_packet_fifo); //8 byte
+		 DMAtx_LIS3M->CMAR = (uint32_t)mag_lis3md.DMA_TX_fifo_buf;
+		 DMAtx_LIS3M->CCR |= DMA_CCR_EN;// enable tx dma
+	}
+
+	//if(!lis3m)lis3m = 1;
+
+	EXTI->PR1 |= (1 << 1);//PB1
 
 };
+
 
 
 void Error_Handler(void) {

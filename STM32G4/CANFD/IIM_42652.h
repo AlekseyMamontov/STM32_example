@@ -10,6 +10,8 @@
 
 */
 
+//////// DEFINE
+
 #ifndef INC_IIM_42652_H_
 #define INC_IIM_42652_H_
 #include <Ixm42xxxDefs.h>
@@ -31,8 +33,53 @@
 #define IRQ_pin_IIM42XXX      EXTI15_10_IRQn  //INT_fifo_ready EN
 
 
+#define OPERATION_MODE_IIM42xxx 0x01
+#define CONFIG_MODE_IIM42xxx    0x02
+#define DISABLED_IIM42xxx       0x80
+#define INT_FIFO_IIM42xxx       0x40
+#define DMA_OK_IIM42xxx       	0x20
 
 
+//////// DATA
+
+
+uint8_t iim_42652_status = DISABLED_IIM42xxx,
+		n_16bit_packet_fifo =12 ;// 20byte
+
+int 	gyro_IIM42652[3]  = { 0 },
+		accel_IIM42652[3] = { 0 },
+		temp_IIM42652,
+		timestamp_IIM42652;
+
+uint8_t   raw_fifo_buffer[40]={0};
+uint16_t  DMA_RX_buf_iim42652[40] = {0};
+uint16_t  DMA_TX_buf_iim42652[40] = {0};
+
+ struct imu_data{
+
+	uint8_t* 	  status;
+	int *		    gyro;
+	int *		   aceel;
+	int *	 temperature;
+	int *	   timestamp;
+
+	uint8_t *  raw_fifo_buf;
+	uint16_t*  DMA_RX_fifo_buf;
+	uint16_t*  DMA_TX_fifo_buf;
+	uint8_t *  n_16bit_packet_fifo;
+
+	uint16_t* reg_status;
+	uint16_t* reg_config;
+	uint16_t* reg_gyro_accel_temp;
+
+	uint16_t  n_raw_fifo_buf;
+	uint16_t  n_reg_config;
+	uint16_t  n_reg_status;
+	uint16_t  n_reg_gyro_accel_temp;
+
+};
+
+//////// REGISTR IIN42652
 
 
 /*IIM_42652*/
@@ -930,63 +977,31 @@ uint16_t read_reg_status[]={
 
 };
 
-#define OPERATION_MODE_IIM42xxx 0x01
-#define CONFIG_MODE_IIM42xxx    0x02
-#define DISABLED_IIM42xxx       0x80
-#define INT_FIFO_IIM42xxx       0x40
-#define DMA_OK_IIM42xxx       	0x20
 
-uint8_t iim_42652_status = DISABLED_IIM42xxx, n_16bit_packet_fifo =12 ;// 20byte
-
-int gyro_IIM42652[3]  = { 0 },
-	accel_IIM42652[3] = { 0 },
-	temp_IIM42652,
-	timestamp_IIM42652;
-
-uint8_t   raw_fifo_buffer[40]={0};
-uint16_t  raw_RX_buf_iim42652[40] = {0};
-uint16_t  raw_TX_buf_iim42652[40] = {0};
-
- struct imu_data{
-
-	uint8_t* 	  status;
-	int *		    gyro;
-	int *		   aceel;
-	int *	 temperature;
-	int *	   timestamp;
-
-	uint8_t *  raw_fifo_buf;
-	uint16_t*  raw_RX_fifo_buf;
-	uint16_t*  raw_TX_fifo_buf;
-	uint8_t *  n_16bit_packet_fifo;
-
-	uint16_t* reg_status;
-	uint16_t* reg_config;
-	uint16_t* reg_gyro_accel_temp;
-
-	uint16_t  n_raw_fifo_buf;
-	uint16_t  n_reg_config;
-	uint16_t  n_reg_status;
-	uint16_t  n_reg_gyro_accel_temp;
-
-};
 
  struct imu_data imu_iim42652 ={
+
+//// Data sensor
 
 	.status 	 = &iim_42652_status,
 	.gyro 		 = gyro_IIM42652,
 	.aceel  	 = accel_IIM42652,
 	.temperature = &temp_IIM42652,
 
+//// buffer,dma
+
 	.raw_fifo_buf    = raw_fifo_buffer,
-	.raw_RX_fifo_buf = raw_RX_buf_iim42652,
-	.raw_TX_fifo_buf = raw_TX_buf_iim42652,
+	.DMA_RX_fifo_buf = DMA_RX_buf_iim42652,
+	.DMA_TX_fifo_buf = DMA_TX_buf_iim42652,
 	.n_16bit_packet_fifo = &n_16bit_packet_fifo,
 
-	.reg_status   	 = read_reg_status,
+//// base reg
 
+	.reg_status   	 	 = read_reg_status,
 	.reg_config 		 = imu_config_registr,
 	.reg_gyro_accel_temp = read_data_aceel_gyro_temp,
+
+//// n - size
 
 	.n_raw_fifo_buf 	= sizeof(raw_fifo_buffer),
 	.n_reg_config 		= sizeof(imu_config_registr)/2,
@@ -1011,7 +1026,7 @@ void DMA_init_IIM42xxx(struct imu_data* imu) {
 
     DMArx_IIM42XXX->CNDTR = *(imu->n_16bit_packet_fifo);               // n__16bit
     DMArx_IIM42XXX->CPAR = (uint32_t)&(SPI_IIM42XXX->DR); // SPI data
-    DMArx_IIM42XXX->CMAR = (uint32_t)imu->raw_RX_fifo_buf;
+    DMArx_IIM42XXX->CMAR = (uint32_t)imu->DMA_RX_fifo_buf;
     DMAMUXrx_IIM42XXX->CCR = DMAMUXrx_id_device_IIM42XXX ;//SPI2_RX (Table 91)
 
 
@@ -1024,69 +1039,12 @@ void DMA_init_IIM42xxx(struct imu_data* imu) {
 
     DMAtx_IIM42XXX->CNDTR = *(imu->n_16bit_packet_fifo);  // Количество слов для передачи
     DMAtx_IIM42XXX->CPAR = (uint32_t)&(SPI_IIM42XXX->DR); // Адрес регистра SPI
-    DMAtx_IIM42XXX->CMAR = (uint32_t)imu->raw_TX_fifo_buf;// Адрес буфера передачи
+    DMAtx_IIM42XXX->CMAR = (uint32_t)imu->DMA_TX_fifo_buf;// Адрес буфера передачи
 
     DMAMUXtx_IIM42XXX->CCR = DMAMUXtx_id_device_IIM42XXX ;// SPI2_TX (Table 91)
 
 }
 
-
-void DMA1_Channel1_IRQHandler(void) {
-
-    if (DMA1->ISR & DMA_ISR_TCIF1) {
-
-        DMA1->IFCR = DMA_IFCR_CTCIF1;
-
-        //DMA1_Channel1->CCR &= ~DMA_CCR_EN;
-
-        DMAtx_IIM42XXX->CCR &= ~DMA_CCR_EN;
-
-         IIM42XXX_CS_off
-
-         iim_42652_status &= ~INT_FIFO_IIM42xxx;
-         iim_42652_status |= DMA_OK_IIM42xxx;
-
-    }
-
-  DMA1->IFCR |= DMA_IFCR_CGIF1;
-}
-
-/*
-
-PB12 IMU_int1  EXTI 12 configuration bits
-PB11 IMU int2
-*/
-
-void EXTI15_10_IRQHandler(void) {
-
-    if (EXTI->PR1 & (1 << 12)) { // PB12 INT1
-
-    	if((iim_42652_status & INT_FIFO_IIM42xxx) == 0){
-
-    	  iim_42652_status |= INT_FIFO_IIM42xxx;
-
-    	  IIM42XXX_CS_on
-
-          raw_TX_buf_iim42652[0] = 0xAD00; // READ INT_STATUS0,FL,FH,FIFO (packet)
-
-
-    	  DMAtx_IIM42XXX->CNDTR = 12; //24 byte
-    	  DMAtx_IIM42XXX->CMAR = (uint32_t)raw_TX_buf_iim42652;
-    	  DMAtx_IIM42XXX->CCR |= DMA_CCR_EN;// enable tx dma
-    	}
-
-    	EXTI->PR1 |= (1 << 12); // Сброс флага
-
-    }
-
-
-    if (EXTI->PR1 & (1 << 11)) { //PB11  INT2
-
-
-
-        EXTI->PR1 |= (1 << 11); // Сброс флага
-   }
-}
 
 /////////////////// sensor block ////////////////
 
@@ -1143,7 +1101,7 @@ uint8_t init_iim42652(struct imu_data* imu){
      NVIC_EnableIRQ(IRQ_pin_IIM42XXX);   //INT_fifo_ready EN
 
      *(imu->status) &= ~CONFIG_MODE_IIM42xxx;
-     *(imu->status) |= OPERATION_MODE_IIM42xxx;
+     *(imu->status) |= OPERATION_MODE_IIM42xxx | DMA_OK_IIM42xxx ;
 
 	systick_pause = 2;//2ms
 	while(systick_pause);
@@ -1155,8 +1113,8 @@ uint8_t init_iim42652(struct imu_data* imu){
 
 uint8_t Data_fifo_pack20byte_IIM42xxx(struct imu_data* imu){
 
-	uint8_t  error= 1;
-	uint8_t *data8 = (uint8_t*)imu->raw_RX_fifo_buf;
+	//uint8_t  error= 1;
+	uint8_t *data8 = (uint8_t*)imu->DMA_RX_fifo_buf;
 
 	if( ((*data8) & 0x04) == 0)return 1;
 
@@ -1238,7 +1196,7 @@ return 0;
 uint8_t Data_fifo_pack16byte_IIM42xxx(struct imu_data* imu){
 
 //	uint8_t  error= 1;
-	uint8_t *data8 = (uint8_t*)imu->raw_RX_fifo_buf;
+	uint8_t *data8 = (uint8_t*)imu->DMA_RX_fifo_buf;
 
 	if( ((*data8) & 0x04) == 0)return 1;
 
