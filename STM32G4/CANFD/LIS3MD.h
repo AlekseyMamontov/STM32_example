@@ -193,7 +193,7 @@
 
 int 	mag_data_lis3md [3];
 uint8_t lis3mdl_buffer[40],
-	    lis3md_status,
+	    lis3md_status =0,
 	    lis3md_dma_packet = 4;
 
 uint16_t lis3mdl_bufferRX[5]={0},
@@ -284,13 +284,13 @@ struct data_magnit mag_lis3md ={
 
 uint8_t RW_REG_LIS3M(uint16_t* reg,uint16_t dir, uint16_t len) {
 
-	uint8_t data, error = 0;
+	uint8_t data = 0, error = 0;
 
 	while (len--){
 
-		IIM42XXX_CS_on
+		LIS3M_CS_on
 		error = SPI_sensor_reg_data_check(LIS3M_SPI,(*reg)|(dir),&data);
-		IIM42XXX_CS_off
+		LIS3M_CS_off
 		if(error) break;
 		if(dir) *reg = ((*reg)&0xff00)|data;// read 1, write 0
 		reg++;
@@ -313,7 +313,7 @@ void DMA_init_LIS3M(struct data_magnit* mag) {
 	DMArx_LIS3M->CNDTR = *(mag->n_16bit_packet_fifo);               // n__16bit
     DMArx_LIS3M->CPAR = (uint32_t)&(LIS3M_SPI->DR); // SPI data
     DMArx_LIS3M->CMAR = (uint32_t)mag->DMA_RX_fifo_buf;
-    DMAMUXrx_LIS3M->CCR = DMAMUXrx_id_device_LIS3M ;//SPI2_RX (Table 91)
+    DMAMUXrx_LIS3M->CCR = DMAMUXrx_id_device_LIS3M ;//SPI1_RX (Table 91)
 
     //SPI_TX  DIR=1 (Memory-to-Peripheral)
 
@@ -325,14 +325,22 @@ void DMA_init_LIS3M(struct data_magnit* mag) {
     DMAtx_LIS3M->CNDTR = *(mag->n_16bit_packet_fifo);  // Количество слов для передачи
     DMAtx_LIS3M->CPAR = (uint32_t)&(LIS3M_SPI->DR); // Адрес регистра SPI
     DMAtx_LIS3M->CMAR = (uint32_t)mag->DMA_TX_fifo_buf;// Адрес буфера передачи
-    DMAMUXtx_LIS3M->CCR = DMAMUXtx_id_device_LIS3M ;// SPI2_TX (Table 91)
+    DMAMUXtx_LIS3M->CCR = DMAMUXtx_id_device_LIS3M ;// SPI1_TX (Table 91)
 
 }
 
 uint8_t init_lis3md (struct data_magnit* mag){
 
-	uint8_t data;
+	uint8_t data = 0;
 	*(mag->status) = DISABLED_LIS3MXX | CONFIG_MODE_LIS3MXX;
+
+	//reboot
+	LIS3M_CS_on
+	data = SPI_reg_data(LIS3M_SPI,(LIS3M_CTRL_REG2|READ_REG_LIS3M), 0x0C);
+	LIS3M_CS_off
+
+	systick_pause = 50;//50ms
+	while(systick_pause);
 
 	LIS3M_CS_on
 	data = SPI_reg_data(LIS3M_SPI,(LIS3M_WHO_AM_I|READ_REG_LIS3M), 0x00);
@@ -347,12 +355,12 @@ uint8_t init_lis3md (struct data_magnit* mag){
 	*(mag->status) &=~DISABLED_LIS3MXX;// Ok
 
 	 DMA_init_LIS3M(mag);
-	// DMA_SPIenable_LIS3M;			  //SPI dma 16bit
-	// DMArx_LIS3M->CCR |= DMA_CCR_EN;
-    // NVIC_EnableIRQ(IRQ_DMArx_LIS3M); //RX_buffer_circle
+	 DMA_SPIenable_LIS3M;			  //SPI dma 16bit
+	 DMArx_LIS3M->CCR |= DMA_CCR_EN;
+     NVIC_EnableIRQ(IRQ_DMArx_LIS3M); //RX_buffer_circle
      NVIC_EnableIRQ(IRQ_pin_LIS3M);  //INT_fifo_ready EN
 
-     *(mag->status) &= CONFIG_MODE_LIS3MXX;
+     *(mag->status) &= ~CONFIG_MODE_LIS3MXX;
      *(mag->status) |= OPERATION_MODE_LIS3MXX;
 
 	systick_pause = 2;//2ms

@@ -21,7 +21,7 @@
 void Init_SPI_STM32(void) {
 
 	RCC->APB1ENR1 |= RCC_APB1ENR1_SPI2EN;
-	RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
+	RCC->APB2ENR  |= RCC_APB2ENR_SPI1EN;
 	/*
 	 SPI control register 1 (SPIx_CR1) Address offset: 0x00 Reset value: 0x0000
 
@@ -106,7 +106,7 @@ void Init_SPI_STM32(void) {
 	 */
 
 	SPI2->CR1 = (1 << 2) | (2 << 3) | (3 << 8) | 0; // master | clk/8 |  SSM=1 SSI =1 CPOL0 _/
-	SPI1->CR1 = (1 << 2) | (5 << 3) | (3 << 8) | 0; // master | clk/64 |  SSM=1 SSI =1 CPOL0 _/
+	SPI1->CR1 = (1 << 2) | (6 << 3) | (3 << 8) | 0; // master | clk/64 |  SSM=1 SSI =1 CPOL0 _/
 	/*
 	 SPI control register 2 (SPIx_CR2) Address offset: 0x04 Reset value: 0x0700 (8 bit)
 	 Регістровий опис SPI_CR2

@@ -51,7 +51,9 @@ int main(void) {
 ///////  Sensors
 
 	BMP280_Init  (&BMP280_sensor1);
+
 	init_iim42652(&imu_iim42652);
+
 	init_lis3md	 (&mag_lis3md);
 
 
@@ -89,7 +91,9 @@ int main(void) {
 
 /////////////////////////////////
 
-		if(*(imu_iim42652.status) & DMA_OK_IIM42xxx ){ *(imu_iim42652.status) = 0;
+		if(*(imu_iim42652.status) & DMA_OK_IIM42xxx ){
+
+				*(imu_iim42652.status) &= ~DMA_OK_IIM42xxx;//????
 
 				if((*imu_iim42652.DMA_RX_fifo_buf) &0x0C){
 
@@ -127,18 +131,29 @@ int main(void) {
 
 //////////////////////////////
 
-		if(lis3m){
+		if(*(mag_lis3md.status)&DMA_OK_LIS3MXX){
 
-			lis3m =   0;
+			*(mag_lis3md.status) &= ~DMA_OK_LIS3MXX;
+
 			sendMAG = 1;
 
-			load_mag_lis3mdtr(&mag_lis3md);
-
-			mag.axis.x =	*dt16;
-			mag.axis.y =*(dt16+1);
-			mag.axis.z =*(dt16+2);
-
 		};
+
+
+
+
+		///if(lis3m){
+
+		///	lis3m =   0;
+		///	sendMAG = 1;
+
+		//	load_mag_lis3mdtr(&mag_lis3md);
+
+			//mag.axis.x =	*dt16;
+			//mag.axis.y =*(dt16+1);
+			//mag.axis.z =*(dt16+2);
+
+		//};
 
 /////////////////////////////
 
@@ -172,7 +187,7 @@ int main(void) {
 			CAN_SendMessage(id+2, (uint8_t*)ft32+2,8);
 */
 
-	if(sendMAG){CAN_SendMessage(id+3,mag_lis3md.raw_fifo_buffer, 8); sendMAG=0;}
+	if(sendMAG){CAN_SendMessage(id+3,(uint8_t*)mag_lis3md.DMA_RX_fifo_buf, 8);sendMAG=0;}
 
 			trigger = trigger ? 0 : 1;
 
@@ -238,7 +253,7 @@ void DMA1_Channel1_IRQHandler(void) {
 
     if (DMA1->ISR & DMA_ISR_TCIF1) {
 
-        DMA1->IFCR = DMA_IFCR_CTCIF1;
+        DMA1->IFCR |= DMA_IFCR_CTCIF1;
 
         //DMA1_Channel1->CCR &= ~DMA_CCR_EN;
 
@@ -295,7 +310,7 @@ void DMA1_Channel3_IRQHandler(void) {
 
     if (DMA1->ISR & DMA_ISR_TCIF3) {
 
-        DMA1->IFCR = DMA_IFCR_CTCIF3;
+        DMA1->IFCR |= DMA_IFCR_CTCIF3;
 
         //DMA1_Channel1->CCR &= ~DMA_CCR_EN;
 
@@ -303,8 +318,8 @@ void DMA1_Channel3_IRQHandler(void) {
 
         LIS3M_CS_off
 
-        lis3md_status &= ~INT_FIFO_LIS3MXX;
-        lis3md_status |= DMA_OK_LIS3MXX;
+        *(mag_lis3md.status) &= ~INT_FIFO_LIS3MXX;
+        *(mag_lis3md.status) |= DMA_OK_LIS3MXX;
 
     }
 
@@ -312,11 +327,13 @@ void DMA1_Channel3_IRQHandler(void) {
 }
 
 
+
 void EXTI1_IRQHandler(void){
 
-	if((lis3md_status & INT_FIFO_LIS3MXX) == 0){
 
-		lis3md_status |= INT_FIFO_LIS3MXX;
+	if((*(mag_lis3md.status) & INT_FIFO_LIS3MXX) == 0){
+
+		*(mag_lis3md.status) |= INT_FIFO_LIS3MXX;
 
 		LIS3M_CS_on;
 
