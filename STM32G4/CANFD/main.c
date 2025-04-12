@@ -5,7 +5,7 @@
 #include "Fusion.h"
 #include "INIT_STM32G431_GPIO.h"
 #include <CANFD_STM32G431.h>
-#include "I2C.h"
+#include "BMP280.h"
 #include "DMA.h"
 #include "SPI.h"
 #include "IIM_42652.h"
@@ -89,7 +89,10 @@ int main(void) {
 
 	while (1) {
 
-/////////////////////////////////
+
+
+
+///////////////   iim42652
 
 		if(*(imu_iim42652.status) & DMA_OK_IIM42xxx ){
 
@@ -129,37 +132,18 @@ int main(void) {
 			}
 		}
 
-//////////////////////////////
+/////////////////  lis3md
 
 		if(*(mag_lis3md.status)&DMA_OK_LIS3MXX){
 
 			*(mag_lis3md.status) &= ~DMA_OK_LIS3MXX;
 
-	//		LIS3M_CS_on
-	//		 SPI_reg_data(LIS3M_SPI,(LIS3M_STATUS_REG|READ_REG_LIS3M), 0x00);
-	//		LIS3M_CS_off
-
 			sendMAG = 1;
 
 		};
 
+//////////////////   CAN_SendMessage
 
-
-
-		///if(lis3m){
-
-		///	lis3m =   0;
-		///	sendMAG = 1;
-
-		//	load_mag_lis3mdtr(&mag_lis3md);
-
-			//mag.axis.x =	*dt16;
-			//mag.axis.y =*(dt16+1);
-			//mag.axis.z =*(dt16+2);
-
-		//};
-
-/////////////////////////////
 
  		if (!systick_pause) {
 
