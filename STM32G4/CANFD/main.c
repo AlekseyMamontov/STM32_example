@@ -135,6 +135,10 @@ int main(void) {
 
 			*(mag_lis3md.status) &= ~DMA_OK_LIS3MXX;
 
+	//		LIS3M_CS_on
+	//		 SPI_reg_data(LIS3M_SPI,(LIS3M_STATUS_REG|READ_REG_LIS3M), 0x00);
+	//		LIS3M_CS_off
+
 			sendMAG = 1;
 
 		};
@@ -314,7 +318,7 @@ void DMA1_Channel3_IRQHandler(void) {
 
         //DMA1_Channel1->CCR &= ~DMA_CCR_EN;
 
-        DMArx_LIS3M->CCR &= ~DMA_CCR_EN;
+        DMAtx_LIS3M->CCR &= ~DMA_CCR_EN;
 
         LIS3M_CS_off
 
@@ -337,7 +341,7 @@ void EXTI1_IRQHandler(void){
 
 		LIS3M_CS_on;
 
-		mag_lis3md.DMA_TX_fifo_buf[0]= ((LIS3M_STATUS_REG|INC_REG_LIS3M |READ_REG_LIS3M)<<8|0);
+		*(mag_lis3md.DMA_TX_fifo_buf)= ((LIS3M_STATUS_REG|INC_REG_LIS3M |READ_REG_LIS3M)<<8|0);
 
 		 DMAtx_LIS3M->CNDTR = *(mag_lis3md.n_16bit_packet_fifo); //8 byte
 		 DMAtx_LIS3M->CMAR = (uint32_t)mag_lis3md.DMA_TX_fifo_buf;

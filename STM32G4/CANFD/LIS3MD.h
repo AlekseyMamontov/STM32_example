@@ -135,7 +135,7 @@
 #define DMAMUXrx_LIS3M  DMAMUX1_Channel2
 #define DMAMUXtx_LIS3M  DMAMUX1_Channel3
 
-#define DMAMUXrx_id_device_LIS3M 10    // STM32G4  SPI2 12 (tab 91)
+#define DMAMUXrx_id_device_LIS3M 10    // STM32G4  SPI1 10(tab 91)
 #define DMAMUXtx_id_device_LIS3M 11    // ---
 
 #define InitRCC_DMA_LIS3M  RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN | RCC_AHB1ENR_DMAMUX1EN;
@@ -236,9 +236,9 @@ uint16_t magnit_config_registr[]={
 		(LIS3M_CTRL_REG4 << 8)| 0b00001000,  //def 00000000
 //		(LIS3M_CTRL_REG5 << 8)| 0,  //def 00000000
 
-//		(INT_CFG   << 8)| 0, // def 11101000
-//		(INT_THS_L << 8)| 0, // def 00000000
-//		(INT_THS_H << 8)| 0, // def 00000000
+		(LIS3M_INT_CFG   << 8)| 0b11101010, // def 11101000
+//		(LIS3M_INT_THS_L << 8)| 0, // def 00000000
+//		(LIS3M_INT_THS_H << 8)| 0, // def 00000000
 
 		//enable
 		(LIS3M_CTRL_REG3 << 8)| 0b00000000,  //def 00000011
