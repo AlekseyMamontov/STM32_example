@@ -19,9 +19,9 @@ uint8_t test = 1,
 		trigger = 0,
 		command = 0xEF,
 		data = 0,
-		sendACC=0,
-		sendPs=0,
-		sendMAG=0;
+		sendACC=0,sendMAG=0,
+		sendPs=0, test_ps=0;
+
 
 uint32_t pause = 500;
 
@@ -40,7 +40,7 @@ float heading;
 uint16_t spi2_rx_buf[30]={0},spi2rxsize = 12,
 		 spi2_tx_buf[30]={0},spi2txsize = 12;
 
-uint8_t  spi2_rx_data[30]={0},*fdata, dmaComplete=0,readyINT1 =0;
+uint8_t  spi2_rx_data[30]={0},*fdata, dmaComplete=0, readyINT1 =0;
 
 
 
@@ -52,20 +52,14 @@ int main(void) {
 	SystemClock_Config();
 	GPIO_INIT();
 	CAN_Config();
-	I2C2_Init();
 	Init_SPI_STM32();
 
 ///////  Sensors
 
 
 	init_iim42652(&imu_iim42652);
-
 	init_lis3md	 (&mag_lis3md);
-
 	init_bmp280  (&bmp280_sensor1);
-
-
-	__enable_irq();
 
 	float data32[2]= {0};
 	uint32_t id = 1003;  // Стандартный идентификатор CAN
@@ -131,18 +125,23 @@ int main(void) {
 
 
 	//	BMP280_Read_Raw_Data(&BMP280_sensor1);
+
 		if(*(bmp280_sensor1.status)&DMA_OK_BMP280 ){
 
-			*(bmp280_sensor1.status) &= ~DMA_OK_BMP280 ;
+			*(bmp280_sensor1.status) &= ~DMA_OK_BMP280;
 
-					sendPs= 1;
+			sendPs= 1;
 
-		 }else if(!(*(bmp280_sensor1.status)&INT_FIFO_BMP280)){
-
-
-
-
-		 };
+		 }else{
+				 if (!systick_pause){
+					 test_ps++;
+					 if(test_ps >= 25){
+						 test_ps = 0;
+						 BMP280_Read_Data(&bmp280_sensor1);
+						 sendPs= 1;
+					 };
+				 };
+			  }
 
 
 
@@ -167,8 +166,9 @@ int main(void) {
 
 				data32[0] = BMP280_Compensate_Temperature(&bmp280_sensor1);
 				data32[1] = BMP280_Compensate_Pressure(&bmp280_sensor1);
-				CAN_SendMessage(id+4, (uint8_t*) data32, 8);
+				CAN_SendMessage(id+4, (uint8_t*)bmp280_sensor1.DMArx_buf, 8);
 				sendPs = 0;
+
 			}
 
 			///////// LED
@@ -296,8 +296,6 @@ void DMA1_Channel3_IRQHandler(void) {
 
         DMA1->IFCR |= DMA_IFCR_CTCIF3;
 
-        //DMA1_Channel1->CCR &= ~DMA_CCR_EN;
-
         DMAtx_LIS3M->CCR &= ~DMA_CCR_EN;
 
         LIS3M_CS_off
@@ -321,7 +319,7 @@ void EXTI1_IRQHandler(void){
 
 		LIS3M_CS_on;
 
-		*(mag_lis3md.DMA_TX_fifo_buf)= ((LIS3M_STATUS_REG|INC_REG_LIS3M |READ_REG_LIS3M)<<8|0);
+		mag_lis3md.DMA_TX_fifo_buf[0]= ((LIS3M_STATUS_REG|INC_REG_LIS3M |READ_REG_LIS3M)<<8|0);
 
 		 DMAtx_LIS3M->CNDTR = *(mag_lis3md.n_16bit_packet_fifo); //8 byte
 		 DMAtx_LIS3M->CMAR = (uint32_t)mag_lis3md.DMA_TX_fifo_buf;

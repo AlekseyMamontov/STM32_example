@@ -154,6 +154,7 @@
 #define LIS3M_CTRL_REG5 0x24
 
 
+
 #define LIS3M_OFFSET_X_REG_L_M 0x05
 #define LIS3M_OFFSET_X_REG_H_M 0x06
 #define LIS3M_OFFSET_Y_REG_L_M 0x07
@@ -180,7 +181,7 @@
 
 #define READ_REG_LIS3M   0x80
 #define INC_REG_LIS3M    0x40
-#define WRITE_REG_LIS3M   0x00
+#define WRITE_REG_LIS3M  0x00
 
 #define OPERATION_MODE_LIS3MXX 0x01
 #define CONFIG_MODE_LIS3MXX    0x02
@@ -236,7 +237,7 @@ uint16_t magnit_config_registr[]={
 		(LIS3M_CTRL_REG4 << 8)| 0b00001000,  //def 00000000
 //		(LIS3M_CTRL_REG5 << 8)| 0,  //def 00000000
 
-		(LIS3M_INT_CFG   << 8)| 0b11101010, // def 11101000
+//		(LIS3M_INT_CFG   << 8)| 0b11101010, // def 11101000
 //		(LIS3M_INT_THS_L << 8)| 0, // def 00000000
 //		(LIS3M_INT_THS_H << 8)| 0, // def 00000000
 
@@ -308,7 +309,6 @@ void DMA_init_LIS3M(struct data_magnit* mag) {
                        DMA_CCR_TCIE    |   // IRQ_RXNE
                        DMA_CCR_PSIZE_0 |   // 16 bit
                        DMA_CCR_MSIZE_0 |   // 16 bit
-                       DMA_CCR_PL_0	   |   // Priority level Medium
                        DMA_CCR_CIRC;
 
 	DMArx_LIS3M->CNDTR = *(mag->n_16bit_packet_fifo);               // n__16bit
@@ -337,10 +337,10 @@ uint8_t init_lis3md (struct data_magnit* mag){
 
 	//reboot
 	LIS3M_CS_on
-	data = SPI_reg_data(LIS3M_SPI,(LIS3M_CTRL_REG2|READ_REG_LIS3M), 0x0C);
+	data = SPI_reg_data(LIS3M_SPI,(LIS3M_CTRL_REG2|WRITE_REG_LIS3M), 0x0C);
 	LIS3M_CS_off
 
-	systick_pause = 50;//50ms
+	systick_pause = 5;//50ms
 	while(systick_pause);
 
 	LIS3M_CS_on
@@ -356,10 +356,13 @@ uint8_t init_lis3md (struct data_magnit* mag){
 	*(mag->status) &=~DISABLED_LIS3MXX;// Ok
 
 	 DMA_init_LIS3M(mag);
+
 	 DMA_SPIenable_LIS3M;			  //SPI dma 16bit
 	 DMArx_LIS3M->CCR |= DMA_CCR_EN;
      NVIC_EnableIRQ(IRQ_DMArx_LIS3M); //RX_buffer_circle
      NVIC_EnableIRQ(IRQ_pin_LIS3M);  //INT_fifo_ready EN
+
+     mag->DMA_TX_fifo_buf[0]= ((LIS3M_STATUS_REG|INC_REG_LIS3M |READ_REG_LIS3M)<<8|0);
 
      *(mag->status) &= ~CONFIG_MODE_LIS3MXX;
      *(mag->status) |= OPERATION_MODE_LIS3MXX;
