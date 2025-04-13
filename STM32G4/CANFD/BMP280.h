@@ -62,7 +62,7 @@ struct BMP280{
     uint8_t addr;
 };
 
-static struct BMP280 BMP280_sensor1 = {
+static struct BMP280 bmp280_sensor1 = {
 
 		.dig_T1 = (uint16_t*)data_calib,
 		.dig_T2 = data_calib+1,
@@ -89,29 +89,13 @@ uint8_t  BMP280_Read_Calibration_Data(struct BMP280 *sensor) {
  return  I2C2_ReadBytes(sensor->addr, 0x88 ,(uint8_t*)data_calib, 24);
 }
 
-/////////////
-void DMA_BMP280(struct BMP280 *sensor) {
 
-    RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN | RCC_AHB1ENR_DMAMUX1EN;
-
-    // DMA1_Channel6 (RX, круговой режим)
-    DMA1_Channel6->CCR = DMA_CCR_MINC | DMA_CCR_CIRC | DMA_CCR_TCIE | DMA_CCR_PL_1;
-    DMA1_Channel6->CPAR = (uint32_t)&I2C2->RXDR;
-    DMA1_Channel6->CMAR = (uint32_t)sensor->DMArx_buf;
-    DMA1_Channel6->CNDTR = 6; // 6 байт
-
-    // DMAMUX (таб 91, RM0440)
-    DMAMUX1_Channel5->CCR = 16; // I2C1_RX
-    NVIC_EnableIRQ(DMA1_Channel6_IRQn);
-    DMA1_Channel6->CCR |= DMA_CCR_EN; // Запуск DMA
-}
 
 // Чтение данных (TX через прерывания, RX через DMA)
 
 void BMP280_Read_Data(struct BMP280 *sensor) {
     if (!(*(sensor->status) & INT_FIFO_BMP280)) {
         *(sensor->status) |= INT_FIFO_BMP280;
-
         // Запустить отправку адреса регистра через прерывания
         I2C2->CR2 = (BMP280_ADDR << 1) | (1 << I2C_CR2_NBYTES_Pos) | I2C_CR2_START;
     }
@@ -121,86 +105,80 @@ void BMP280_Read_Data(struct BMP280 *sensor) {
 // Обработчик прерываний I2C (EV)
 void I2C1_EV_IRQHandler(void) {
 
+    if (I2C2->ISR & I2C_ISR_TXIS){ I2C2->TXDR = BMP280_REG_DATA;// Отправить адрес регистра
 
-    if (I2C2->ISR & I2C_ISR_TXIS) {
-        // Отправить адрес регистра
-        I2C2->TXDR = BMP280_REG_DATA;
+    }else if (I2C2->ISR & I2C_ISR_TC)  // Завершена отправка адреса, запустить чтение через DMA
+        I2C2->CR2 = (BMP280_ADDR << 1) | I2C_CR2_RD_WRN | (6 << I2C_CR2_NBYTES_Pos) | I2C_CR2_START | I2C_CR2_AUTOEND;
+}
+
+
+// Обработчик ошибок I2C
+
+void I2C2_ER_IRQHandler(void) {
+    if (I2C2->ISR & I2C_ISR_NACKF) {
+        I2C2->ICR |= I2C_ICR_NACKCF;
+        *(bmp280_sensor1.status) &= ~INT_FIFO_BMP280;
     }
-
-    if (I2C2->ISR & I2C_ISR_TC) {
-        // Завершена отправка адреса, запустить чтение через DMA
-        I2C2->CR2 = (BMP280_ADDR << 1) | I2C_CR2_RD_WRN |
-                    (6 << I2C_CR2_NBYTES_Pos) |
-                    I2C_CR2_START | I2C_CR2_AUTOEND;
-
-        I2C2->ICR |= I2C_ICR_TCCF;
+    if (I2C2->ISR & I2C_ISR_BERR) {
+        I2C2->ICR |= I2C_ICR_BERRCF;
+        *(bmp280_sensor1.status) &= ~INT_FIFO_BMP280;
     }
-
 }
 
 // Обработчик DMA RX
-void DMA1_Channel6_7_IRQHandler(void) {
+
+void DMA1_Channel6_IRQHandler(void) {
+
     if (DMA1->ISR & DMA_ISR_TCIF6) {
         DMA1->IFCR |= DMA_IFCR_CTCIF6;
-        *(BMP280_sensor1.status) &= ~INT_FIFO_BMP280;
-        *(BMP280_sensor1.status) |= DMA_OK_BMP280;
+        *(bmp280_sensor1.status) &= ~INT_FIFO_BMP280;
+        *(bmp280_sensor1.status) |= DMA_OK_BMP280;
     }
     DMA1->IFCR |= DMA_IFCR_CGIF6;
 }
 
-// Обработчик ошибок I2C
-void I2C1_ER_IRQHandler(void) {
-    if (I2C1->ISR & I2C_ISR_NACKF) {
-        I2C1->ICR |= I2C_ICR_NACKCF;
-        *(BMP280_sensor1.status) &= ~INT_FIFO_BMP280;
-    }
-    if (I2C1->ISR & I2C_ISR_BERR) {
-        I2C1->ICR |= I2C_ICR_BERRCF;
-        *(BMP280_sensor1.status) &= ~INT_FIFO_BMP280;
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-uint8_t BMP280_Init(struct BMP280 *sensor) {
+uint8_t init_bmp280(struct BMP280 *sensor) {
 
     uint8_t error =0;
 
     *(sensor->status) = DISABLED_BMP280 | CONFIG_MODE_BMP280;
     I2C2_ReadBytes(sensor->addr,BMP280_REG_ID,&error, 1);
 
-    if (error != 0x58) { // id  BMP280
-        return 1; // Ошибка: неверный идентификатор
-    }
-    *(sensor->status) &= ~DISABLED_BMP280;
+    if (error != 0x58) return 1; // id  BMP280
 
     error = I2C2_WriteCheck(sensor->addr, BMP280_REG_CTRL_MEAS, 0x27);
+
 	if(error) return error;
+
+	*(sensor->status) &= ~DISABLED_BMP280;
 
 	error = BMP280_Read_Calibration_Data(sensor);
+
 	if(error) return error;
 
-	*(sensor->status) &= ~CONFIG_MODE_BMP280;
+	I2C2->CR1 &= ~I2C_CR1_PE;
 
-	DMA_BMP280(sensor);
+    I2C2->CR1 |= I2C_CR1_RXDMAEN | I2C_CR1_ERRIE | I2C_CR1_TXIE | I2C_CR1_TCIE;
 
+    // DMA1_Channel6 (RX, круговой режим)
+
+    RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN | RCC_AHB1ENR_DMAMUX1EN;
+
+    DMA1_Channel6->CCR = DMA_CCR_MINC | DMA_CCR_CIRC | DMA_CCR_TCIE ;
+
+    DMA1_Channel6->CPAR = (uint32_t)&I2C2->RXDR;
+    DMA1_Channel6->CMAR = (uint32_t)sensor->DMArx_buf;
+    DMA1_Channel6->CNDTR = 6; // 6 байт
+	DMAMUX1_Channel5->CCR = 18; // I2C2_RX  DMAMUX (таб 91, RM0440)
+
+	I2C2->CR1 |= I2C_CR1_PE;
+	DMA1_Channel6->CCR |= DMA_CCR_EN;
+
+	NVIC_EnableIRQ(DMA1_Channel6_IRQn);
     NVIC_EnableIRQ(I2C2_EV_IRQn);
     NVIC_EnableIRQ(I2C2_ER_IRQn);
 
+    *(sensor->status) &= ~CONFIG_MODE_BMP280;
 	*(sensor->status) |= OPERATION_MODE_BMP280;
 
 return 0 ;

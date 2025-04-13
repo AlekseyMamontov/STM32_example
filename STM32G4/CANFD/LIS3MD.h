@@ -308,6 +308,7 @@ void DMA_init_LIS3M(struct data_magnit* mag) {
                        DMA_CCR_TCIE    |   // IRQ_RXNE
                        DMA_CCR_PSIZE_0 |   // 16 bit
                        DMA_CCR_MSIZE_0 |   // 16 bit
+                       DMA_CCR_PL_0	   |   // Priority level Medium
                        DMA_CCR_CIRC;
 
 	DMArx_LIS3M->CNDTR = *(mag->n_16bit_packet_fifo);               // n__16bit

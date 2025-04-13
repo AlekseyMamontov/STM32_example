@@ -15,7 +15,14 @@
 
 
 
-uint8_t test = 1, trigger = 0, command = 0xEF, data = 0,sendACC=0,lis3m=1,sendMAG=0;
+uint8_t test = 1,
+		trigger = 0,
+		command = 0xEF,
+		data = 0,
+		sendACC=0,
+		sendPs=0,
+		sendMAG=0;
+
 uint32_t pause = 500;
 
 
@@ -50,41 +57,18 @@ int main(void) {
 
 ///////  Sensors
 
-	BMP280_Init  (&BMP280_sensor1);
 
 	init_iim42652(&imu_iim42652);
 
 	init_lis3md	 (&mag_lis3md);
 
+	init_bmp280  (&bmp280_sensor1);
 
 
 	__enable_irq();
-/*
-    FusionAhrsInitialise(&ahrs);
-    FusionAhrsSetSettings(&ahrs, &(FusionAhrsSettings){
-        .gain = 0.5f,
-        .accelerationRejection = 10.0f,
-        .magneticRejection = 20.0f
-        // Убрано rejectionTimeout, так как его нет в вашей версии
-    });
-*/
 
-
-
-    int16_t* dt16 =(int16_t*)mag_lis3md.raw_fifo_buffer, *buf16;
-
-	uint32_t data_block[8] = {0};
-	float ft32[8]= {0};
+	float data32[2]= {0};
 	uint32_t id = 1003;  // Стандартный идентификатор CAN
-
-
-//	SPI2->CR2 |= SPI_CR2_TXDMAEN;    // Включение DMA для передачи (TX)
-//	SPI2->CR2 |= SPI_CR2_RXDMAEN;    // Включение DMA для приема (RX)
-
-
-
-
-
 
 
 	while (1) {
@@ -142,43 +126,55 @@ int main(void) {
 
 		};
 
+/////////////////  bmp280
+
+
+
+	//	BMP280_Read_Raw_Data(&BMP280_sensor1);
+		if(*(bmp280_sensor1.status)&DMA_OK_BMP280 ){
+
+			*(bmp280_sensor1.status) &= ~DMA_OK_BMP280 ;
+
+					sendPs= 1;
+
+		 }else if(!(*(bmp280_sensor1.status)&INT_FIFO_BMP280)){
+
+
+
+
+		 };
+
+
+
+
+
 //////////////////   CAN_SendMessage
 
 
  		if (!systick_pause) {
 
-			GPIOA->BSRR = trigger ? GPIO_BSRR_BS12 : GPIO_BSRR_BR12;
 
-			 //FusionAhrsUpdateNoMagnetometer(&ahrs, gyro, acc, DELTA_TIME);
-			 //heading = FusionCompassCalculateHeading(FusionConventionNwu, acc, mag);
-			 //FusionAhrsSetHeading(&ahrs, heading);
-			 //quaternion = FusionAhrsGetQuaternion(&ahrs);
 
 			if(sendACC){sendACC =0;
 						CAN_SendMessage(id+1,(uint8_t*) spi2_rx_data, 8);
 					    CAN_SendMessage(id+2,(uint8_t*) spi2_rx_data+8, 8);
-//				CAN_SendMessage(id+1, imu_iim42652.raw_fifo_buf, 8);
-//				CAN_SendMessage(id+2,(imu_iim42652.raw_fifo_buf)+8, 8);
+
 			};
 
+			if(sendMAG){CAN_SendMessage(id+3,(uint8_t*)mag_lis3md.DMA_RX_fifo_buf, 8);sendMAG=0;}
 
-			//BMP280_Read_Raw_Data(&BMP280_sensor1);
-			//data32[0] = BMP280_Compensate_Temperature(&BMP280_sensor1);
-			//data32[1] = BMP280_Compensate_Pressure(&BMP280_sensor1);
-			//CAN_SendMessage(id, (uint8_t*) data32, 8);
-/*
-			ft32[0] = quaternion.element.w;
-			ft32[1] = quaternion.element.x;
-			CAN_SendMessage(id+1, (uint8_t*)ft32,8);
-			ft32[2] = quaternion.element.y;
-			ft32[3] = quaternion.element.z;
-			CAN_SendMessage(id+2, (uint8_t*)ft32+2,8);
-*/
+			if(sendPs){
 
-	if(sendMAG){CAN_SendMessage(id+3,(uint8_t*)mag_lis3md.DMA_RX_fifo_buf, 8);sendMAG=0;}
+				data32[0] = BMP280_Compensate_Temperature(&bmp280_sensor1);
+				data32[1] = BMP280_Compensate_Pressure(&bmp280_sensor1);
+				CAN_SendMessage(id+4, (uint8_t*) data32, 8);
+				sendPs = 0;
+			}
 
+			///////// LED
+
+			GPIOA->BSRR = trigger ? GPIO_BSRR_BS12 : GPIO_BSRR_BR12;
 			trigger = trigger ? 0 : 1;
-
 			systick_pause = 20;
 		};
 
@@ -353,4 +349,42 @@ void assert_failed(uint8_t *file, uint32_t line)
   // Обработка ошибок assert
 }
 #endif /* USE_FULL_ASSERT */
+/*
 
+    FusionAhrsInitialise(&ahrs);
+    FusionAhrsSetSettings(&ahrs, &(FusionAhrsSettings){
+        .gain = 0.5f,
+        .accelerationRejection = 10.0f,
+        .magneticRejection = 20.0f
+        // Убрано rejectionTimeout, так как его нет в вашей версии
+    });
+
+
+
+			 //FusionAhrsUpdateNoMagnetometer(&ahrs, gyro, acc, DELTA_TIME);
+			 //heading = FusionCompassCalculateHeading(FusionConventionNwu, acc, mag);
+			 //FusionAhrsSetHeading(&ahrs, heading);
+			 //quaternion = FusionAhrsGetQuaternion(&ahrs);
+
+
+
+
+
+
+
+			ft32[0] = quaternion.element.w;
+			ft32[1] = quaternion.element.x;
+			CAN_SendMessage(id+1, (uint8_t*)ft32,8);
+			ft32[2] = quaternion.element.y;
+			ft32[3] = quaternion.element.z;
+			CAN_SendMessage(id+2, (uint8_t*)ft32+2,8);
+
+
+
+
+
+
+
+
+
+  */

@@ -1022,7 +1022,8 @@ void DMA_init_IIM42xxx(struct imu_data* imu) {
                           DMA_CCR_TCIE    |   // IRQ_RXNE
                           DMA_CCR_PSIZE_0 |   // 16 bit
                           DMA_CCR_MSIZE_0 |   // 16 bit
-                          DMA_CCR_CIRC;
+                          DMA_CCR_PL_1   |    // Priority level HIGH
+                          DMA_CCR_CIRC;       // circle RX
 
     DMArx_IIM42XXX->CNDTR = *(imu->n_16bit_packet_fifo);               // n__16bit
     DMArx_IIM42XXX->CPAR = (uint32_t)&(SPI_IIM42XXX->DR); // SPI data

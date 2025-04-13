@@ -20,9 +20,6 @@ void I2C2_Init(void) {
     I2C2->TIMINGR = 0x30D29DE4;// 400кгц 160 мгц
     //I2C2->TIMINGR = ((9 << 28) | (10 << 20) | (9 << 16) | (799 << 8) | 799);  // 100 кГц
 
-    I2C2->CR1 |= I2C_CR1_RXDMAEN | I2C_CR1_ERRIE | I2C_CR1_TXIE | I2C_CR1_TCIE; // TXIE для прерываний
-    NVIC_EnableIRQ(I2C2_EV_IRQn);
-    NVIC_EnableIRQ(I2C2_ER_IRQn);
     I2C2->CR1 |= I2C_CR1_PE;   // Включаем I2C2
 }
 
