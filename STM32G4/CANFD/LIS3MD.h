@@ -364,6 +364,15 @@ uint8_t init_lis3md (struct data_magnit* mag){
 
      mag->DMA_TX_fifo_buf[0]= ((LIS3M_STATUS_REG|INC_REG_LIS3M |READ_REG_LIS3M)<<8|0);
 
+		*(mag_lis3md.status) |= INT_FIFO_LIS3MXX;
+
+		LIS3M_CS_on;
+
+
+		 DMAtx_LIS3M->CNDTR = *(mag_lis3md.n_16bit_packet_fifo); //8 byte
+		 DMAtx_LIS3M->CMAR = (uint32_t)mag_lis3md.DMA_TX_fifo_buf;
+		 DMAtx_LIS3M->CCR |= DMA_CCR_EN;// enable tx dma
+
      *(mag->status) &= ~CONFIG_MODE_LIS3MXX;
      *(mag->status) |= OPERATION_MODE_LIS3MXX;
 

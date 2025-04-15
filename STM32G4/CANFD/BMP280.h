@@ -110,14 +110,16 @@ void BMP280_Read_Data(struct BMP280 *sensor) {
 // Обработчик прерываний I2C (EV)
 void I2C2_EV_IRQHandler(void) {
 
-    if (I2C2->ISR & I2C_ISR_TXIS) I2C2->TXDR = BMP280_REG_DATA;// Отправить адрес регистра
+    if (I2C2->ISR & I2C_ISR_TXIS)
+    	I2C2->TXDR = BMP280_REG_DATA;// Отправить адрес регистра
+
 
     if (I2C2->ISR & I2C_ISR_TC)  // Завершена отправка адреса, запустить чтение через DMA
         I2C2->CR2 = (BMP280_ADDR << 1)
 					 |  I2C_CR2_RD_WRN
 					 |  ((*(bmp280_sensor1.n_byte_rx)) << I2C_CR2_NBYTES_Pos)
 					 |  I2C_CR2_START
-					// |  I2C_CR2_AUTOEND
+				     |  I2C_CR2_AUTOEND
 					 ;
 }
 
@@ -126,8 +128,10 @@ void I2C2_EV_IRQHandler(void) {
 
 void I2C2_ER_IRQHandler(void) {
     if (I2C2->ISR & I2C_ISR_NACKF) {
+
         I2C2->ICR |= I2C_ICR_NACKCF;
         *(bmp280_sensor1.status) &= ~INT_FIFO_BMP280;
+
     }
     if (I2C2->ISR & I2C_ISR_BERR) {
         I2C2->ICR |= I2C_ICR_BERRCF;
@@ -140,10 +144,14 @@ void I2C2_ER_IRQHandler(void) {
 void DMA1_Channel6_IRQHandler(void) {
 
     if (DMA1->ISR & DMA_ISR_TCIF6) {
+
         DMA1->IFCR |= DMA_IFCR_CTCIF6;
         *(bmp280_sensor1.status) &= ~INT_FIFO_BMP280;
         *(bmp280_sensor1.status) |= DMA_OK_BMP280;
+
+      //  I2C2->CR2 |= I2C_CR2_STOP;
     }
+
     DMA1->IFCR |= DMA_IFCR_CGIF6;
 }
 
@@ -171,7 +179,7 @@ uint8_t init_bmp280(struct BMP280 *sensor) {
 
 	//I2C2->CR1 &= ~I2C_CR1_PE;
 	//I2C2->TIMINGR = 0x30D29DE4;
-    I2C2->CR1 |= I2C_CR1_RXDMAEN | I2C_CR1_ERRIE | I2C_CR1_TXIE | I2C_CR1_TCIE;
+
 
     // DMA1_Channel6 (RX, круговой режим)
 
@@ -184,13 +192,13 @@ uint8_t init_bmp280(struct BMP280 *sensor) {
     DMA1_Channel6->CNDTR = *(sensor->n_byte_rx); // 6 байт
 	DMAMUX1_Channel5->CCR = 18; // I2C2_RX  DMAMUX (таб 91, RM0440)
 
-	//I2C2->CR1 |= I2C_CR1_PE;
-
 	DMA1_Channel6->CCR |= DMA_CCR_EN;
-
 	NVIC_EnableIRQ(DMA1_Channel6_IRQn);
-    NVIC_EnableIRQ(I2C2_EV_IRQn);
-    NVIC_EnableIRQ(I2C2_ER_IRQn);
+
+	I2C2->CR1 |= I2C_CR1_RXDMAEN | I2C_CR1_ERRIE | I2C_CR1_TXIE | I2C_CR1_TCIE;
+	NVIC_EnableIRQ(I2C2_EV_IRQn);
+	NVIC_EnableIRQ(I2C2_ER_IRQn);
+
 
     *(sensor->status) &= ~CONFIG_MODE_BMP280;
 	*(sensor->status) |= OPERATION_MODE_BMP280;

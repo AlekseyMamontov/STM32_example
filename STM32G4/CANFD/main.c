@@ -60,7 +60,6 @@ int main(void) {
 	init_iim42652(&imu_iim42652);
 	init_lis3md	 (&mag_lis3md);
 	init_bmp280  (&bmp280_sensor1);
-
 	float data32[2]= {0};
 	uint32_t id = 1003;  // Стандартный идентификатор CAN
 
@@ -162,14 +161,7 @@ int main(void) {
 
 			if(sendMAG){CAN_SendMessage(id+3,(uint8_t*)mag_lis3md.DMA_RX_fifo_buf, 8);sendMAG=0;}
 
-			if(sendPs){
 
-				data32[0] = BMP280_Compensate_Temperature(&bmp280_sensor1);
-				data32[1] = BMP280_Compensate_Pressure(&bmp280_sensor1);
-				CAN_SendMessage(id+4, (uint8_t*)bmp280_sensor1.DMArx_buf, 8);
-				sendPs = 0;
-
-			}
 
 			///////// LED
 
@@ -178,7 +170,15 @@ int main(void) {
 			systick_pause = 20;
 		};
 
-		if (test){test = 0;}
+
+		if(sendPs){
+
+			data32[0] = BMP280_Compensate_Temperature(&bmp280_sensor1);
+			data32[1] = BMP280_Compensate_Pressure(&bmp280_sensor1);
+			CAN_SendMessage(id+4, bmp280_sensor1.DMArx_buf, 8);
+			sendPs = 0;
+
+		}
 
 	}
 
