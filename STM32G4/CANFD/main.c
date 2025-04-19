@@ -11,6 +11,7 @@
 #include "IIM_42652.h"
 #include "LIS3MD.h"
 #include "main.h"
+#include "UART1.h"
 
 
 
@@ -53,6 +54,7 @@ int main(void) {
 	GPIO_INIT();
 	CAN_Config();
 	Init_SPI_STM32();
+	UART1_Init();
 
 ///////  Sensors
 
@@ -173,11 +175,21 @@ int main(void) {
 
 		if(sendPs){
 
-			data32[0] = BMP280_Compensate_Temperature(&bmp280_sensor1);
-			data32[1] = BMP280_Compensate_Pressure(&bmp280_sensor1);
+			 *(bmp280_sensor1.raw_p) = ((int32_t)(bmp280_sensor1.DMArx_buf[0]) << 12)|
+					                   ((int32_t)(bmp280_sensor1.DMArx_buf[1]) << 4) |
+					                   ((bmp280_sensor1.DMArx_buf[2] >> 4) & 0x0F);
+
+			 *(bmp280_sensor1.raw_t) = ((int32_t)(bmp280_sensor1.DMArx_buf[3]) << 12)|
+									   ((int32_t)(bmp280_sensor1.DMArx_buf[4]) << 4) |
+									   ((bmp280_sensor1.DMArx_buf[5] >> 4) & 0x0F);
+
+			 data32[0] = BMP280_Compensate_Temperature(&bmp280_sensor1);
+			 data32[1] = BMP280_Compensate_Pressure(&bmp280_sensor1);
+
 			CAN_SendMessage(id+4, bmp280_sensor1.DMArx_buf, 8);
 			sendPs = 0;
 
+		//	UART1_SendDMA(txBuffer,19);
 		}
 
 	}

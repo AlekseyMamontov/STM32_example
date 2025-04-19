@@ -9,6 +9,7 @@
 #define INC_BMP280_H_
 
 #include "I2C.h"
+#include "math.h"
 ////////////////////////////// BMP280 /////////////////////////
 
 #define OPERATION_MODE_BMP280 0x01
@@ -217,13 +218,28 @@ void  BMP280_Read_Raw_Data(struct BMP280 *sensor) {
     *(sensor->raw_t) = ((int32_t)(data[3]) << 12) | ((int32_t)(data[4]) << 4) | ((data[5] >> 4) & 0x0F);
 }
 
-////////////
+///////////
+
+void  BMP280_DMAbuf_to_raw_Data(struct BMP280 *sensor){
+
+*(bmp280_sensor1.raw_p) = ((int32_t)(sensor->DMArx_buf[0]) << 12)|
+		                  ((int32_t)(sensor->DMArx_buf[1]) << 4) |
+		                  ((sensor->DMArx_buf[2] >> 4) & 0x0F);
+
+*(bmp280_sensor1.raw_t) = ((int32_t)(sensor->DMArx_buf[3]) << 12)|
+						  ((int32_t)(sensor->DMArx_buf[4]) << 4) |
+						  ((sensor->DMArx_buf[5] >> 4) & 0x0F);
+
+}
+
+//////////// code Bosch dataheet BMP280
 
 float BMP280_Compensate_Temperature(struct BMP280 *sensor) {
+
     int32_t var1, var2;
     var1 = ((((sensor->raw_t[0] >> 3) - ((int32_t)(*sensor->dig_T1) << 1)) * ((int32_t)(*sensor->dig_T2))) >> 11);
     var2 = (((((sensor->raw_t[0] >> 4) - (int32_t)(*sensor->dig_T1)) * ((sensor->raw_t[0] >> 4) - (int32_t)(*sensor->dig_T1)) >> 12) * (int32_t)(*sensor->dig_T3)) >> 14);
-    *sensor->fin_t = var1 + var2; // Обновление подправленного значения
+    *sensor->fin_t = var1 + var2;		    // Обновление подправленного значения
     return (*sensor->fin_t * 5 + 128) >> 8; // Возвращает температуру в градусах Цельсия
 }
 
