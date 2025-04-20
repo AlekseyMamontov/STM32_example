@@ -4,7 +4,6 @@
  *  Created on: Mar 3, 2025
  *      Author: oleksii
  */
-
 #ifndef INC_UART1_H_
 #define INC_UART1_H_
 
@@ -64,20 +63,14 @@ void UART1_Init(void) {
     DMA2_Channel1->CPAR = (uint32_t)&(USART1->RDR);
     DMA2_Channel1->CMAR = (uint32_t)rxBuffer;
     DMA2_Channel1->CNDTR = RX_BUFFER_SIZE;
-    DMA2_Channel1->CCR = DMA_CCR_MINC
-    		           | DMA_CCR_CIRC
-    		           | DMA_CCR_TEIE
-    		           | (2 << DMA_CCR_PL_Pos);
-
+    DMA2_Channel1->CCR = DMA_CCR_MINC | DMA_CCR_CIRC | DMA_CCR_TEIE | (2 << DMA_CCR_PL_Pos);
     DMA2_Channel1->CCR |= DMA_CCR_EN;
 
     DMA2_Channel2->CCR &= ~DMA_CCR_EN;
     DMA2_Channel2->CPAR = (uint32_t)&(USART1->TDR);
     DMA2_Channel2->CMAR = 0;
     DMA2_Channel2->CNDTR = 0;
-    DMA2_Channel2->CCR = DMA_CCR_MINC
-    				   | DMA_CCR_DIR
-    				   | (2 << DMA_CCR_PL_Pos);
+    DMA2_Channel2->CCR = DMA_CCR_MINC | DMA_CCR_DIR | (2 << DMA_CCR_PL_Pos);
 
     NVIC_EnableIRQ(DMA2_Channel1_IRQn); // Прерывание для RX DMA
     NVIC_EnableIRQ(DMA2_Channel2_IRQn); // Прерывание для TX DMA
@@ -85,10 +78,8 @@ void UART1_Init(void) {
     USART1->CR1 |= USART_CR1_UE;
 }
 
-///////// Отправка команды дальномеру
-
+// Отправка команды дальномеру
 bool UART1_SendCommand(uint8_t command, uint8_t *params, uint8_t paramLen) {
-
     if (txBusy || paramLen + 4 > TX_BUFFER_SIZE) {
         return false;
     }
@@ -96,7 +87,6 @@ bool UART1_SendCommand(uint8_t command, uint8_t *params, uint8_t paramLen) {
     txBuffer[0] = 0x55; // Заголовок
     txBuffer[1] = command; // Команда
     txBuffer[2] = paramLen; // Длина параметров
-
     for (uint8_t i = 0; i < paramLen; i++) {
         txBuffer[3 + i] = params[i]; // Параметры
     }
@@ -105,17 +95,13 @@ bool UART1_SendCommand(uint8_t command, uint8_t *params, uint8_t paramLen) {
     for (uint8_t i = 0; i < 3 + paramLen; i++) {
         checksum ^= txBuffer[i];
     }
-
     txBuffer[3 + paramLen] = checksum; // XOR
 
     return UART1_SendDMA((uint8_t*)txBuffer, 4 + paramLen, NULL);
-
 }
 
 // Парсинг сообщения (вызывается в основном цикле)
-
 bool UART1_ParseMessage(void) {
-
     if (!messageReceived || messageLength < 6) {
         messageReceived = false;
         messageLength = 0;
@@ -164,45 +150,48 @@ bool UART1_ParseMessage(void) {
 }
 
 // Обработчик прерывания UART1 (IDLE)
-
 void USART1_IRQHandler(void) {
-
     if (USART1->ISR & USART_ISR_IDLE) {
-        USART1->ICR = USART_ISR_IDLE; // Сбрасываем флаг IDLE
+        USART1->ICR = USART_ISR_IDLE;
 
-        // Проверяем ошибки ORE/FE
         if (USART1->ISR & (USART_ISR_ORE | USART_ISR_FE)) {
             USART1->ICR = USART_ISR_ORE | USART_ISR_FE;
-            rxHead = RX_BUFFER_SIZE - DMA2_Channel1->CNDTR; // Сбрасываем при ошибке
+            DMA2_Channel1->CCR &= ~DMA_CCR_EN;
+            DMA2_Channel1->CNDTR = RX_BUFFER_SIZE;
+            DMA2_Channel1->CCR |= DMA_CCR_EN;
+            rxHead = 0;
+            messageLength = 0;
             return;
         }
 
         uint32_t tail = RX_BUFFER_SIZE - DMA2_Channel1->CNDTR;
-        // Проверяем минимальную длину (6 байт)
-        if ((tail >= rxHead ? tail - rxHead : RX_BUFFER_SIZE - rxHead + tail) < 6) {
-            rxHead = tail; // Недостаточно данных
+        uint32_t bytes_to_end = RX_BUFFER_SIZE - rxHead;
+        if (bytes_to_end < 3) {
+            rxHead = tail;
             return;
         }
 
-        // Проверяем заголовок
         if (rxBuffer[rxHead] != 0x55) {
-            rxHead = tail; // Неверный заголовок
+            rxHead = tail;
             return;
         }
 
-        // Проверяем длину сообщения
-        uint8_t len = rxBuffer[(rxHead + 2) % RX_BUFFER_SIZE];
-        uint32_t msgLen = len + 4; // Заголовок, команда, длина, данные, XOR
+        uint8_t len = rxBuffer[rxHead + 2];
+        uint32_t msgLen = len + 4;
 
         if (msgLen > MESSAGE_BUFFER_SIZE ||
             (tail >= rxHead ? tail - rxHead : RX_BUFFER_SIZE - rxHead + tail) < msgLen) {
-            rxHead = tail; // Недостаточно данных или переполнение буфера
+            rxHead = tail;
             return;
         }
 
-        // Копируем сообщение в messageBuffer
+        if (bytes_to_end < msgLen) {
+            rxHead = tail;
+            return;
+        }
+
         for (uint8_t i = 0; i < msgLen; i++) {
-            messageBuffer[i] = rxBuffer[(rxHead + i) % RX_BUFFER_SIZE];
+            messageBuffer[i] = rxBuffer[rxHead + i];
         }
         messageLength = msgLen;
         rxHead = (rxHead + msgLen) % RX_BUFFER_SIZE;
@@ -211,25 +200,19 @@ void USART1_IRQHandler(void) {
 }
 
 // Обработчик прерывания DMA RX
-
 void DMA2_Channel1_IRQHandler(void) {
-
     if (DMA2->ISR & DMA_ISR_TEIF1) {
-
         DMA2->IFCR = DMA_IFCR_CGIF1; // Сбрасываем флаги для канала 1
         DMA2_Channel1->CCR &= ~DMA_CCR_EN;
         DMA2_Channel1->CNDTR = RX_BUFFER_SIZE;
         DMA2_Channel1->CCR |= DMA_CCR_EN;
         rxHead = 0; // Сбрасываем индекс при ошибке
         messageLength = 0;
-
     }
 }
 
 // Отправка данных через DMA
-
 bool UART1_SendDMA(uint8_t *data, uint16_t size, void (*callback)(void)) {
-
     if (txBusy || size > TX_BUFFER_SIZE) {
         return false;
     }
