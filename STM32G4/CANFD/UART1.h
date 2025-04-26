@@ -15,234 +15,365 @@
 #define TX_BUFFER_SIZE 32
 #define MESSAGE_BUFFER_SIZE 64 // Для сообщений до 22 байт (например, 0x28)
 
-volatile uint8_t rxBuffer[RX_BUFFER_SIZE]; // Буфер для приёма (DMA RX)
-volatile uint8_t txBuffer[TX_BUFFER_SIZE]; // Буфер для отправки (DMA TX)
-volatile uint8_t messageBuffer[MESSAGE_BUFFER_SIZE]; // Буфер для сообщения
-volatile uint8_t messageLength = 0; // Длина скопированного сообщения
-volatile bool messageReceived = false; // Флаг завершения сообщения
-volatile bool txBusy = false; // Флаг занятости TX DMA
-volatile uint32_t rangeData[3] = {0}; // Дальность для 1-й, 2-й, 3-й целей (в 0.1 м)
-volatile uint8_t rangeFlags = 0; // Флаги D9
-volatile uint32_t rxHead = 0; // Индекс чтения в rxBuffer
+#define TX_MSG_SEND 1
+
+#define RX_MSG_READ 1
+#define RX_MSG_NEW 2
+#define RX_MSG_ERR 4
+#define RX_MSG_FULL 8
+
+#define RS422_rxDMA    DMA2_Channel1
+#define RS422_rxDMAMUX DMAMUX1_Channel6
+#define RS422_txDMA    DMA2_Channel2
+#define RS422_txDMAMUX DMAMUX1_Channel7
+
+#define RS422_UART USART1
+#define RS422_RCC_UART  RCC->APB2ENR |= RCC_APB2ENR_USART1EN;
+#define RS422_RCC_DMA   RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN | RCC_AHB1ENR_DMAMUX1EN;
+
+#define RS422_RX_IRQ DMA2_Channel1_IRQn
+#define RS422_TX_IRQ DMA2_Channel2_IRQn
+#define RS422_UART_IRQ USART1_IRQn
+
+
+
+struct RS422_driver{
+
+		uint8_t  *status_rxDMA;
+		uint8_t  *rx_buffer;
+		uint8_t *rx_w_index;
+		uint8_t *rx_r_index;
+
+		uint8_t *mesg_buf;
+		uint8_t *n_mesg_buf;
+
+		uint8_t  *status_txDMA;
+		uint8_t  *tx_buffer;
+		uint8_t *tx_w_index;
+		uint8_t *tx_r_index;
+
+		uint16_t rx_size_buffer;
+		uint16_t tx_size_buffer;
+
+};
+
+uint8_t status_rxDMA = 0,
+		status_txDMA = 0,
+        UART1_rxBuffer[RX_BUFFER_SIZE], // Буфер для приёма (DMA RX)
+        UART1_txBuffer[TX_BUFFER_SIZE], // Буфер для отправки (DMA TX)
+        RS422_messageBuffer[MESSAGE_BUFFER_SIZE],
+        messageLength = 0;             // Длина скопированного сообщения
+
+
+bool txBusy = false; // Флаг занятости TX DMA
+uint32_t rangeData[3] = {0}; // Дальность для 1-й, 2-й, 3-й целей (в 0.1 м)
+uint8_t rangeFlags = 0; // Флаги D9
+uint32_t rxHead = 0; // Индекс чтения в rxBuffer
+
+
+
+struct RS422_driver dalnomer={
+
+		.status_rxDMA = &status_rxDMA,
+
+		.rx_buffer =  UART1_rxBuffer,
+		.rx_r_index = UART1_rxBuffer,
+		.rx_w_index = UART1_rxBuffer,
+		.rx_size_buffer = RX_BUFFER_SIZE,
+
+		.mesg_buf = UART1_rxBuffer,
+		.n_mesg_buf = &messageLength,
+
+
+		.status_txDMA = &status_txDMA,
+
+		.tx_buffer =  UART1_txBuffer,
+		.tx_r_index = UART1_txBuffer,
+		.tx_w_index = UART1_txBuffer,
+		.tx_size_buffer = TX_BUFFER_SIZE,
+
+};
+
 
 // Callback для завершения передачи
 void (*txCompleteCallback)(void) = NULL;
 
 // Прототипы функций
-void UART1_Init(void);
-bool UART1_SendCommand(uint8_t command, uint8_t *params, uint8_t paramLen);
-bool UART1_SendDMA(uint8_t *data, uint16_t size, void (*callback)(void));
-bool UART1_ParseMessage(void);
+//void UART1_Init(struct RS422_driver *);
+
+//bool UART1_SendCommand(struct RS422_driver * , uint8_t command, uint8_t *params, uint8_t paramLen);
+//bool UART1_SendDMA(struct RS422_driver * , uint8_t *data, uint16_t size, void (*callback)(void));
+
+//bool UART1_ParseMessage(void);
 
 // Инициализация UART1 с DMA для RS422
-void UART1_Init(void) {
-    RCC->APB2ENR |= RCC_APB2ENR_USART1EN; // UART1
-    RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN | RCC_AHB1ENR_DMAMUX1EN; // DMA2 и DMAMUX
-    // RCC->AHB2ENR |= RCC_AHB2ENR_GPIOBEN; // GPIOB (закомментировано)
 
-    /*
-    GPIOB->MODER &= ~(GPIO_MODER_MODE6 | GPIO_MODER_MODE7);
-    GPIOB->MODER |= GPIO_MODER_MODE6_1 | GPIO_MODER_MODE7_1;
-    GPIOB->AFR[0] &= ~(GPIO_AFRL_AFSEL6 | GPIO_AFRL_AFSEL7);
-    GPIOB->AFR[0] |= (7 << GPIO_AFRL_AFSEL6_Pos) | (7 << GPIO_AFRL_AFSEL7_Pos);
-    */
+void UART1_Init(struct RS422_driver *rs){
 
-    USART1->CR1 &= ~USART_CR1_UE;
-    USART1->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_IDLEIE; // Включаем прерывание IDLE
-    USART1->CR2 = 0;
-    USART1->CR3 = USART_CR3_DMAT | USART_CR3_DMAR;
-    USART1->BRR = 1389; // 160 МГц / 115200
+	RS422_RCC_UART
+	RS422_RCC_DMA
 
-    DMAMUX1_Channel6->CCR = 24 | DMAMUX_CxCR_EGE; // UART1_RX
-    DMAMUX1_Channel7->CCR = 25; // UART1_TX
+    RS422_UART->CR1 &= ~USART_CR1_UE;
+    RS422_rxDMA->CCR &= ~DMA_CCR_EN;
+    RS422_txDMA->CCR &= ~DMA_CCR_EN;
+
+    RS422_UART->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_IDLEIE; // Включаем прерывание IDLE
+    RS422_UART->CR2 = 0;
+    RS422_UART->CR3 = USART_CR3_DMAT | USART_CR3_DMAR;
+    RS422_UART->BRR = 1389; // 160 МГц / 115200
+
+    RS422_rxDMAMUX->CCR = 24 | DMAMUX_CxCR_EGE; // UART1_RX
+    RS422_txDMAMUX->CCR = 25;                   // UART1_TX
 
     // Сброс флагов для DMA2_Channel1 (UART1_RX) и DMA2_Channel2 (UART1_TX)
     DMA2->IFCR = DMA_IFCR_CGIF1 | DMA_IFCR_CGIF2;
 
-    DMA2_Channel1->CCR &= ~DMA_CCR_EN;
-    DMA2_Channel1->CPAR = (uint32_t)&(USART1->RDR);
-    DMA2_Channel1->CMAR = (uint32_t)rxBuffer;
-    DMA2_Channel1->CNDTR = RX_BUFFER_SIZE;
-    DMA2_Channel1->CCR = DMA_CCR_MINC | DMA_CCR_CIRC | DMA_CCR_TEIE | (2 << DMA_CCR_PL_Pos);
-    DMA2_Channel1->CCR |= DMA_CCR_EN;
+    RS422_rxDMA->CPAR = (uint32_t)&(RS422_UART->RDR);
+    RS422_rxDMA->CMAR = (uint32_t)rs->rx_buffer;
+    RS422_rxDMA->CNDTR = rs->rx_size_buffer;
+    RS422_rxDMA->CCR = DMA_CCR_MINC |
+    				   DMA_CCR_CIRC |
+    				   DMA_CCR_TEIE |
+    				   (2 << DMA_CCR_PL_Pos);
 
-    DMA2_Channel2->CCR &= ~DMA_CCR_EN;
-    DMA2_Channel2->CPAR = (uint32_t)&(USART1->TDR);
-    DMA2_Channel2->CMAR = 0;
-    DMA2_Channel2->CNDTR = 0;
-    DMA2_Channel2->CCR = DMA_CCR_MINC | DMA_CCR_DIR | (2 << DMA_CCR_PL_Pos);
+    RS422_txDMA->CPAR = (uint32_t)&(RS422_UART->TDR);
+    RS422_txDMA->CMAR =  0;
+    RS422_txDMA->CNDTR = 0;
+    RS422_txDMA->CCR = DMA_CCR_MINC |
+    				   DMA_CCR_DIR  |
+    				   (2 << DMA_CCR_PL_Pos);
 
-    NVIC_EnableIRQ(DMA2_Channel1_IRQn); // Прерывание для RX DMA
-    NVIC_EnableIRQ(DMA2_Channel2_IRQn); // Прерывание для TX DMA
-    NVIC_EnableIRQ(USART1_IRQn); // Прерывание UART1 (IDLE)
-    USART1->CR1 |= USART_CR1_UE;
+
+
+    NVIC_EnableIRQ(RS422_RX_IRQ); // Прерывание для RX DMA
+    NVIC_EnableIRQ(RS422_TX_IRQ); // Прерывание для TX DMA
+    NVIC_EnableIRQ(RS422_UART_IRQ);        // Прерывание UART1 (IDLE)
+
+    RS422_rxDMA->CCR |= DMA_CCR_EN;
+    RS422_UART->CR1 |= USART_CR1_UE;
 }
 
-// Отправка команды дальномеру
-bool UART1_SendCommand(uint8_t command, uint8_t *params, uint8_t paramLen) {
-    if (txBusy || paramLen + 4 > TX_BUFFER_SIZE) {
+// Отправка команды дальномерy
+bool UART1_SendDMA(struct RS422_driver* rs, uint8_t *data, uint16_t size) {
+
+    if (*(rs->status_txDMA) & TX_MSG_SEND || size > rs->tx_size_buffer) {
         return false;
     }
 
-    txBuffer[0] = 0x55; // Заголовок
-    txBuffer[1] = command; // Команда
-    txBuffer[2] = paramLen; // Длина параметров
-    for (uint8_t i = 0; i < paramLen; i++) {
-        txBuffer[3 + i] = params[i]; // Параметры
-    }
+    RS422_txDMA->CCR &= ~DMA_CCR_EN;
+    RS422_txDMA->CMAR = (uint32_t)data;
+    RS422_txDMA->CNDTR = size;
+    RS422_txDMA->CCR |= DMA_CCR_EN;
 
-    uint8_t checksum = 0;
-    for (uint8_t i = 0; i < 3 + paramLen; i++) {
-        checksum ^= txBuffer[i];
-    }
-    txBuffer[3 + paramLen] = checksum; // XOR
-
-    return UART1_SendDMA((uint8_t*)txBuffer, 4 + paramLen, NULL);
-}
-
-// Парсинг сообщения (вызывается в основном цикле)
-bool UART1_ParseMessage(void) {
-    if (!messageReceived || messageLength < 6) {
-        messageReceived = false;
-        messageLength = 0;
-        return false;
-    }
-
-    // Проверяем заголовок
-    if (messageBuffer[0] != 0x55) {
-        messageReceived = false;
-        messageLength = 0;
-        return false;
-    }
-
-    // Проверяем длину
-    uint8_t len = messageBuffer[2];
-    if (messageLength != len + 4) {
-        messageReceived = false;
-        messageLength = 0;
-        return false;
-    }
-
-    // Проверяем контрольную сумму
-    uint8_t checksum = 0;
-    for (uint8_t i = 0; i < len + 3; i++) {
-        checksum ^= messageBuffer[i];
-    }
-    if (checksum != messageBuffer[len + 3]) {
-        messageReceived = false;
-        messageLength = 0;
-        return false;
-    }
-
-    // Парсим данные для 0x01/0x02
-    uint8_t cmd = messageBuffer[1];
-    if ((cmd == 0x01 || cmd == 0x02) && len >= 10) {
-        rangeFlags = messageBuffer[3]; // D9
-        rangeData[0] = (messageBuffer[4] << 16) | (messageBuffer[5] << 8) | messageBuffer[6]; // 1-я цель
-        rangeData[1] = (messageBuffer[7] << 16) | (messageBuffer[8] << 8) | messageBuffer[9]; // 2-я цель
-        rangeData[2] = (messageBuffer[10] << 16) | (messageBuffer[11] << 8) | messageBuffer[12]; // 3-я цель
-    }
-    // Другие команды считаются валидными, но не парсятся
-
-    messageReceived = false;
-    messageLength = 0;
     return true;
 }
 
-// Обработчик прерывания UART1 (IDLE)
-void USART1_IRQHandler(void) {
-    if (USART1->ISR & USART_ISR_IDLE) {
-        USART1->ICR = USART_ISR_IDLE;
+bool UART1_SendCommand(struct RS422_driver* rs,uint8_t command, uint8_t *params, uint8_t paramLen) {
 
-        if (USART1->ISR & (USART_ISR_ORE | USART_ISR_FE)) {
-            USART1->ICR = USART_ISR_ORE | USART_ISR_FE;
-            DMA2_Channel1->CCR &= ~DMA_CCR_EN;
-            DMA2_Channel1->CNDTR = RX_BUFFER_SIZE;
-            DMA2_Channel1->CCR |= DMA_CCR_EN;
-            rxHead = 0;
-            messageLength = 0;
-            return;
-        }
+    uint8_t checksum = 0;
 
-        uint32_t tail = RX_BUFFER_SIZE - DMA2_Channel1->CNDTR;
-        uint32_t bytes_to_end = RX_BUFFER_SIZE - rxHead;
-        if (bytes_to_end < 3) {
-            rxHead = tail;
-            return;
-        }
+    if (*(rs->status_txDMA) & TX_MSG_SEND || paramLen + 4 > rs->tx_size_buffer)  return false;
 
-        if (rxBuffer[rxHead] != 0x55) {
-            rxHead = tail;
-            return;
-        }
+    rs->tx_buffer[0] = 0x55;    // Заголовок
+    rs->tx_buffer[1] = command; // Команда
+    rs->tx_buffer[2] = paramLen;// Длина параметров
 
-        uint8_t len = rxBuffer[rxHead + 2];
-        uint32_t msgLen = len + 4;
+    for (uint8_t i = 0; i < paramLen; i++){rs->tx_buffer[3 + i] = params[i];} // Параметры
 
-        if (msgLen > MESSAGE_BUFFER_SIZE ||
-            (tail >= rxHead ? tail - rxHead : RX_BUFFER_SIZE - rxHead + tail) < msgLen) {
-            rxHead = tail;
-            return;
-        }
+    for (uint8_t i = 0; i < 3 + paramLen; i++){checksum ^= rs->tx_buffer[i];}
 
-        if (bytes_to_end < msgLen) {
-            rxHead = tail;
-            return;
-        }
+    rs->tx_buffer[3 + paramLen] = checksum; // XOR
 
-        for (uint8_t i = 0; i < msgLen; i++) {
-            messageBuffer[i] = rxBuffer[rxHead + i];
-        }
-        messageLength = msgLen;
-        rxHead = (rxHead + msgLen) % RX_BUFFER_SIZE;
-        messageReceived = true;
-    }
+    return UART1_SendDMA(rs,(uint8_t*)rs->tx_buffer, 4 + paramLen);
 }
 
+
+// Обработчик прерывания UART1 (IDLE)
+void USART1_IRQHandler(void) {
+
+	uint16_t n_byte = 0;
+
+
+/////// error
+
+    if (RS422_UART->ISR & (USART_ISR_ORE | USART_ISR_FE)) {
+
+    	RS422_UART->ICR =  USART_ISR_ORE | USART_ISR_FE;
+    	RS422_rxDMA->CCR &= ~DMA_CCR_EN;
+    	RS422_rxDMA->CNDTR = dalnomer.rx_size_buffer;
+    	RS422_rxDMA->CCR |=  DMA_CCR_EN;
+
+        dalnomer.rx_r_index = dalnomer.rx_w_index = dalnomer.rx_buffer;
+        messageLength = 0;
+        return;
+    }
+
+
+
+////// n_bayt ?
+
+    if (USART1->ISR & USART_ISR_IDLE) {
+
+    	  USART1->ICR = USART_ISR_IDLE;
+
+    	  dalnomer.rx_w_index = (uint8_t*) RS422_rxDMA->CMAR;
+
+///// n_byte
+
+    	  if(dalnomer.rx_r_index <= dalnomer.rx_w_index){
+
+    		  n_byte = dalnomer.rx_w_index - dalnomer.rx_r_index;
+
+    	  }else{
+
+    		  n_byte = (dalnomer.rx_size_buffer + dalnomer.rx_buffer) - dalnomer.rx_r_index;
+    		  n_byte += (dalnomer.rx_buffer - dalnomer.rx_w_index);
+
+    	  };
+
+ //// block for test
+
+    	  if( n_byte < 6 || *(dalnomer.rx_r_index) != 0x55 ){
+
+    		  dalnomer.rx_r_index = dalnomer.rx_w_index;
+    		  *(dalnomer.status_rxDMA) |= RX_MSG_ERR;
+    		  return;
+    	  }
+
+    	  if( *(dalnomer.status_rxDMA) & RX_MSG_NEW){
+
+    		  dalnomer.rx_r_index = dalnomer.rx_w_index;
+    		  *(dalnomer.status_rxDMA) |= RX_MSG_FULL;
+    		  return;
+    	  }
+
+
+    	  //
+
+    	  *(dalnomer.status_rxDMA) &= ~(RX_MSG_ERR|RX_MSG_FULL) ;
+    	  *(dalnomer.status_rxDMA) |=RX_MSG_NEW;
+    	  dalnomer.mesg_buf = dalnomer.rx_r_index;
+    	  *(dalnomer.n_mesg_buf) = n_byte;
+
+     }
+}
+
+/*
+
+Интерфейс: RS422, 115200 бод, 8 бит данных, 1 стартовый бит, 1 стоповый бит,
+без проверки чётности.
+Протокол: Master -> slave .
+STX0: Заголовок, 0x55 .
+CMD:  Команда или код ответа.
+LEN:  Длина данных (байт).
+DATA: Параметры или данные ответа.
+CHK:  Контрольная сумма (XOR всех байтов, кроме CHK).
+
+ */
+
+
+
+uint8_t Dalnomer_Message(struct RS422_driver *rs) {
+
+	uint8_t*data = rs->mesg_buf,
+		   *end_buf = rs->rx_buffer + rs->rx_size_buffer,
+		   checksum = 0, len = *rs->n_mesg_buf;
+
+	if(!(*(rs->status_rxDMA)& RX_MSG_NEW)) return 1; //  new msg?
+
+	if (len > 22) len = 22;
+
+	for(uint8_t i=0; i< len;i++){
+		RS422_messageBuffer[i] = *data++;
+		if(data >= end_buf) data = rs->rx_buffer;
+	}
+
+	*rs->status_rxDMA &= ~RX_MSG_NEW;
+
+	if(RS422_messageBuffer[0] != 0x55) return 2;
+
+	// Проверяем контрольную сумму
+
+		len  = RS422_messageBuffer[2];
+	    for (uint8_t i = 0; i < len + 3; i++)checksum ^= RS422_messageBuffer[i];
+	    if (checksum != RS422_messageBuffer[len + 3]) return 3;
+
+
+	switch(RS422_messageBuffer[1]){
+
+		case 0:
+
+		break;
+
+		case 1:
+			rangeFlags =    RS422_messageBuffer[3]; // D9
+			rangeData[0] = (RS422_messageBuffer[4] << 16)|(RS422_messageBuffer[5] << 8) |
+					        RS422_messageBuffer[6];//  1_
+			rangeData[1] = (RS422_messageBuffer[7] << 16) | (RS422_messageBuffer[8] << 8)|
+							RS422_messageBuffer[9]; // 2
+			rangeData[2] = (RS422_messageBuffer[10] << 16) | (RS422_messageBuffer[11] << 8)|
+							RS422_messageBuffer[12]; // 3-
+
+		case 2:
+			rangeFlags =    RS422_messageBuffer[3]; // D9
+			rangeData[0] = (RS422_messageBuffer[4] << 16)|(RS422_messageBuffer[5] << 8) |
+					        RS422_messageBuffer[6];//  1_
+			rangeData[1] = (RS422_messageBuffer[7] << 16) | (RS422_messageBuffer[8] << 8)|
+							RS422_messageBuffer[9]; // 2
+			rangeData[2] = (RS422_messageBuffer[10] << 16) | (RS422_messageBuffer[11] << 8)|
+							RS422_messageBuffer[12]; // 3-
+		break;
+
+
+
+		default: break;
+
+	};
+
+
+    return 0;
+}
+
+
+
 // Обработчик прерывания DMA RX
+
 void DMA2_Channel1_IRQHandler(void) {
+
     if (DMA2->ISR & DMA_ISR_TEIF1) {
-        DMA2->IFCR = DMA_IFCR_CGIF1; // Сбрасываем флаги для канала 1
+
         DMA2_Channel1->CCR &= ~DMA_CCR_EN;
         DMA2_Channel1->CNDTR = RX_BUFFER_SIZE;
         DMA2_Channel1->CCR |= DMA_CCR_EN;
         rxHead = 0; // Сбрасываем индекс при ошибке
+
         messageLength = 0;
+
+        DMA2->IFCR = DMA_IFCR_CGIF1;// Сбрасываем флаги для канала 1
+
+
     }
 }
-
+/*
 // Отправка данных через DMA
-bool UART1_SendDMA(uint8_t *data, uint16_t size, void (*callback)(void)) {
-    if (txBusy || size > TX_BUFFER_SIZE) {
-        return false;
-    }
 
-    txBusy = true;
-    txCompleteCallback = callback;
-
-    DMA2_Channel2->CCR &= ~DMA_CCR_EN;
-    DMA2_Channel2->CMAR = (uint32_t)data;
-    DMA2_Channel2->CNDTR = size;
-    DMA2_Channel2->CCR |= DMA_CCR_EN;
-
-    return true;
-}
 
 // Обработчик прерывания DMA TX
-void DMA2_Channel2_IRQHandler(void) {
-    if (DMA2->ISR & DMA_ISR_TCIF2) {
-        DMA2->IFCR = DMA_IFCR_CGIF2; // Сбрасываем флаги для канала 2
-        txBusy = false;
-        if (txCompleteCallback) {
-            txCompleteCallback();
-        }
-    }
-    if (DMA2->ISR & DMA_ISR_TEIF2) {
-        DMA2->IFCR = DMA_IFCR_CGIF2; // Сбрасываем флаги для канала 2
-        txBusy = false;
-    }
-}
 
+void DMA2_Channel2_IRQHandler(void) {
+
+    if (DMA2->ISR & DMA_ISR_TCIF2) {
+
+        txBusy = false;
+
+        if (txCompleteCallback) txCompleteCallback();
+    }
+
+    if (DMA2->ISR & DMA_ISR_TEIF2)  txBusy = false;
+
+    DMA2->IFCR = DMA_IFCR_CGIF2;
+}
+*/
 #endif /* INC_UART1_H_ */
 /*
 

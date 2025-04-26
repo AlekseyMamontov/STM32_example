@@ -54,7 +54,7 @@ int main(void) {
 	GPIO_INIT();
 	CAN_Config();
 	Init_SPI_STM32();
-	UART1_Init();
+	UART1_Init(&dalnomer);
 
 ///////  Sensors
 
@@ -62,14 +62,13 @@ int main(void) {
 	init_iim42652(&imu_iim42652);
 	init_lis3md	 (&mag_lis3md);
 	init_bmp280  (&bmp280_sensor1);
+
 	float data32[2]= {0};
+
 	uint32_t id = 1003;  // Стандартный идентификатор CAN
 
 
 	while (1) {
-
-
-
 
 ///////////////   iim42652
 
