@@ -263,7 +263,7 @@ void USART1_IRQHandler(void) {
 
     	  };
 
- //// block for test
+ //// block for test (back to change;)
 
     	  if( n_byte < 6 || *(dalnomer.rx_r_index) != 0x55 ){
 
