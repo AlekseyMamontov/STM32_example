@@ -54,7 +54,7 @@ int main(void) {
 	GPIO_INIT();
 	CAN_Config();
 	Init_SPI_STM32();
-	UART1_Init(&dalnomer);
+	RS422_UART_init(&dalnomer);
 
 ///////  Sensors
 

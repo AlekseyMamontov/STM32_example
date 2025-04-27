@@ -24,31 +24,43 @@
 
 #define RS422_rxDMA    DMA2_Channel1
 #define RS422_rxDMAMUX DMAMUX1_Channel6
+#define RS422_rxDMAMUX_TAB 24			// DMAMUX table 91 RM440
 #define RS422_txDMA    DMA2_Channel2
 #define RS422_txDMAMUX DMAMUX1_Channel7
+#define RS422_txDMAMUX_TAB 25
+
 
 #define RS422_UART USART1
 #define RS422_RCC_UART  RCC->APB2ENR |= RCC_APB2ENR_USART1EN;
 #define RS422_RCC_DMA   RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN | RCC_AHB1ENR_DMAMUX1EN;
 
+#define RS422_UART_IRQ USART1_IRQn
 #define RS422_RX_IRQ DMA2_Channel1_IRQn
 #define RS422_TX_IRQ DMA2_Channel2_IRQn
-#define RS422_UART_IRQ USART1_IRQn
 
+uint8_t status_rxDMA = 0,
+		status_txDMA = 0,
+        UART1_rxBuffer[RX_BUFFER_SIZE], // Буфер для приёма (DMA RX)
+        UART1_txBuffer[TX_BUFFER_SIZE], // Буфер для отправки (DMA TX)
+        RS422_messageBuffer[MESSAGE_BUFFER_SIZE],
+        messageLength = 0,             // Длина скопированного сообщения
+		rangeFlags = 0; // Флаги D9
+
+uint32_t rangeData[3] = {0}; // Дальность для 1-й, 2-й, 3-й целей (в 0.1 м)
 
 
 struct RS422_driver{
 
-		uint8_t  *status_rxDMA;
-		uint8_t  *rx_buffer;
+		uint8_t *status_rxDMA;
+		uint8_t *rx_buffer;
 		uint8_t *rx_w_index;
 		uint8_t *rx_r_index;
 
 		uint8_t *mesg_buf;
 		uint8_t *n_mesg_buf;
 
-		uint8_t  *status_txDMA;
-		uint8_t  *tx_buffer;
+		uint8_t *status_txDMA;
+		uint8_t *tx_buffer;
 		uint8_t *tx_w_index;
 		uint8_t *tx_r_index;
 
@@ -56,20 +68,6 @@ struct RS422_driver{
 		uint16_t tx_size_buffer;
 
 };
-
-uint8_t status_rxDMA = 0,
-		status_txDMA = 0,
-        UART1_rxBuffer[RX_BUFFER_SIZE], // Буфер для приёма (DMA RX)
-        UART1_txBuffer[TX_BUFFER_SIZE], // Буфер для отправки (DMA TX)
-        RS422_messageBuffer[MESSAGE_BUFFER_SIZE],
-        messageLength = 0;             // Длина скопированного сообщения
-
-
-bool txBusy = false; // Флаг занятости TX DMA
-uint32_t rangeData[3] = {0}; // Дальность для 1-й, 2-й, 3-й целей (в 0.1 м)
-uint8_t rangeFlags = 0; // Флаги D9
-uint32_t rxHead = 0; // Индекс чтения в rxBuffer
-
 
 
 struct RS422_driver dalnomer={
@@ -79,36 +77,27 @@ struct RS422_driver dalnomer={
 		.rx_buffer =  UART1_rxBuffer,
 		.rx_r_index = UART1_rxBuffer,
 		.rx_w_index = UART1_rxBuffer,
-		.rx_size_buffer = RX_BUFFER_SIZE,
 
 		.mesg_buf = UART1_rxBuffer,
 		.n_mesg_buf = &messageLength,
 
 
 		.status_txDMA = &status_txDMA,
-
 		.tx_buffer =  UART1_txBuffer,
 		.tx_r_index = UART1_txBuffer,
 		.tx_w_index = UART1_txBuffer,
+
+
+		.rx_size_buffer = RX_BUFFER_SIZE,
 		.tx_size_buffer = TX_BUFFER_SIZE,
 
 };
 
 
-// Callback для завершения передачи
-void (*txCompleteCallback)(void) = NULL;
 
-// Прототипы функций
-//void UART1_Init(struct RS422_driver *);
+////////// UART1 с DMA для RS422
 
-//bool UART1_SendCommand(struct RS422_driver * , uint8_t command, uint8_t *params, uint8_t paramLen);
-//bool UART1_SendDMA(struct RS422_driver * , uint8_t *data, uint16_t size, void (*callback)(void));
-
-//bool UART1_ParseMessage(void);
-
-// Инициализация UART1 с DMA для RS422
-
-void UART1_Init(struct RS422_driver *rs){
+void RS422_UART_init(struct RS422_driver *rs){
 
 	RS422_RCC_UART
 	RS422_RCC_DMA
@@ -122,8 +111,8 @@ void UART1_Init(struct RS422_driver *rs){
     RS422_UART->CR3 = USART_CR3_DMAT | USART_CR3_DMAR;
     RS422_UART->BRR = 1389; // 160 МГц / 115200
 
-    RS422_rxDMAMUX->CCR = 24 | DMAMUX_CxCR_EGE; // UART1_RX
-    RS422_txDMAMUX->CCR = 25;                   // UART1_TX
+    RS422_rxDMAMUX->CCR = RS422_rxDMAMUX_TAB | DMAMUX_CxCR_EGE; // UART1_RX
+    RS422_txDMAMUX->CCR = RS422_txDMAMUX_TAB;                   // UART1_TX
 
     // Сброс флагов для DMA2_Channel1 (UART1_RX) и DMA2_Channel2 (UART1_TX)
     DMA2->IFCR = DMA_IFCR_CGIF1 | DMA_IFCR_CGIF2;
@@ -153,13 +142,14 @@ void UART1_Init(struct RS422_driver *rs){
     RS422_UART->CR1 |= USART_CR1_UE;
 }
 
-// Отправка команды дальномерy
+/////////// Отправка команды дальномерy
+
 bool UART1_SendDMA(struct RS422_driver* rs, uint8_t *data, uint16_t size) {
 
     if (*(rs->status_txDMA) & TX_MSG_SEND || size > rs->tx_size_buffer) {
         return false;
     }
-
+    *rs->status_txDMA |= TX_MSG_SEND;
     RS422_txDMA->CCR &= ~DMA_CCR_EN;
     RS422_txDMA->CMAR = (uint32_t)data;
     RS422_txDMA->CNDTR = size;
@@ -168,27 +158,68 @@ bool UART1_SendDMA(struct RS422_driver* rs, uint8_t *data, uint16_t size) {
     return true;
 }
 
-bool UART1_SendCommand(struct RS422_driver* rs,uint8_t command, uint8_t *params, uint8_t paramLen) {
+bool RS422_SendCommand(struct RS422_driver* rs,uint8_t command, uint8_t *params, uint8_t paramLen) {
 
-    uint8_t checksum = 0;
+    uint8_t checksum = 0, len = paramLen;
+    uint8_t* data = rs->tx_buffer;
 
     if (*(rs->status_txDMA) & TX_MSG_SEND || paramLen + 4 > rs->tx_size_buffer)  return false;
 
-    rs->tx_buffer[0] = 0x55;    // Заголовок
-    rs->tx_buffer[1] = command; // Команда
-    rs->tx_buffer[2] = paramLen;// Длина параметров
+    *data++ = 0x55;    // 0 Заголовок
+    *data++ = command; // 1 Команда
+    *data++ = paramLen;// 2 Длина параметров
 
-    for (uint8_t i = 0; i < paramLen; i++){rs->tx_buffer[3 + i] = params[i];} // Параметры
+    while (len){
 
-    for (uint8_t i = 0; i < 3 + paramLen; i++){checksum ^= rs->tx_buffer[i];}
+    	checksum ^= *params;
+    	*data++ = *params++;
+    	len --;
+    }
 
-    rs->tx_buffer[3 + paramLen] = checksum; // XOR
+    *data = checksum; // XOR
 
     return UART1_SendDMA(rs,(uint8_t*)rs->tx_buffer, 4 + paramLen);
 }
+////////////// IRQ RX
+
+void DMA2_Channel1_IRQHandler(void) {
+
+    if (DMA2->ISR & DMA_ISR_TEIF1) {
+
+    	RS422_rxDMA->CCR &= ~DMA_CCR_EN;
+    	RS422_rxDMA->CNDTR = RX_BUFFER_SIZE;
+        RS422_rxDMA->CCR |= DMA_CCR_EN;
 
 
-// Обработчик прерывания UART1 (IDLE)
+        messageLength = 0;
+
+        DMA2->IFCR = DMA_IFCR_CGIF1;// Сбрасываем флаги для канала 1
+
+
+    }
+}
+////////////// IRQ TX
+
+// Callback для завершения передачи
+void (*txCompleteCallback)(void) = NULL;
+
+void DMA2_Channel2_IRQHandler(void){
+
+    if (DMA2->ISR & DMA_ISR_TCIF2){
+    		*dalnomer.status_txDMA &= ~TX_MSG_SEND;
+    		//if (txCompleteCallback) txCompleteCallback();
+    		}
+
+    if (DMA2->ISR & DMA_ISR_TEIF2)
+    	*dalnomer.status_txDMA &= ~TX_MSG_SEND;
+
+    DMA2->IFCR = DMA_IFCR_CGIF2;
+}
+
+
+
+/////////////// Обработчик прерывания UART1 (IDLE)
+
 void USART1_IRQHandler(void) {
 
 	uint16_t n_byte = 0;
@@ -210,7 +241,7 @@ void USART1_IRQHandler(void) {
 
 
 
-////// n_bayt ?
+////// pause transmit ?
 
     if (USART1->ISR & USART_ISR_IDLE) {
 
@@ -226,8 +257,9 @@ void USART1_IRQHandler(void) {
 
     	  }else{
 
-    		  n_byte = (dalnomer.rx_size_buffer + dalnomer.rx_buffer) - dalnomer.rx_r_index;
-    		  n_byte += (dalnomer.rx_buffer - dalnomer.rx_w_index);
+    		  n_byte = dalnomer.rx_size_buffer - (dalnomer.rx_r_index - dalnomer.rx_w_index);
+    		  //n_byte = (dalnomer.rx_size_buffer + dalnomer.rx_buffer) - dalnomer.rx_r_index;
+    		  //n_byte += (dalnomer.rx_buffer - dalnomer.rx_w_index);
 
     	  };
 
@@ -338,41 +370,14 @@ uint8_t Dalnomer_Message(struct RS422_driver *rs) {
 
 // Обработчик прерывания DMA RX
 
-void DMA2_Channel1_IRQHandler(void) {
 
-    if (DMA2->ISR & DMA_ISR_TEIF1) {
-
-        DMA2_Channel1->CCR &= ~DMA_CCR_EN;
-        DMA2_Channel1->CNDTR = RX_BUFFER_SIZE;
-        DMA2_Channel1->CCR |= DMA_CCR_EN;
-        rxHead = 0; // Сбрасываем индекс при ошибке
-
-        messageLength = 0;
-
-        DMA2->IFCR = DMA_IFCR_CGIF1;// Сбрасываем флаги для канала 1
-
-
-    }
-}
 /*
 // Отправка данных через DMA
 
 
 // Обработчик прерывания DMA TX
 
-void DMA2_Channel2_IRQHandler(void) {
 
-    if (DMA2->ISR & DMA_ISR_TCIF2) {
-
-        txBusy = false;
-
-        if (txCompleteCallback) txCompleteCallback();
-    }
-
-    if (DMA2->ISR & DMA_ISR_TEIF2)  txBusy = false;
-
-    DMA2->IFCR = DMA_IFCR_CGIF2;
-}
 */
 #endif /* INC_UART1_H_ */
 /*
@@ -555,5 +560,4 @@ UART1 підтримує розширені функції, включаючи:
 ---
 
 Якщо потрібен детальніший опис окремого регістру, приклад коду для налаштування UART1 або переклад конкретних частин документа, повідомте!
-
- INC_UART_H_ */
+*/
