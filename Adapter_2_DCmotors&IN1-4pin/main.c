@@ -67,6 +67,9 @@ int main(void)
   uint16_t data16;
   send_txPDO1 = 0;
 
+  gpio_old = gpio_new = GPIOA->IDR&0xf0;
+  send_gpio ++;
+
   while (1){
 
 	  if(!read_can_buffer(&Dcan_buffer,&can_frame)){
@@ -123,8 +126,8 @@ int main(void)
 
 	  if(send_gpio){
 
-		  tx_mailbox2.TIR = ((txPDO2	 + DC_motor.can_id)<<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
-		  tx_mailbox2.TDTR = 3;
+		  tx_mailbox2.TIR = ((txPDO2+ DC_motor.can_id)<<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
+		  tx_mailbox2.TDTR = 1;
 		  tx_mailbox2.TDLR = gpio_old;
 		  tx_mailbox2.TDHR = 0;
 
@@ -229,7 +232,7 @@ void Set_default_data(struct Adapter_DCmotor *ram){
 	ram->in2_drv_pwm = 200;
 	ram->in1_drv2_pwm = 200;
 	ram->in2_drv2_pwm = 200;
-	ram->can_id = 3;
+	ram->can_id = 10;
 	ram->can_speed = 0;// 500kb
 	ram->timer_psc = 120-1;
 	ram->timer_arr = 200-1;
@@ -697,18 +700,21 @@ sdo_exit:SET_BIT(CAN->RF1R, CAN_RF1R_RFOM1);
 
 void EXTI4_15_IRQHandler(void){
 
-	pin_status |=(EXTI->PR&0x0F);
+	uint16_t  gpio_exti= (EXTI->PR&0xf0);
+	pin_status |= gpio_exti;
 
 	if (pin_status & PIN1)pin_ms[0] = gpio_ms[0];
 	if (pin_status & PIN2)pin_ms[1] = gpio_ms[1];
 	if (pin_status & PIN3)pin_ms[2] = gpio_ms[2];
 	if (pin_status & PIN4)pin_ms[3] = gpio_ms[3];
 
-	EXTI->PR |= pin_status;
+	EXTI->PR |= gpio_exti;
 };
 void SysTick_Handler(void){
 
 	uint16_t gpio;
+
+	//if(send_gpio) send_gpio--;
 
 	if(pin_status){
 
@@ -747,6 +753,7 @@ void SysTick_Handler(void){
 	if(gpio_old != gpio_new){gpio_old = gpio_new;send_gpio++;}
 
 	};
+
 };
 
 
