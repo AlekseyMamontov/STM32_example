@@ -735,7 +735,7 @@ void init_controller_STM32F042(void){
 
 	can_id = ((GPIOB->IDR)&0b0000001111111000)>>3;// b3-b9
 	can_speed = ((GPIOA->IDR)&0x700)>>8;
-	can_speed =0;
+	//can_speed =0;
 	switch(can_speed){ // 48 Мгц.
 
 		case 0x01: speed = 0x001c0002;break; //1000kb
