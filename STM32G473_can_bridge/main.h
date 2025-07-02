@@ -10,14 +10,10 @@ extern "C" {
 #endif
 
 
-
-
-
-
-
-
-
-void Error_Handler(void);
+	void CAN2_to_CAN1(void);
+	void CAN1_to_CAN2(void);
+	void FDCANs_Config(void);
+	void Error_Handler(void);
 
 
 #ifdef __cplusplus
