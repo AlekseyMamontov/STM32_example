@@ -136,21 +136,15 @@ void FDCANs_Config(void){
 
 void CAN1_to_CAN2(void){
 
-	uint32_t index_rxfifo = 0,index_txfifo = 0, rxHeader0, rxHeader1;
+	uint32_t index_rxfifo = 0,index_txfifo = 0;// rxHeader0, rxHeader1;
 	uint32_t *RxBuffer,*TxBuffer;
 	uint8_t  status;
+
 	// Проверить cообщение в FIFO 0
 	if (FDCAN1->RXF0S & FDCAN_RXF0S_F0FL){
 
-		index_rxfifo = (FDCAN1->RXF0S & FDCAN_RXF0S_F0GI) >> FDCAN_RXF0S_F0GI_Pos;
-		RxBuffer = (uint32_t*) (RAMBaseFDCAN1 + RamFIFO0RX + (index_rxfifo * 18 * 4));
-		rxHeader0 = *RxBuffer++;
-		rxHeader1 = *RxBuffer++;
-		//id = (rxHeader0 & XTDbit) ? rxHeader0 & 0x1FFFFFFF : (rxHeader0 & 0x1FFFFFFF) >> 18;
-		//dlc = (rxHeader1 >> 16) & 0xF;
-
-		//FDCAN1->RXF0A = index_rxfifo;
-		//FDCAN1->IR |= 1; // clearFifo
+		index_rxfifo = ((FDCAN1->RXF0S) & FDCAN_RXF0S_F0GI) >> FDCAN_RXF0S_F0GI_Pos;
+		RxBuffer = (uint32_t*) (RAMBaseFDCAN1 + RamFIFO0RX + (index_rxfifo * (18* 4)));
 
 			if ((FDCAN2->TXFQS & FDCAN_TXFQS_TFQF) == 0) {
 				    // Получаем индекс вставки в Tx FIFO
@@ -158,17 +152,18 @@ void CAN1_to_CAN2(void){
 					// Указатель на буфер передачи в Message RAM/
 			        TxBuffer =(uint32_t*) (RAMBaseFDCAN2 + RamBaseTX + (index_txfifo * 18 * 4));
 
-			        *TxBuffer++ = rxHeader0&0x7FFFFFFF;
-			        status = rxHeader1 & FDFbit?1:0;
-			        *TxBuffer++ = rxHeader1&0x3F0000; //header1
-
+			       *TxBuffer++ = (*RxBuffer++)&0x7FFFFFFF;
+			         status = (*RxBuffer) & FDFbit?1:0;
+			       *TxBuffer++ = (*RxBuffer++)&0x3F0000; //header1
 			        *TxBuffer++ = *RxBuffer++; //data 1-4
 			        *TxBuffer++ = *RxBuffer++; //data 5-8
 
-			        if (status){for(uint8_t i = 0; i < 14; i++){*TxBuffer++ = *RxBuffer++;}};
+			      if (status){for(uint8_t i = 0; i < 14; i++){*TxBuffer++ = *RxBuffer++;}};
 
-			FDCAN2->TXBAR = (1 << index_txfifo); // Активация соответствующего запроса на передачу
 			FDCAN1->RXF0A = index_rxfifo;
+			//FDCAN1->IR |= 1;
+			FDCAN2->TXBAR = (1 << index_txfifo); // Активация соответствующего запроса на передачу
+
 
 		};
 	}
@@ -176,21 +171,14 @@ void CAN1_to_CAN2(void){
 
 void CAN2_to_CAN1(void){
 
-	uint32_t index_rxfifo = 0,index_txfifo = 0, rxHeader0, rxHeader1;
+	uint32_t index_rxfifo = 0,index_txfifo = 0;// rxHeader0, rxHeader1;
 	uint32_t *RxBuffer,*TxBuffer;
 	uint8_t  status;
 	// Проверить cообщение в FIFO 0
 	if (FDCAN2->RXF0S & FDCAN_RXF0S_F0FL){
 
-		index_rxfifo = (FDCAN2->RXF0S & FDCAN_RXF0S_F0GI) >> FDCAN_RXF0S_F0GI_Pos;
-		RxBuffer = (uint32_t*) (RAMBaseFDCAN2 + RamFIFO0RX + (index_rxfifo * 18 * 4));
-		rxHeader0 = *RxBuffer++;
-		rxHeader1 = *RxBuffer++;
-		//id = (rxHeader0 & XTDbit) ? rxHeader0 & 0x1FFFFFFF : (rxHeader0 & 0x1FFFFFFF) >> 18;
-		//dlc = (rxHeader1 >> 16) & 0xF;
-
-		//FDCAN1->RXF0A = index_rxfifo;
-		//FDCAN1->IR |= 1; // clearFifo
+		index_rxfifo = ((FDCAN2->RXF0S) & FDCAN_RXF0S_F0GI) >> FDCAN_RXF0S_F0GI_Pos;
+		RxBuffer = (uint32_t*) (RAMBaseFDCAN2 + RamFIFO0RX + (index_rxfifo * (18* 4)));;
 
 			if ((FDCAN1->TXFQS & FDCAN_TXFQS_TFQF) == 0) {
 				    // Получаем индекс вставки в Tx FIFO
@@ -198,17 +186,17 @@ void CAN2_to_CAN1(void){
 					// Указатель на буфер передачи в Message RAM/
 			        TxBuffer =(uint32_t*) (RAMBaseFDCAN1 + RamBaseTX + (index_txfifo * 18 * 4));
 
-			        *TxBuffer++ = rxHeader0&0x7FFFFFFF;
-			        status = rxHeader1 & FDFbit?1:0;
-			        *TxBuffer++ = rxHeader1&0x3F0000; //header1
-
+				    *TxBuffer++ = (*RxBuffer++)&0x7FFFFFFF;
+				     status = (*RxBuffer) & FDFbit?1:0;
+				    *TxBuffer++ = (*RxBuffer++)&0x3F0000; //header1
 			        *TxBuffer++ = *RxBuffer++; //data 1-4
-			        *TxBuffer++ = *RxBuffer++; //data 5-8
+			     	*TxBuffer++ = *RxBuffer++; //data 5-8
 
-			        if (status){for(uint8_t i = 0; i < 14; i++){*TxBuffer++ = *RxBuffer++;}};
+			      if (status){for(uint8_t i = 0; i < 14; i++){*TxBuffer++ = *RxBuffer++;}};
 
-			FDCAN1->TXBAR = (1 << index_txfifo); // Активация соответствующего запроса на передачу
 			FDCAN2->RXF0A = index_rxfifo;
+			FDCAN1->TXBAR = (1 << index_txfifo); // Активация соответствующего запроса на передачу
+
 
 		};
 	}

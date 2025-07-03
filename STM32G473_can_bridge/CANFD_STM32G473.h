@@ -9,19 +9,28 @@
 #define INC_CANFD_STM32G473_H_
 
 #include <math.h>
+void FDCANs_Config(void);
+FDCAN_GlobalTypeDef *FDCAN ;
 
-FDCAN_GlobalTypeDef *FDCAN = FDCAN1;
 
-// RAM  CANFD module
+//  FDCANs Message RAM
 /*
- 0x4000 AC00 - 0x4000 AFFF1 KB
- 0x4000 A800 - 0x4000 ABFF1 KB
- 0x4000 A400 - 0x4000 A7FF1 KB
- */
+Section 44.4.38: FDCAN register map
+
+0x4000 AC00 - 0x4000 AFFF1 KB
+0x4000 A800 - 0x4000 ABFF1 KB
+0x4000 A400 - 0x4000 A7FF1 KB
+
+0x4000 6C00 - 0x4000 6FFF1 KB  FDCAN3
+0x4000 6800 - 0x4000 6BFF1 KB  FDCAN2
+0x4000 6400 - 0x4000 67FF1 KB  FDCAN1
+
+
+*/
 
 #define RAMBaseFDCAN1  0x4000A400
-#define RAMBaseFDCAN2  0x4000A800
-#define RAMBaseFDCAN3  0x4000AC00
+#define RAMBaseFDCAN2  RAMBaseFDCAN1 + 0x350
+#define RAMBaseFDCAN3  RAMBaseFDCAN2 + 0x350
 
 // RAM Message
 
@@ -225,11 +234,12 @@ struct RX_canFD_message {
 
 };
 
-void CAN_Config(void) {
+void CAN_Config(FDCAN_GlobalTypeDef *CAN, uint32_t *RAM,uint8_t *speed) {
+
 
 	// Настройка CAN
-	FDCAN_GlobalTypeDef *CAN = FDCAN1;
-	uint32_t *filterRAM = (uint32_t*) RAMBaseFDCAN1;
+	//FDCAN_GlobalTypeDef *CAN = FDCAN1;
+	uint32_t *filterRAM = RAM;
 
 	// Включение тактирования для CAN
 	RCC->APB1ENR1 |= RCC_APB1ENR1_FDCANEN;
@@ -248,14 +258,15 @@ void CAN_Config(void) {
 
 	/*
 	 Baudrate	NSJW	NBRP	NTSEG1	NTSEG2	FDCAN_NBTP (uint32)
-	 125000		1		640		543		95		0x21F5F
+	 125000		1		640		543	void C	95		0x21F5F
 	 250000		1		320		271		47		0x10F2F
 	 500000		2		160		67		12		0x08617
 	 800000		1		100		84		14		0x0540E
 	 1000000		1		80		67		11		0x0430B
 	 */
 
-	// Set the nominal bit timing register
+	// Set the nominal bit timing register -1 (500кб)
+
 	CAN->NBTP = (1 << FDCAN_NBTP_NSJW_Pos) | (1 << FDCAN_NBTP_NBRP_Pos)
 			| (66 << FDCAN_NBTP_NTSEG1_Pos) | (11 << FDCAN_NBTP_NTSEG2_Pos);
 
