@@ -236,27 +236,12 @@ struct RX_canFD_message {
 
 
 
-
- /*
-(кбит/с),NBRP, NTSEG1,NTSEG2,NSJW,FDCAN_NBTP (hex),Точка выборки
-10,		 39,   173,	  24,	 1,     0x027AD18,"87,5%"
-20,      19,   173,   24,    1,     0x013AD18,"87,5%"
-50,       9,   138,   19,    1,     0x0098A13,"87,5%"
-125,      3,   138,   19,    1,		0x0038A13,"87,5%"
-250,      1,   138,   19,    1,		0x0018A13,"87,5%"
-500,      0,   138,   19,    1,		0x0008A13,"87,5%"
-800,      3,    20,    2,    1,		0x0031402, 88%
-1000,     1,    33,    4,    1,		0x0012104,"87,5%"
- */
-
-
-void CAN_Config(FDCAN_GlobalTypeDef *CAN, uint32_t *RAM,uint8_t *speed) {
+void CAN_Config(FDCAN_GlobalTypeDef *CAN, uint32_t *RAM,uint16_t speed) {
 
 
 	// Настройка CAN
 	//FDCAN_GlobalTypeDef *CAN = FDCAN1;
-	uint32_t *filterRAM = RAM;
-
+	uint32_t *filterRAM = RAM, nbrp, ntseg1, ntseg2, nsjw;
 	// Включение тактирования для CAN
 	RCC->APB1ENR1 |= RCC_APB1ENR1_FDCANEN;
 
@@ -298,8 +283,45 @@ void CAN_Config(FDCAN_GlobalTypeDef *CAN, uint32_t *RAM,uint8_t *speed) {
 
 	// Set the nominal bit timing register -1 (500кб)
 
-	CAN->NBTP = (1 << FDCAN_NBTP_NSJW_Pos) | (1 << FDCAN_NBTP_NBRP_Pos)
-			| (66 << FDCAN_NBTP_NTSEG1_Pos) | (11 << FDCAN_NBTP_NTSEG2_Pos);
+	///CAN->NBTP = (1 << FDCAN_NBTP_NSJW_Pos) | (1 << FDCAN_NBTP_NBRP_Pos)
+	//		| (66 << FDCAN_NBTP_NTSEG1_Pos) | (11 << FDCAN_NBTP_NTSEG2_Pos);
+
+
+	    switch (speed) {
+	        case 10:
+	            nbrp = 39; ntseg1 = 173; ntseg2 = 24; nsjw = 1; // 0x027AD18
+	            break;
+	        case 20:
+	            nbrp = 19; ntseg1 = 173; ntseg2 = 24; nsjw = 1; // 0x013AD18
+	            break;
+	        case 50:
+	            nbrp = 9; ntseg1 = 138; ntseg2 = 19; nsjw = 1; // 0x0098A13
+	            break;
+	        case 125:
+	            nbrp = 3; ntseg1 = 138; ntseg2 = 19; nsjw = 1; // 0x0038A13
+	            break;
+	        case 250:
+	            nbrp = 1; ntseg1 = 138; ntseg2 = 19; nsjw = 1; // 0x0018A13
+	            break;
+	        case 500:
+	            nbrp = 0; ntseg1 = 138; ntseg2 = 19; nsjw = 1; // 0x0008A13
+	            break;
+	        case 800:
+	            nbrp = 3; ntseg1 = 20; ntseg2 = 2; nsjw = 1; // 0x0031402
+	            break;
+	        case 1000:
+	            nbrp = 4; ntseg1 = 12; ntseg2 = 1; nsjw = 1; // 0x0040C01
+	            break;
+	        default:nbrp = 0; ntseg1 = 138; ntseg2 = 19; nsjw = 1; // 0x0008A13
+	        break; // default 500кб.
+	    }
+
+	    FDCAN1->NBTP =  (nbrp << FDCAN_NBTP_NBRP_Pos) |
+	                    (ntseg1 << FDCAN_NBTP_NTSEG1_Pos) |
+	                    (ntseg2 << FDCAN_NBTP_NTSEG2_Pos) |
+	                    (nsjw << FDCAN_NBTP_NSJW_Pos);
+
+
 
 	// Clear message RAM
 
