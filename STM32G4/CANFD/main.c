@@ -3,6 +3,7 @@
 
 #include <math.h>
 #include "Fusion.h"
+
 #include "INIT_STM32G431_GPIO.h"
 #include <CANFD_STM32G431.h>
 #include "BMP280.h"
@@ -65,7 +66,7 @@ int main(void) {
 
 	float data32[2]= {0};
 
-	uint32_t id = 1003;  // Стандартный идентификатор CAN
+	uint32_t id = 4;  // Стандартный идентификатор CAN
 
 
 	while (1) {

@@ -20,8 +20,6 @@ FDCAN_GlobalTypeDef *FDCAN = FDCAN1;
  */
 
 #define RAMBaseFDCAN1  0x4000A400
-#define RAMBaseFDCAN2  0x4000A800
-#define RAMBaseFDCAN3  0x4000AC00
 
 // RAM Message
 
@@ -247,17 +245,35 @@ void CAN_Config(void) {
 	CAN->CCCR |= FDCAN_CCCR_CCE; // Разрешение доступа к конфигурационным регистрам
 
 	/*
-	 Baudrate	NSJW	NBRP	NTSEG1	NTSEG2	FDCAN_NBTP (uint32)
-	 125000		1		640		543		95		0x21F5F
-	 250000		1		320		271		47		0x10F2F
-	 500000		2		160		67		12		0x08617
-	 800000		1		100		84		14		0x0540E
-	 1000000		1		80		67		11		0x0430B
+(кбит/с),NBRP, NTSEG1,NTSEG2,NSJW,FDCAN_NBTP (hex),Точка выборки
+10,		 39,   173,	  24,	 1,     0x027AD18,"87,5%"
+20,      19,   173,   24,    1,     0x013AD18,"87,5%"
+50,       9,   138,   19,    1,     0x0098A13,"87,5%"
+125,      3,   138,   19,    1,		0x0038A13,"87,5%"
+250,      1,   138,   19,    1,		0x0018A13,"87,5%"
+500,      0,   138,   19,    1,		0x0008A13,"87,5%"
+800,      3,    20,    2,    1,		0x0031402,88%
+1000,     1,    33,    4,    1,		0x0012104,"87,5%"
 	 */
 
-	// Set the nominal bit timing register
-	CAN->NBTP = (1 << FDCAN_NBTP_NSJW_Pos) | (1 << FDCAN_NBTP_NBRP_Pos)
-			| (66 << FDCAN_NBTP_NTSEG1_Pos) | (11 << FDCAN_NBTP_NTSEG2_Pos);
+	// Set the nominal bit timing register 500 кб , 85% ,FDCAN clock 80mhz
+
+	//CAN->NBTP = (1 << FDCAN_NBTP_NSJW_Pos) | (1 << FDCAN_NBTP_NBRP_Pos)
+	//		| (66 << FDCAN_NBTP_NTSEG1_Pos) | (11 << FDCAN_NBTP_NTSEG2_Pos);
+
+
+	// Set the nominal bit timing register 1000 кб , 85% ,FDCAN clock 80mhz
+
+	//CAN->NBTP = (0 << FDCAN_NBTP_NSJW_Pos) | (0 << FDCAN_NBTP_NBRP_Pos)
+	//		| (66 << FDCAN_NBTP_NTSEG1_Pos) | (10 << FDCAN_NBTP_NTSEG2_Pos);
+
+	// 87,5%
+	CAN->NBTP = (1 << FDCAN_NBTP_NBRP_Pos) | // NBRP = 1
+	            (33 << FDCAN_NBTP_NTSEG1_Pos) | // NTSEG1 = 33
+	            (4 << FDCAN_NBTP_NTSEG2_Pos) | // NTSEG2 = 4
+	            (1 << FDCAN_NBTP_NSJW_Pos); // NSJW = 1
+
+
 
 	// Clear message RAM
 
@@ -619,4 +635,106 @@ void FDCAN_Config(FDCAN_BaudRate *config) {
  0: Новое сообщение не записано в FIFO 0 приема.
  1: Новое сообщение записано в FIFO 0 приема.
  */
+
+///
+
+
+
+
+void CAN_Config2(void) {
+    // Настройка CAN
+    FDCAN_GlobalTypeDef *CAN = FDCAN1;
+    uint32_t *filterRAM = (uint32_t*) RAMBaseFDCAN1;
+
+    // Выбор битрейта (в кбит/с)
+    uint32_t baudrate = 1000; // Можно изменить на 100, 125, 250, 500, 800, 1000
+
+    // Включение тактирования для CAN
+    RCC->APB1ENR1 |= RCC_APB1ENR1_FDCANEN;
+
+    RCC->CCIPR &= ~RCC_CCIPR_FDCANSEL;
+    // Установить PLL "Q" как источник тактирования для FDCAN
+    RCC->CCIPR |= (0x1 << RCC_CCIPR_FDCANSEL_Pos); // Установить PLL "Q"
+
+    // Выключаем CAN перед настройкой
+    CAN->CCCR |= FDCAN_CCCR_INIT;
+    while (!(CAN->CCCR & FDCAN_CCCR_INIT))
+        ;
+
+    // Разрешение доступа к конфигурационным регистрам
+    CAN->CCCR |= FDCAN_CCCR_CCE;
+
+    /*
+     Baudrate   NSJW   NBRP   NTSEG1   NTSEG2   FDCAN_NBTP (uint32)
+     100000     3(2)   39     15(14)   4(3)     0x018270E
+     125000     3(2)   31     15(14)   4(3)     0x0181F0E
+     250000     3(2)   15     15(14)   4(3)     0x0180F0E
+     500000     3(2)   7      15(14)   4(3)     0x018070E
+     800000     3(2)   4      15(14)   4(3)     0x018040E
+     1000000    3(2)   3      15(14)   4(3)     0x018030E
+    */
+
+    // Set the nominal bit timing register
+    switch (baudrate) {
+        case 100:
+            CAN->NBTP = (2 << FDCAN_NBTP_NSJW_Pos) | (39 << FDCAN_NBTP_NBRP_Pos) |
+                        (14 << FDCAN_NBTP_NTSEG1_Pos) | (3 << FDCAN_NBTP_NTSEG2_Pos);
+            break;
+        case 125:
+            CAN->NBTP = (2 << FDCAN_NBTP_NSJW_Pos) | (31 << FDCAN_NBTP_NBRP_Pos) |
+                        (14 << FDCAN_NBTP_NTSEG1_Pos) | (3 << FDCAN_NBTP_NTSEG2_Pos);
+            break;
+        case 250:
+            CAN->NBTP = (2 << FDCAN_NBTP_NSJW_Pos) | (15 << FDCAN_NBTP_NBRP_Pos) |
+                        (14 << FDCAN_NBTP_NTSEG1_Pos) | (3 << FDCAN_NBTP_NTSEG2_Pos);
+            break;
+        case 500:
+            CAN->NBTP = (2 << FDCAN_NBTP_NSJW_Pos) | (7 << FDCAN_NBTP_NBRP_Pos) |
+                        (14 << FDCAN_NBTP_NTSEG1_Pos) | (3 << FDCAN_NBTP_NTSEG2_Pos);
+            break;
+        case 800:
+            CAN->NBTP = (2 << FDCAN_NBTP_NSJW_Pos) | (4 << FDCAN_NBTP_NBRP_Pos) |
+                        (14 << FDCAN_NBTP_NTSEG1_Pos) | (3 << FDCAN_NBTP_NTSEG2_Pos);
+            break;
+        case 1000:
+            CAN->NBTP = (2 << FDCAN_NBTP_NSJW_Pos) | (3 << FDCAN_NBTP_NBRP_Pos) |
+                        (14 << FDCAN_NBTP_NTSEG1_Pos) | (3 << FDCAN_NBTP_NTSEG2_Pos);
+            break;
+        default:
+            // По умолчанию 500 кбит/с
+            CAN->NBTP = (2 << FDCAN_NBTP_NSJW_Pos) | (7 << FDCAN_NBTP_NBRP_Pos) |
+                        (14 << FDCAN_NBTP_NTSEG1_Pos) | (3 << FDCAN_NBTP_NTSEG2_Pos);
+            break;
+    }
+
+    // Clear message RAM
+    for (uint8_t i = 0; i < 212; i++) {
+        filterRAM[i] = 0;
+    }
+
+    // Настройка глобального фильтра
+    CAN->RXGFC = STDfilter_n(2) | EXTfilter_n(0) | ANFS_Reject_rx | ANFE_Reject_rx;
+
+    // ID фильтры 100 и 80
+    filterRAM[0] = STDfilterID_DUAL | STDfilterRxFIFO0 | STDfilterID1(100) | STDfilterID2(80);
+
+    // Включить прерывания в FDCAN FIFO
+    CAN->IE |= 3; // FDCAN_IE_RF0NE | FDCAN_IE_RF0FE
+    CAN->ILS |= 1; // RXFIFO0: RX FIFO bit grouping
+    CAN->ILE |= 2; // Enable IT1
+
+    // Включение SYSCFG
+    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
+
+    // Включение прерывания
+    NVIC_EnableIRQ(FDCAN1_IT1_IRQn);
+
+    // Настройка режима работы (нормальный режим)
+    CAN->CCCR &= ~FDCAN_CCCR_INIT;
+    while (CAN->CCCR & FDCAN_CCCR_INIT)
+        ;
+}
+
+
+
 #endif /* INC_CANFD_STM32G431_H_ */

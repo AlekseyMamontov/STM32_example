@@ -34,7 +34,7 @@ void SystemClock_Config(void) {
 
 
 
-    // Настройка PLL для генерации тактовой частоты 150 МГц
+    // Настройка PLL для генерации тактовой частоты 160 МГц
     RCC->PLLCFGR = 0; // Сброс конфигурации PLL
     RCC->PLLCFGR |= (RCC_PLLCFGR_PLLSRC_HSE | 	  // Использование HSE как источника
                     (1 << RCC_PLLCFGR_PLLM_Pos) | // PLLM = 2 (8 МГц / 2 = 4 МГц)
@@ -72,7 +72,7 @@ void SystemClock_Config(void) {
     // Обновление SystemCoreClock
     SystemCoreClockUpdate();
 
-    SysTick->LOAD = 160000000/1000 - 1;  // (48 mHz / 1000) -1  // 1ms
+    SysTick->LOAD = 160000000/1000 - 1;  // (160 mHz / 1000) -1  // 1ms
     SysTick->VAL = 0;  // reset
     SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk | SysTick_CTRL_ENABLE_Msk;
 
@@ -176,8 +176,8 @@ void GPIO_INIT(void){
    */
 
 	//-------------   151413121110 9 8 7 6 5 4 3 2 1 0
-	GPIOA->OTYPER = 0b00000000000000000000000000000000;
-	GPIOB->OTYPER = 0b00000000000000000000000000000000;
+	GPIOA->OTYPER |= 0b00000000000000000000000000000000;
+	GPIOB->OTYPER |= 0b00000000000000000000000000000000;
 
 	/*
 	GPIO port pull-up/pull-down register (GPIOx_PUPDR)
