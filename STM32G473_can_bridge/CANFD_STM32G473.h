@@ -316,7 +316,7 @@ void CAN_Config(FDCAN_GlobalTypeDef *CAN, uint32_t *RAM,uint16_t speed) {
 	        break; // default 500кб.
 	    }
 
-	    FDCAN1->NBTP =  (nbrp << FDCAN_NBTP_NBRP_Pos) |
+	    CAN->NBTP =  (nbrp << FDCAN_NBTP_NBRP_Pos) |
 	                    (ntseg1 << FDCAN_NBTP_NTSEG1_Pos) |
 	                    (ntseg2 << FDCAN_NBTP_NTSEG2_Pos) |
 	                    (nsjw << FDCAN_NBTP_NSJW_Pos);
