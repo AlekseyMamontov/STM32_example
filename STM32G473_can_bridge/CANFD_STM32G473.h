@@ -310,7 +310,7 @@ void CAN_Config(FDCAN_GlobalTypeDef *CAN, uint32_t *RAM,uint16_t speed) {
 	            nbrp = 3; ntseg1 = 20; ntseg2 = 2; nsjw = 1; // 0x0031402
 	            break;
 	        case 1000:
-	            nbrp = 4; ntseg1 = 12; ntseg2 = 1; nsjw = 1; // 0x0040C01
+	            nbrp = 1; ntseg1 = 33; ntseg2 = 4; nsjw = 1; // 0x0040C01
 	            break;
 	        default:nbrp = 0; ntseg1 = 138; ntseg2 = 19; nsjw = 1; // 0x0008A13
 	        break; // default 500кб.
