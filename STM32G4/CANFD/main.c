@@ -64,9 +64,9 @@ int main(void) {
 	init_lis3md	 (&mag_lis3md);
 	init_bmp280  (&bmp280_sensor1);
 
-	float data32[2]= {0};
+	uint32_t data32[2]= {0};
 
-	uint32_t id = 4;  // Стандартный идентификатор CAN
+	uint32_t id = 284;  // Стандартный идентификатор CAN
 
 
 	while (1) {
@@ -186,7 +186,8 @@ int main(void) {
 			 data32[0] = BMP280_Compensate_Temperature(&bmp280_sensor1);
 			 data32[1] = BMP280_Compensate_Pressure(&bmp280_sensor1);
 
-			CAN_SendMessage(id+4, bmp280_sensor1.DMArx_buf, 8);
+			//CAN_SendMessage(id+4, bmp280_sensor1.DMArx_buf, 8);
+			CAN_SendMessage(id+4,(uint8_t*)data32, 8);
 			sendPs = 0;
 
 		//	UART1_SendDMA(txBuffer,19);
@@ -359,42 +360,4 @@ void assert_failed(uint8_t *file, uint32_t line)
   // Обработка ошибок assert
 }
 #endif /* USE_FULL_ASSERT */
-/*
 
-    FusionAhrsInitialise(&ahrs);
-    FusionAhrsSetSettings(&ahrs, &(FusionAhrsSettings){
-        .gain = 0.5f,
-        .accelerationRejection = 10.0f,
-        .magneticRejection = 20.0f
-        // Убрано rejectionTimeout, так как его нет в вашей версии
-    });
-
-
-
-			 //FusionAhrsUpdateNoMagnetometer(&ahrs, gyro, acc, DELTA_TIME);
-			 //heading = FusionCompassCalculateHeading(FusionConventionNwu, acc, mag);
-			 //FusionAhrsSetHeading(&ahrs, heading);
-			 //quaternion = FusionAhrsGetQuaternion(&ahrs);
-
-
-
-
-
-
-
-			ft32[0] = quaternion.element.w;
-			ft32[1] = quaternion.element.x;
-			CAN_SendMessage(id+1, (uint8_t*)ft32,8);
-			ft32[2] = quaternion.element.y;
-			ft32[3] = quaternion.element.z;
-			CAN_SendMessage(id+2, (uint8_t*)ft32+2,8);
-
-
-
-
-
-
-
-
-
-  */
