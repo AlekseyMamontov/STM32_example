@@ -30,7 +30,7 @@ struct CAN_buffer Dcan_buffer;
 CAN_FIFOMailBox_TypeDef rx_mailbox;
 CAN_TxMailBox_TypeDef 	tx_mailbox,tx_mailbox2;
 
-uint32_t id_rxPDO1,id_rxPDO2,
+uint32_t id_rxPDO1,id_rxPDO2,id_rxPDO3,
 		 id_txPDO1,id_rxSDO,
 		 id_txSDO,heartbroken;
 
@@ -74,54 +74,94 @@ int main(void)
 
 	  if(!read_can_buffer(&Dcan_buffer,&can_frame)){
 
-		if(can_frame.dlc){
+	    if(can_frame.id == id_rxPDO1){
 
-		  data0 = (can_frame.msg[0]&0xff);
-		  DC_motor.in_data = data0&3;
+//  1 motor rxPDO1
 
-		  switch (can_frame.dlc){
+	    	if(can_frame.dlc){
 
-		  case 1:
+	    			data0 = (can_frame.msg[0]&0xff);
+	    			DC_motor.in_data &= 0b11111100;
+	    			DC_motor.in_data |= data0&3;
 
-			  IN1_DRV = (data0&1)?DC_motor.in1_drv_pwm:0;
-			  IN2_DRV = (data0&2)?DC_motor.in2_drv_pwm:0;
-			  IN1_DRV2 = (data0&4)?DC_motor.in1_drv2_pwm:0;
-			  IN2_DRV2 = (data0&8)?DC_motor.in2_drv2_pwm:0;
+	    			switch (can_frame.dlc){
 
-			  break;
+	    				case 1:
 
-		  case 2:
+	    					IN1_DRV = (data0&1)?DC_motor.in1_drv_pwm:0;
+	    					IN2_DRV = (data0&2)?DC_motor.in2_drv_pwm:0;
 
-			  data1 = (can_frame.msg[0]&0xff00)>>8;
-			  if(data0&1)DC_motor.in1_drv_pwm =  data1;
-			  if(data0&2)DC_motor.in2_drv_pwm =  data1;
-			  if(data0&4)DC_motor.in1_drv2_pwm = data1;
-			  if(data0&8)DC_motor.in2_drv2_pwm = data1;
+	    				 break;
 
-			  IN1_DRV = (data0&1)?DC_motor.in1_drv_pwm:0;
-			  IN2_DRV = (data0&2)?DC_motor.in2_drv_pwm:0;
-			  IN1_DRV2 =(data0&4)?DC_motor.in1_drv2_pwm:0;
-			  IN2_DRV2 =(data0&8)?DC_motor.in2_drv2_pwm:0;
+	    				case 2:
 
-			  break;
+	    					data1 = (can_frame.msg[0]&0xff00)>>8;
+	    					if(data0&1)DC_motor.in1_drv_pwm =  data1;
+	    					if(data0&2)DC_motor.in2_drv_pwm =  data1;
+	    					IN1_DRV = (data0&1)?DC_motor.in1_drv_pwm:0;
+	    					IN2_DRV = (data0&2)?DC_motor.in2_drv_pwm:0;
 
-		  default:
+	    				break;
 
-			  if(!can_frame.dlc) break;
-		  	  data16 = (can_frame.msg[0]&0xffff00)>>8;
-		  	  if(data0&1)DC_motor.in1_drv_pwm = data16;
-		  	  if(data0&2)DC_motor.in2_drv_pwm = data16;
-			  if(data0&4)DC_motor.in1_drv2_pwm = data16;
-			  if(data0&8)DC_motor.in2_drv2_pwm = data16;
-		  	  IN1_DRV = (data0&1)?DC_motor.in1_drv_pwm:0;
-		  	  IN2_DRV = (data0&2)?DC_motor.in2_drv_pwm:0;
-			  IN1_DRV2 =(data0&4)?DC_motor.in1_drv2_pwm:0;
-			  IN2_DRV2 =(data0&8)?DC_motor.in2_drv2_pwm:0;
-			  break;
+	    				default:
 
-		  };
+	    					if(!can_frame.dlc) break;
+	    					data16 = (can_frame.msg[0]&0xffff00)>>8;
+	    					if(data0&1)DC_motor.in1_drv_pwm = data16;
+	    					if(data0&2)DC_motor.in2_drv_pwm = data16;
+	    					IN1_DRV = (data0&1)?DC_motor.in1_drv_pwm:0;
+	    					IN2_DRV = (data0&2)?DC_motor.in2_drv_pwm:0;
+	    					break;};
+	    				};
+// 2 motor
 
-		};
+		}else if(can_frame.id == id_rxPDO2){
+
+	    	if(can_frame.dlc){
+
+	    			data0 = (can_frame.msg[0]&0xff);
+	    			DC_motor.in_data &= 0x0C;
+	    			DC_motor.in_data |= (data0&3)<<2;
+
+	    			switch (can_frame.dlc){
+
+	    				case 1:
+
+	    					IN1_DRV2 = (data0&1)?DC_motor.in1_drv2_pwm:0;
+	    					IN2_DRV2 = (data0&2)?DC_motor.in2_drv2_pwm:0;
+
+	    				 break;
+
+	    				case 2:
+
+	    					data1 = (can_frame.msg[0]&0xff00)>>8;
+
+	    					if(data0&1)DC_motor.in1_drv2_pwm = data1;
+	    					if(data0&2)DC_motor.in2_drv2_pwm = data1;
+
+	    					IN1_DRV2 =(data0&1)?DC_motor.in1_drv2_pwm:0;
+	    					IN2_DRV2 =(data0&2)?DC_motor.in2_drv2_pwm:0;
+
+	    				break;
+
+	    				default:
+
+	    					if(!can_frame.dlc) break;
+	    					data16 = (can_frame.msg[0]&0xffff00)>>8;
+
+	    					if(data0&1)DC_motor.in1_drv2_pwm = data16;
+	    					if(data0&2)DC_motor.in2_drv2_pwm = data16;
+
+	    					IN1_DRV2 =(data0&1)?DC_motor.in1_drv2_pwm:0;
+	    					IN2_DRV2 =(data0&2)?DC_motor.in2_drv2_pwm:0;
+	    					break;};
+	    				};
+
+
+		  }else if(can_frame.id == id_rxPDO3){ send_txPDO1 = 1;}
+
+
+
 	  };
 
 	  if(send_gpio){
@@ -148,8 +188,9 @@ int main(void)
 
 	  			   tx_mailbox.TDTR = 3;
 	  			   tx_mailbox.TDLR = send_data|
-	  								   (DC_motor.in1_drv_pwm << 8)
-	  								   |(DC_motor.in2_drv_pwm << 16);
+	  								 (DC_motor.in1_drv_pwm << 8)|
+	  								 (DC_motor.in2_drv_pwm << 16);
+
 	  			   tx_mailbox.TDHR = 0;
 
 
@@ -200,7 +241,7 @@ void CEC_CAN_IRQHandler(void){
 
 					default:
 
-						if(id == id_rxPDO1){
+						if(id == id_rxPDO1 || id == id_rxPDO2 || id == id_rxPDO3){
 						if(NMT_status != NMT_status_Operational) break;
 						if(!dlc) break;
 
@@ -208,19 +249,12 @@ void CEC_CAN_IRQHandler(void){
 							Data_frame.dlc = dlc;
 							Data_frame.msg[0] = CAN->sFIFOMailBox[0].RDLR;
 							Data_frame.msg[1] = CAN->sFIFOMailBox[0].RDHR;
-							write_can_buffer (&Dcan_buffer,&Data_frame);
-
-						}else if(id == id_rxPDO2){
-
-								if(NMT_status != NMT_status_Operational) break;
-								if(!dlc) break;
-								if(!data0)break;
-								send_txPDO1 =  1;
-						};
+							write_can_buffer (&Dcan_buffer,&Data_frame);}
 
 				    break;
 				};
 			};
+
 	exit:	SET_BIT(CAN->RF0R, CAN_RF0R_RFOM0);//CAN->RF0R |= 0b0100000;  сообщение прочитано.
 };
 
@@ -232,7 +266,7 @@ void Set_default_data(struct Adapter_DCmotor *ram){
 	ram->in2_drv_pwm = 200;
 	ram->in1_drv2_pwm = 200;
 	ram->in2_drv2_pwm = 200;
-	ram->can_id = 10;
+	ram->can_id = 8;   // default ID = 8;
 	ram->can_speed = 0;// 500kb
 	ram->timer_psc = 120-1;
 	ram->timer_arr = 200-1;
@@ -431,6 +465,7 @@ void SDO_object(struct Adapter_DCmotor *DCmotor){
 
 
 				}else
+
 				  if(cmd == 0x2F){   //save
 
 					  if(dlc < 5){error = ERROR_sLEN_OBJECT;break;};
@@ -1221,6 +1256,7 @@ void init_CAN_module(){
 
 		id_rxPDO1 = rxPDO1 + DC_motor.can_id;
 		id_rxPDO2 = rxPDO2 + DC_motor.can_id;
+		id_rxPDO3 = rxPDO3 + DC_motor.can_id;
 		id_txPDO1 = txPDO1 + DC_motor.can_id;
 		id_rxSDO =  rxSDO +  DC_motor.can_id;
 		id_txSDO =  txSDO +  DC_motor.can_id;
@@ -1235,7 +1271,7 @@ void init_CAN_module(){
 		CAN->FFA1R |= CAN_FFA1R_FFA1; // filtr1 -> FIFO1
 
 		CAN->sFilterRegister[0].FR1 = (id_rxPDO1<< 16 | id_rxPDO2 ) << 5;
-		CAN->sFilterRegister[0].FR2 = 0;
+		CAN->sFilterRegister[0].FR2 = (id_rxPDO3 ) << 5;
 		CAN->sFilterRegister[1].FR1 = (id_rxSDO << 16 | heartbroken)<< 5;//0x02 test rtr bit for heartbroken
 		CAN->sFilterRegister[1].FR2 = (0x80 << 16 | 0x100)<< 5;
 
