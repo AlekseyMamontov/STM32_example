@@ -15,7 +15,7 @@ void SystemClock_Config(void) {
     RCC->CR |= RCC_CR_HSION; // Включение HSI
     while (!(RCC->CR & RCC_CR_HSIRDY)); // Ожидание готовности HSI
 
-    // Настройка PLL для генерации тактовой частоты 150 МГц
+    // Настройка PLL для генерации тактовой частоты 160 МГц
     RCC->PLLCFGR = 0; // Сброс конфигурации PLL
     RCC->PLLCFGR |= (RCC_PLLCFGR_PLLSRC_HSI | // Использование HSI как источника
                      (8 << RCC_PLLCFGR_PLLM_Pos) | // PLLM = 8 (16 МГц / 8 = 2 МГц)
