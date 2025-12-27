@@ -11,6 +11,22 @@
 
 void SystemClock_Config(void) {
 	/*
+// 1. Включаем тактирование PWR
+
+RCC->APB1ENR1 |= RCC_APB1ENR1_PWREN;
+while (PWR->SR2 & PWR_SR2_VOSF); 
+
+
+//Reset cache
+FLASH->ACR &= ~(FLASH_ACR_ICEN | FLASH_ACR_DCEN);
+FLASH->ACR |= (FLASH_ACR_ICRST | FLASH_ACR_DCRST);
+FLASH->ACR &= ~(FLASH_ACR_ICRST | FLASH_ACR_DCRST);
+
+// 3. Настраиваем Latency и включаем кэш заново
+FLASH->ACR = FLASH_ACR_LATENCY_4WS | FLASH_ACR_PRFTEN | FLASH_ACR_ICEN | FLASH_ACR_DCEN;
+
+
+	
     // Включение HSI
     RCC->CR |= RCC_CR_HSION; // Включение HSI
     while (!(RCC->CR & RCC_CR_HSIRDY)); // Ожидание готовности HSI
@@ -22,16 +38,20 @@ void SystemClock_Config(void) {
                      (150 << RCC_PLLCFGR_PLLN_Pos) | // PLLN = 150 (2 МГц * 150 = 300 МГц)
                      (2 << RCC_PLLCFGR_PLLR_Pos) | // PLLR = 2 (300 МГц / 2 = 150 МГц)
                      RCC_PLLCFGR_PLLREN); // Включение PLLR
+
+
+					 
     */
 
-
+	RCC->APB1ENR1 |= RCC_APB1ENR1_PWREN;
+	while (PWR->SR2 & PWR_SR2_VOSF); 
     // Включение HSE 8mhz
     RCC->CR |= RCC_CR_HSEON; // Включение HSE*
     while (!(RCC->CR & RCC_CR_HSERDY)); // Ожидание готовности HSE
 
     // Настройка флеш-памяти для работы на высокой частоте
-    FLASH->ACR |= FLASH_ACR_LATENCY_4WS; // Установка латентности Flash (4 такта для 150 МГц)
-
+    // FLASH->ACR |= FLASH_ACR_LATENCY_4WS; // Установка латентности Flash (4 такта для 160 МГц)
+    FLASH->ACR = FLASH_ACR_LATENCY_4WS | FLASH_ACR_PRFTEN | FLASH_ACR_ICEN | FLASH_ACR_DCEN;
 
 
     // Настройка PLL для генерации тактовой частоты 160 МГц
@@ -61,7 +81,7 @@ void SystemClock_Config(void) {
 
     SET_BIT(RCC->APB1ENR1, RCC_APB1ENR1_CRSEN);
     RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
-    SET_BIT(RCC->APB1ENR1, RCC_APB1ENR1_PWREN);
+    //SET_BIT(RCC->APB1ENR1, RCC_APB1ENR1_PWREN);
 
 
 
