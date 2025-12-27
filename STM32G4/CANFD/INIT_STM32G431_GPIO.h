@@ -42,9 +42,11 @@ FLASH->ACR = FLASH_ACR_LATENCY_4WS | FLASH_ACR_PRFTEN | FLASH_ACR_ICEN | FLASH_A
 
 					 
     */
-
-	RCC->APB1ENR1 |= RCC_APB1ENR1_PWREN;
-	while (PWR->SR2 & PWR_SR2_VOSF); 
+	// R1MODE bit configuration (<150Mhz)  1,  (>150MHz) 0
+   RCC->APB1ENR1 |= RCC_APB1ENR1_PWREN;
+   PWR->CR5 &= ~PWR_CR5_R1MODE;
+   while (PWR->SR2 & PWR_SR2_VOSF);
+	
     // Включение HSE 8mhz
     RCC->CR |= RCC_CR_HSEON; // Включение HSE*
     while (!(RCC->CR & RCC_CR_HSERDY)); // Ожидание готовности HSE
