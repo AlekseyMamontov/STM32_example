@@ -15,7 +15,7 @@ void SystemClock_Config(void) {
     RCC->CR |= RCC_CR_HSION; // Включение HSI
     while (!(RCC->CR & RCC_CR_HSIRDY)); // Ожидание готовности HSI
 
-    // Настройка PLL для генерации тактовой частоты 160 МГц
+    // Настройка PLL для генерации тактовой частоты 150 МГц
     RCC->PLLCFGR = 0; // Сброс конфигурации PLL
     RCC->PLLCFGR |= (RCC_PLLCFGR_PLLSRC_HSI | // Использование HSI как источника
                      (8 << RCC_PLLCFGR_PLLM_Pos) | // PLLM = 8 (16 МГц / 8 = 2 МГц)
@@ -24,49 +24,47 @@ void SystemClock_Config(void) {
                      RCC_PLLCFGR_PLLREN); // Включение PLLR
     */
 
-
-    // Включение HSE 8mhz
-    RCC->CR |= RCC_CR_HSEON; // Включение HSE*
-    while (!(RCC->CR & RCC_CR_HSERDY)); // Ожидание готовности HSE
-
-    // Настройка флеш-памяти для работы на высокой частоте
-    FLASH->ACR |= FLASH_ACR_LATENCY_4WS; // Установка латентности Flash (4 такта для 150 МГц)
-
-
-
-    // Настройка PLL для генерации тактовой частоты 150 МГц
-    RCC->PLLCFGR = 0; // Сброс конфигурации PLL
-    RCC->PLLCFGR |= (RCC_PLLCFGR_PLLSRC_HSE | 	  // Использование HSE как источника
+    // R1MODE bit configuration (<150Mhz)  1,  (>150MHz) 0
+       RCC->APB1ENR1 |= RCC_APB1ENR1_PWREN;
+       PWR->CR5 &= ~PWR_CR5_R1MODE;
+       while (PWR->SR2 & PWR_SR2_VOSF);
+    // HSE 8Mhz on
+       RCC->CR |= RCC_CR_HSEON;
+       while (!(RCC->CR & RCC_CR_HSERDY));
+     //Flash
+       FLASH->ACR = FLASH_ACR_LATENCY_4WS | FLASH_ACR_PRFTEN | FLASH_ACR_ICEN | FLASH_ACR_DCEN;
+     // Настройка PLL для генерации тактовой частоты 160 МГц
+      RCC->PLLCFGR = 0; // reset PLL
+      RCC->PLLCFGR |= (RCC_PLLCFGR_PLLSRC_HSE |   // HSE ON
                     (1 << RCC_PLLCFGR_PLLM_Pos) | // PLLM = 2 (8 МГц / 2 = 4 МГц)
                     (80 << RCC_PLLCFGR_PLLN_Pos)| // PLLN = 80 * 4 МГц *  320 МГц)
                     (0 << RCC_PLLCFGR_PLLR_Pos) | // PLLR = 2 (320 МГц / 2 = 160 МГц)
 					(1 << RCC_PLLCFGR_PLLQ_Pos) | // PLLQ = 4 (320 МГц / 4 = 80 МГц) for FDCAN
-                    RCC_PLLCFGR_PLLREN |
-					RCC_PLLCFGR_PLLQEN); 		  // Включение PLLR
+                    RCC_PLLCFGR_PLLREN | RCC_PLLCFGR_PLLQEN);
 
-
-    // Включение PLL
     RCC->CR |= RCC_CR_PLLON;
     while (!(RCC->CR & RCC_CR_PLLRDY)); // Ожидание готовности PLL
 
     // Настройка AHB, APB1 и APB2
-    RCC->CFGR |= RCC_CFGR_HPRE_DIV1; // AHB = SYSCLK
+    RCC->CFGR |= RCC_CFGR_HPRE_DIV1;  // AHB = SYSCLK
     RCC->CFGR |= RCC_CFGR_PPRE1_DIV1; // APB1 = HCLK
     RCC->CFGR |= RCC_CFGR_PPRE2_DIV1; // APB2 = HCLK
 
     // Установка SYSCLK на PLL
     RCC->CFGR |= RCC_CFGR_SW_PLL;
-    while ((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_PLL); // Ожидание установки PLL как SYSCLK
+    while ((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_PLL);
 
 
-    SET_BIT(RCC->APB1ENR1, RCC_APB1ENR1_CRSEN);
+    // for usb
+    //RCC->CRRCR |= RCC_CRRCR_HSI48ON;
+    //while(!(RCC->CRRCR & RCC_CRRCR_HSI48RDY));
+    // CRS (Clock Recovery System)
+    RCC->APB1ENR1 |= RCC_APB1ENR1_CRSEN;
+    //CRS->CFGR |= (2 << CRS_CFGR_SYNCSRC_Pos);
+    //CRS->CR |= CRS_CR_AUTOTRIMEN | CRS_CR_CEN;
+    //RCC->APB1ENR1 |= RCC_APB1ENR1_USBEN;
+
     RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
-    SET_BIT(RCC->APB1ENR1, RCC_APB1ENR1_PWREN);
-
-
-
-
-
 
 
     // Обновление SystemCoreClock
@@ -83,46 +81,10 @@ void SystemClock_Config(void) {
 void GPIO_INIT(void){
 
 
-	RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN | RCC_AHB2ENR_GPIOBEN|RCC_AHB2ENR_GPIOCEN;
 
 
 
-	/*
-		GPIOA
-
-		  USART2 TX PA2
-		  USART2 RX PA3
-
-		  LED_STAT  PA5
-
-		  USB DP PA12
-		  USB DM PA11
-
-		  LED_CAN3  PA15
-
-
-	  GPIOB
-
-	      FDCAN3 PB3 RX
-	      FDCAN3 PB4 TX
-	      FDCAN2 PB5 RX
-	      FDCAN2 PB6 TX
-
-	      LED CAN2  PB7
-
-	      FDCAN1 PB8 RX
-	      FDCAN1 PB9 TX
-
-	      USART3 TX PB10
-	      USART3 RX PB11
-
-
-      GPIOC
-
-		  PC13 LED CAN1
-
-
-	 */
+	RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN | RCC_AHB2ENR_GPIOBEN;
 
 	/*
 	GPIO port mode register (GPIOx_MODER)
@@ -139,18 +101,6 @@ void GPIO_INIT(void){
 					10: Alternate function mode
 					11: Analog mode (reset state)
 
-    */
-
-
-
-	//   ------------  151413121110 9 8 7 6 5 4 3 2 1 0
-	GPIOA->MODER = 	 0b01101011111111111111011110101111; // General purpose output moder
-	//-------------    151413121110 9 8 7 6 5 4 3 2 1 0
-	GPIOB->MODER =   0b11111111101010100110101010111111; // General purpose output mode
-	GPIOC->MODER =   0b11110111111111111111111111111111;
-
-	/*
-
 	GPIO port output speed register (GPIOx_OSPEEDR)
 		(x = A to G)
 		Address offset: 0x08
@@ -164,13 +114,54 @@ void GPIO_INIT(void){
 			10: High speed
 			11: Very high speed
     */
+
+	/*
+		GPIOA
+
+      FDCAN1 PA12 TX
+      FDCAN1 PA11 RX
+
+      USART1 RX PA10
+      USART1 TX PA9
+
+      IN0 PA2
+      IN1 PA3
+      IN2 PA4
+
+      OUT1 PA5
+      OUT2 PA6
+      OUT3 PA7
+
+
+	 */
+
+
+	//   ------------  151413121110 9 8 7 6 5 4 3 2 1 0
+	GPIOA->MODER = 	 0b00101010101010000101010000000000; // General purpose output moder
 	//-------------    151413121110 9 8 7 6 5 4 3 2 1 0
-	GPIOA->OSPEEDR = 0b10111100000000000000100011110000;
+	GPIOA->OSPEEDR = 0b00111111111111001010101111110000;
+
+/*
+	  GPIOB
+
+      FDCAN2 PB6 TX
+      FDCAN2 PB5 RX
+
+      FDCAN2 PB4 TX
+      FDCAN2 PB3 RX
+
+      PB11 LED STAT
+	  PB12 LED CAN3
+	  PB13 LED CAN2
+	  PB14 LED CAN1
+
+
+ * */
 
 	//-------------    151413121110 9 8 7 6 5 4 3 2 1 0
-	GPIOB->OSPEEDR = 0b00000000111111111011111111000000;
-
-
+	GPIOB->MODER =   0b00010101010000000010101010000000; // General purpose output mode
+	//-------------    151413121110 9 8 7 6 5 4 3 2 1 0
+	GPIOB->OSPEEDR = 0b00111111110000000011111111000000;
 
 	/*GPIO port output type register (GPIOx_OTYPER)
 		(x = A to G)
@@ -183,8 +174,8 @@ void GPIO_INIT(void){
    */
 
 	//-------------   151413121110 9 8 7 6 5 4 3 2 1 0
-	//GPIOA->OTYPER |= 0b00000000000000000000000000000000;
-	//GPIOB->OTYPER |= 0b00000000000000000000000000000000;
+	GPIOA->OTYPER |= 0b00000000000000000000000000000000;
+	GPIOB->OTYPER |= 0b00000000000000000000000000000000;
 
 	/*
 	GPIO port pull-up/pull-down register (GPIOx_PUPDR)
@@ -201,15 +192,14 @@ void GPIO_INIT(void){
 				11: Reserved
   */
 	     //-------------  151413121110 9 8 7 6 5 4 3 2 1 0
-	//	 GPIOA->PUPDR = 0b00100100000000000000000000000000; // General purpose output mode
+		 GPIOA->PUPDR = 0b01100100000000000000000000000000; // General purpose output mode
 	     //-------------  151413121110 9 8 7 6 5 4 3 2 1 0
-	//	 GPIOB->PUPDR = 0b00000000000000000000000000000000; // General purpose output mode
+		 GPIOB->PUPDR = 0b00000001010000010000000000010100; // General purpose output mode
 
 	/*
 
-	GPIO alternate function low register (GPIOx_AFRL) (x = A to G) Address offset: 0x20 Reset value: 0x0000 0000
-	GPIO alternate function high register (GPIOx_AFRH)(x = A to G) Address offset: 0x24 Reset value: 0x0000 0000
-
+			GPIO alternate function low register (GPIOx_AFRL) (x = A to G) Address offset: 0x20 Reset value: 0x0000 0000
+			GPIO alternate function high register (GPIOx_AFRH)(x = A to G) Address offset: 0x24 Reset value: 0x0000 0000
 				0000: AF0
 				0001: AF1
 				0010: AF2
@@ -230,51 +220,48 @@ void GPIO_INIT(void){
 			/*
 				GPIOA
 
-				  USART2 TX PA2  AF7
-				  USART2 RX PA3  AF7
+		      FDCAN1 PA12 TX AF9
+		      FDCAN1 PA11 RX AF9
 
-				  LED_STAT  PA5  -> AF1->TIM2_CH1
+		      USART1 RX PA10 AF7
+		      USART1 TX PA9  AF7
 
-				  USB DP PA12
-				  USB DM PA11
+		      IN0 PA2
+		      IN1 PA3
+		      IN2 PA4
 
-				  LED CAN3  PA15 -> AF2 -> TIM8_CH1
+		      OUT1 PA5
+		      OUT2 PA6
+		      OUT3 PA7
 
-			*/
 
+			 */
 			//-------	     7   6   5   4   3   2   1   0
-		GPIOA->AFR[0] = 0b00000000000000000111011100000000;
+		GPIOA->AFR[0] = 0b00000000000000000000000000000000;
 		   //-------	    15  14  13  12  11  10   9   8
-	    GPIOA->AFR[1] = 0b00000000000000000000000000000000;
+	    GPIOA->AFR[1] = 0b00000000000010011001011101110000;
 
-/*
-		  GPIOB
+	    /*
+	    	  GPIOB
 
-		      FDCAN3 PB3 RX AF11
-		      FDCAN3 PB4 TX AF11
-		      FDCAN2 PB5 RX AF9
-		      FDCAN2 PB6 TX AF9
+	          FDCAN2 PB6 TX AF9
+	          FDCAN2 PB5 RX AF9
 
-		      LED CAN2  PB7    ->AF1 ->TIM17_CH1N
+	          FDCAN2 PB4 TX AF11
+	          FDCAN2 PB3 RX Af11
 
-		      FDCAN1 PB8 RX  AF9
-		      FDCAN1 PB9 TX  AF9
-
-		      USART3 TX PB10 AF7
-		      USART3 RX PB11 AF7
+	          PB11 LED STAT
+	    	  PB12 LED CAN3
+	    	  PB13 LED CAN2
+	    	  PB14 LED CAN1
 
 
-	      GPIOC
-
-			  PC13 LED CAN1
-
-
-		 */
+	     * */
 
 	       //-------	     7   6   5   4   3   2   1   0
 	    GPIOB->AFR[0] = 0b00001001100110111011000000000000;
 	    	//-------	    15  14  13  12  11  10   9   8
-	    GPIOB->AFR[1] = 0b00000000000000000111011110011001;
+	    GPIOB->AFR[1] = 0b00000000000000000000000000000000;
 
 
 
