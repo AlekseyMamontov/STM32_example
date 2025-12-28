@@ -6,7 +6,6 @@
 #include <CANFD_STM32G473.h>
 
 #include "main.h"
-#define LED_STAT  5 // PA5
 uint8_t led_test = 0;
 
 
@@ -26,7 +25,7 @@ int main(void)
 
 	if(!systick_pause){
 
-    GPIOA->BSRR = led_test? 1 << LED_STAT : 1 << (LED_STAT+16);
+    GPIOB->BSRR = led_test? 1 << 11 : 1 <<27;
     led_test = led_test?0:1;
     systick_pause = 500;
 
@@ -48,6 +47,14 @@ void FDCANs_Config(void){
 	uint32_t *RAM_CANFD1 = (uint32_t*)RAMBaseFDCAN1;
 	uint32_t *RAM_CANFD2 = (uint32_t*)RAMBaseFDCAN2;
 	uint32_t *RAM_CANFD3 = (uint32_t*)RAMBaseFDCAN3;
+
+
+
+
+
+
+
+
 
 	// Включение тактирования для CAN
 	RCC->APB1ENR1 |= RCC_APB1ENR1_FDCANEN;
@@ -87,9 +94,9 @@ void FDCANs_Config(void){
 
 
 
-	// 500
-	//FDCAN2->NBTP = (1 << FDCAN_NBTP_NSJW_Pos) | (1 << FDCAN_NBTP_NBRP_Pos)
-	//		| (66 << FDCAN_NBTP_NTSEG1_Pos) | (11 << FDCAN_NBTP_NTSEG2_Pos);
+	//500
+	FDCAN2->NBTP = (1 << FDCAN_NBTP_NSJW_Pos) | (1 << FDCAN_NBTP_NBRP_Pos)
+			| (66 << FDCAN_NBTP_NTSEG1_Pos) | (11 << FDCAN_NBTP_NTSEG2_Pos);
 	// 250
 	//FDCAN2->NBTP = (1 << FDCAN_NBTP_NSJW_Pos) | (1 << FDCAN_NBTP_NBRP_Pos)
 	//		| (134 << FDCAN_NBTP_NTSEG1_Pos) | (23 << FDCAN_NBTP_NTSEG2_Pos);
@@ -115,14 +122,14 @@ N = 1000 нс / 62,5 нс = 16 квантов
 1 + BS1 = 16 × 0,875 = 14
 BS1 = 13 tq
 BS2 = 16 - (1 + 13) = 2 tq
- */
+
 	FDCAN2->NBTP = (1 << FDCAN_NBTP_NBRP_Pos) | // NBRP = 1
 	               (33 << FDCAN_NBTP_NTSEG1_Pos) | // NTSEG1 = 33
 	               (4 << FDCAN_NBTP_NTSEG2_Pos) | // NTSEG2 = 4
 	               (1 << FDCAN_NBTP_NSJW_Pos); // NSJW = 1
 
 
-
+*/
 
 
 	FDCAN3->NBTP = (1 << FDCAN_NBTP_NSJW_Pos) | (1 << FDCAN_NBTP_NBRP_Pos)
@@ -202,7 +209,7 @@ void CAN1_to_CAN2(void){
 			        *TxBuffer++ = (*RxBuffer++)&0x3F0000; //header1
 					   data0 = *RxBuffer++;
 					   data1 = *RxBuffer++;
-/*
+
 			        switch(id){
 
 			        	case 0x4E1:  //[4E1] 4B 46 31 37 38 32 30 36  [4E1]4A 46 31 34 30 34 34 39
@@ -363,7 +370,7 @@ void CAN1_to_CAN2(void){
 			        		break;
 
 			        };
-*/
+
 			        *TxBuffer++ = data0; //data 1-4
 			        *TxBuffer++ = data1; //data 5-8
 
