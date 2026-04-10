@@ -1,9 +1,8 @@
 -------------------------------------------
 Linux
 
-CANGAROO
-
-https://github.com/normaldotcom/cangaroo
+old  CANGAROO https://github.com/normaldotcom/cangaroo
+new  CANGAROO https://github.com/OpenAutoDiagLabs/CANgaroo/releases/tag/v0.10.0
 
 SavvyCAN
 
@@ -11,9 +10,8 @@ https://github.com/collin80/SavvyCAN (https://appimage.github.io/SavvyCAN/);
 
 https://www.csselectronics.com/pages/can-bus-interface-savvycan
 
-Скачать программу 
-
 https://appimage.github.io/SavvyCAN/
+
 
 WireShark
 
@@ -21,7 +19,8 @@ https://www.wireshark.org/
 
 
 ----------------------------------
-работа в терминале
+
+work terminale
 
 sudo apt-get install can-utils
 
@@ -33,17 +32,11 @@ candump can0 (мониторинг шины, номер шины)
 
 
 Windows 10
-
-CANGAROO
-
-https://canable.io/utilities/cangaroo-win32-ccdcb64.zip
+old  CANGAROO https://github.com/normaldotcom/cangaroo
+new  CANGAROO https://github.com/OpenAutoDiagLabs/CANgaroo/releases/tag/v0.10.0
 
 SavvyCAN (через slcan)
-
 https://github.com/collin80/SavvyCAN
-
-Программа тут ..
-
 WireShark
 https://www.wireshark.org/
 
