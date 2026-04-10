@@ -32,7 +32,8 @@ candump can0 (мониторинг шины, номер шины)
 ------------------------------------
 
 
-Windows 10
+Windows 10,11
+
 old  CANGAROO https://github.com/normaldotcom/cangaroo
 
 new  CANGAROO https://github.com/OpenAutoDiagLabs/CANgaroo/releases/tag/v0.10.0
