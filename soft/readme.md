@@ -9,11 +9,14 @@ https://github.com/AlekseyMamontov/STM32_example/blob/main/soft/CAN2.0_STD_Flash
 https://github.com/AlekseyMamontov/STM32_example/blob/main/soft/CANFD_SOLO_DUAL_flash_4_variations.zip
 
 -------------------------------------------
+## SOFT 
+
+https://github.com/AlekseyMamontov/CANnectivity-CANFD-adapters
 
 
 
 
-new  CANGAROO https://github.com/OpenAutoDiagLabs/CANgaroo/releases/tag/v0.10.0
+CANGAROO https://github.com/OpenAutoDiagLabs/CANgaroo/releases/tag/v0.10.0
 
 
 SavvyCAN
