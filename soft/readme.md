@@ -1,6 +1,8 @@
 ### flash
 
-For usbcan stm32f072
+For usbcan stm32f072      https://github.com/AlekseyMamontov/STM32_example/blob/main/soft/CAN2.0_STD_Flash_5_variations_.zip
+
+For usbcandf solo, dual  
 
 -------------------------------------------
 
