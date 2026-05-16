@@ -17,6 +17,12 @@ https://github.com/AlekseyMamontov/CANnectivity-CANFD-adapters
 
 # SocketCAN, can-utils
 
+sudo apt-get install can-utils
+
+sudo ip link set can0 up type can bitrate 500000 (скорость на шине, можно от 10кб до 1Мб)
+
+candump can0 (мониторинг шины, номер шины)
+
 <img width="50"  alt="image" src="https://github.com/user-attachments/assets/4599cf1c-6836-4b64-87ad-56a6bc628432" />
 
 https://www.kernel.org/doc/html/latest/networking/can.html
@@ -102,35 +108,6 @@ WireShark
 
 https://www.wireshark.org/
 
-
-----------------------------------
-
-work terminale
-
-sudo apt-get install can-utils
-
-sudo ip link set can0 up type can bitrate 500000 (скорость на шине, можно от 10кб до 1Мб)
-
-candump can0 (мониторинг шины, номер шины)
-
-------------------------------------
-
-
-Windows 10,11
-
-old  CANGAROO https://github.com/normaldotcom/cangaroo
-
-new  CANGAROO https://github.com/OpenAutoDiagLabs/CANgaroo/releases/tag/v0.10.0
-
-SavvyCAN (через slcan)
-
-https://github.com/collin80/SavvyCAN
-
-WireShark
-
-https://www.wireshark.org/
-
-----------------------------------------
 
 Прошивки
 
