@@ -13,7 +13,77 @@ https://github.com/AlekseyMamontov/STM32_example/blob/main/soft/CANFD_SOLO_DUAL_
 
 https://github.com/AlekseyMamontov/CANnectivity-CANFD-adapters
 
+*CAN Bus Software Overview* 
 
+# SocketCAN, can-utils
+
+<img width="50"  alt="image" src="https://github.com/user-attachments/assets/4599cf1c-6836-4b64-87ad-56a6bc628432" />
+
+https://www.kernel.org/doc/html/latest/networking/can.html
+
+https://github.com/linux-can
+
+
+
+# <img src="https://github.com/Schildkroet/CANgaroo/raw/master/src/assets/cangaroo.png" width="48" height="48"> CANgaroo
+
+Jayachandran Dharuman (https://github.com/OpenAutoDiagLabs/cangaroo)
+
+<img width="500"  alt="image" src="https://github.com/user-attachments/assets/581d26fd-8e25-40ec-a364-900e12229ea9" />
+
+Schildkroet (https://github.com/Schildkroet/CANgaroo)
+
+<img width="500"  alt="image" src="https://github.com/user-attachments/assets/8da40527-1ded-48d2-a7d4-de4685cd5034" />
+
+Wikilift (https://github.com/wikilift/CANgaroo
+
+<img width="500"  alt="image" src="https://github.com/user-attachments/assets/f8424309-0d9e-4b3b-a7cb-6bd4fdba01cb" />
+
+#  SavvyCAN
+
+<img width="500"  alt="image" src="https://github.com/user-attachments/assets/b4a26fa0-ea29-4713-bd0c-ee2b131f507d" />
+
+https://github.com/collin80/SavvyCAN
+
+
+# <img width="200"  alt="image" src="https://github.com/user-attachments/assets/7878c9a6-fd5d-461f-a3a0-53f5431f9938" />  
+
+https://www.wireshark.org/tools/
+
+<img width="600" alt="image" src="https://github.com/user-attachments/assets/4ab0cf8e-a04c-4f79-9e5e-7fb9f0894ae9" />
+
+
+# CAN Analyzer
+
+https://github.com/phnahes/can-bus-analyzer
+
+<img width="500"  alt="image" src="https://github.com/user-attachments/assets/09a1846d-35a9-4b4b-a970-f32ae07cef1d" />
+
+
+<img width="500"  alt="image" src="https://github.com/user-attachments/assets/c630a2d3-ac7f-4b76-a1b5-97889007edbf" />
+
+
+# 🖥️ RCAN Tools
+
+https://rcantools.com/index.html  
+Proprietary commercial software (not open source). SocketCAN native with CAN FD support.
+
+# CANopen lib
+
+https://github.com/CANopenNode
+
+https://github.com/CANopenNode/CANopenEditor
+
+https://github.com/CANopenNode/CanOpenSTM32
+
+ python-can
+
+https://github.com/hardbyte/python-can
+https://github.com/cantools/cantools
+https://github.com/canopen-python/canopen CANopen
+
+# QT can-bus-api
+https://www.qt.io/blog/qt-can-bus-api-extensions
 
 
 CANGAROO https://github.com/OpenAutoDiagLabs/CANgaroo/releases/tag/v0.10.0
