@@ -15,11 +15,11 @@ https://github.com/AlekseyMamontov/CANnectivity-CANFD-adapters
 
 *CAN Bus Software Overview* 
 
-# SocketCAN, can-utils
+## SocketCAN, can-utils
 
-### sudo apt-get install can-utils
+##### sudo apt-get install can-utils
 
-### sudo ip link set can0 up type can bitrate 500000 (скорость на шине, можно от 10кб до 1Мб)
+##### sudo ip link set can0 up type can bitrate 500000 (скорость на шине, можно от 10кб до 1Мб)
 
 candump can0 (мониторинг шины, номер шины)
 
