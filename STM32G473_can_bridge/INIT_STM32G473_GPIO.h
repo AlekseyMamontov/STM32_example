@@ -32,7 +32,7 @@ void SystemClock_Config(void) {
        RCC->CR |= RCC_CR_HSEON;
        while (!(RCC->CR & RCC_CR_HSERDY));
      //Flash
-       FLASH->ACR = FLASH_ACR_LATENCY_4WS | FLASH_ACR_PRFTEN | FLASH_ACR_ICEN | FLASH_ACR_DCEN;
+      FLASH->ACR =  FLASH_ACR_DBG_SWEN | FLASH_ACR_LATENCY_4WS | FLASH_ACR_PRFTEN | FLASH_ACR_ICEN | FLASH_ACR_DCEN;
      // Настройка PLL для генерации тактовой частоты 160 МГц
       RCC->PLLCFGR = 0; // reset PLL
       RCC->PLLCFGR |= (RCC_PLLCFGR_PLLSRC_HSE |   // HSE ON
