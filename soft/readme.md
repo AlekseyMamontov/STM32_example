@@ -33,13 +33,15 @@ https://github.com/linux-can
 
 # <img src="https://github.com/Schildkroet/CANgaroo/raw/master/src/assets/cangaroo.png" width="48" height="48"> CANgaroo
 
+Schildkroet (https://github.com/Schildkroet/CANgaroo) 0.6.2 support Windows USBCANFD adapter
+
+<img width="500"  alt="image" src="https://github.com/user-attachments/assets/8da40527-1ded-48d2-a7d4-de4685cd5034" />
+
 Jayachandran Dharuman (https://github.com/OpenAutoDiagLabs/cangaroo)
 
 <img width="500"  alt="image" src="https://github.com/user-attachments/assets/581d26fd-8e25-40ec-a364-900e12229ea9" />
 
-Schildkroet (https://github.com/Schildkroet/CANgaroo)
 
-<img width="500"  alt="image" src="https://github.com/user-attachments/assets/8da40527-1ded-48d2-a7d4-de4685cd5034" />
 
 Wikilift (https://github.com/wikilift/CANgaroo
 
