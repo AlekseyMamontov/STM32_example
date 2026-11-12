@@ -64,7 +64,7 @@ spi0 miso PA7
 
 # ESP32-S3 
 
-CAN rx io47 , tx io48
+CAN rx io47 , tx io48 - internal bus
 
 spi mosi io11
 
