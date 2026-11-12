@@ -36,13 +36,13 @@ led_status  PA3
 
 bus mcu3 <-> esp32s3
 
-spi0 cs   PA4
+spi cs   PA4
 
-spio sck  PA5
+spi sck  PA5
 
-spi0 mosi PA6
+spi miso PA6
 
-spi0 miso PA7
+spi mosi PA7
 
 # SWD
 
