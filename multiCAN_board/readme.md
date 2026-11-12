@@ -4,25 +4,21 @@
 
 # MCU_1
 
-FDCAN1  PB8  rx, PB9  tx -|
+FDCAN1  PB8  rx, PB9  tx - CAN bridge 1
 
-                          +-----> CAN bridge 1
-
-FDCAN2  PB12 rx, PB13 tx -|
+FDCAN2  PB12 rx, PB13 tx - CAN bridge 1
 
 FDCAN3  PA8  rx, PA15 tx - internal can_bus
 
-usb     PA11,PA12
+usb   PA11,PA12
 
 led_status  PA3
 
 # MCU_2 
 
-FDCAN1  PA11  rx, PA12  tx-|
+FDCAN1  PA11 rx, PA12  tx - CAN bridge 2
 
-                           + ---> CAN bridge 2
-
-FDCAN3  PA8  rx, PA15 tx  _|
+FDCAN3  PA8  rx, PA15  tx - CAN bridge 2
 
 FDCAN2  PB5 rx, PB6 tx  -- internal can_bus
 
@@ -30,11 +26,9 @@ led_status  PA3
 
 # MCU_3
 
-FDCAN1  PA11  rx, PA12  tx-|
+FDCAN1  PA11  rx, PA12  tx  - CAN bridge 3
 
-                           + ---> CAN bridge 3
-
-FDCAN3  PA8  rx, PA15 tx  _|
+FDCAN3  PA8  rx, PA15 tx    - CAN bridge 3
 
 FDCAN2  PB5 rx, PB6 tx  -- internal can_bus
 
