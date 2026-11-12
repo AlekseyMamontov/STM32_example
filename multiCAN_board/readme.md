@@ -1,8 +1,6 @@
 
-STM32G473CBT6
 
-
-<img src="img/T-bridge_can_module.jpg" alt="CAN_bridge" width="400">
+<img src="img/MultBridge_can_module.jpg" alt="CAN_bridge" width="400">
 
 # MCU_1
 
