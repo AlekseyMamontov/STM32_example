@@ -44,7 +44,23 @@ spi0 mosi PA6
 
 spi0 miso PA7
 
----
+# SWD
+
+  1 - rst
+  
+  2 - swo
+  
+  3 - swclk
+  
+  4 - swdio
+  
+  5 - +3.3V
+  
+  6 - GND
+  
+
+--------------------------------------
+
 
 # ESP32-S3 
 
@@ -58,8 +74,9 @@ spi miso io13
 
 spi cs   io14
 
-usb io19.io20
+usb  io19, io20
 
+uart txd0, rxdo
 
 
 
