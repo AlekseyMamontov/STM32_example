@@ -1,0 +1,59 @@
+/*
+ * Copyright (c) 2026 Oleksii Mamontov <mamontov1@gmail.com>
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+#include "mult_canbridge_g473_common.dtsi"
+
+/ {
+	model = "MultBridge MCU1";
+	compatible = "canmodule,mult-canbridge-mcu1";
+
+	chosen {
+		zephyr,canbus = &fdcan1;
+	};
+
+	aliases {
+		can-ext-a = &fdcan1;
+		can-ext-b = &fdcan2;
+		can-internal = &fdcan3;
+	};
+};
+
+zephyr_udc0: &usb {
+	pinctrl-0 = <&usb_dm_pa11 &usb_dp_pa12>;
+	pinctrl-names = "default";
+	clocks = <&rcc STM32_CLOCK(APB1, 23)>,
+		 <&rcc STM32_SRC_HSI48 CLK48_SEL(0)>;
+	status = "okay";
+};
+
+&fdcan1 {
+	pinctrl-0 = <&fdcan1_rx_pb8 &fdcan1_tx_pb9>;
+	pinctrl-names = "default";
+	clocks = <&rcc STM32_CLOCK(APB1, 25)>,
+		 <&rcc STM32_SRC_PLL_Q FDCAN_SEL(1)>;
+  //bus-speed = <500000>;
+	//bus-speed-data = <2000000>;
+	status = "okay";
+};
+
+&fdcan2 {
+	pinctrl-0 = <&fdcan2_rx_pb12 &fdcan2_tx_pb13>;
+	pinctrl-names = "default";
+	clocks = <&rcc STM32_CLOCK(APB1, 25)>,
+		 <&rcc STM32_SRC_PLL_Q FDCAN_SEL(1)>;
+	//bus-speed = <500000>;
+	//bus-speed-data = <2000000>;
+	status = "okay";
+};
+
+&fdcan3 {
+	pinctrl-0 = <&fdcan3_rx_pa8 &fdcan3_tx_pa15>;
+	pinctrl-names = "default";
+	clocks = <&rcc STM32_CLOCK(APB1, 25)>,
+		 <&rcc STM32_SRC_PLL_Q FDCAN_SEL(1)>;
+	//bus-speed = <1000000>; /* internal bus: classic CAN only */
+	status = "okay";
+};

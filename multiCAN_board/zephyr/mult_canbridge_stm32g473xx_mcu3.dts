@@ -1,0 +1,24 @@
+/*
+ * Copyright (c) 2026 Oleksii Mamontov <mamontov1@gmail.com>
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+#include "mult_canbridge_g473_mcu23.dtsi"
+
+/ {
+	model = "MultBridge MCU3";
+	compatible = "canmodule,mult-canbridge-mcu3";
+
+	aliases {
+		esp-spi = &spi1;
+	};
+};
+
+/* SPI peripheral (slave) towards ESP32-S3 (ESP32 is the controller). Hardware NSS on PA4. */
+&spi1 {
+	pinctrl-0 = <&spi1_nss_pa4 &spi1_sck_pa5 &spi1_miso_pa6 &spi1_mosi_pa7>;
+	pinctrl-names = "default";
+	/* TODO: add dmas/dma-names (SPI1 RX/TX on DMAMUX1) for 10 MHz operation */
+	status = "okay";
+};

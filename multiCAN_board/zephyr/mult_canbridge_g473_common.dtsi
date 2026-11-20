@@ -1,0 +1,59 @@
+/*
+ * Copyright (c) 2026 Oleksii Mamontov <mamontov1@gmail.com>
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Common part of the three STM32G473 MCUs of MultBridge.
+ */
+
+#include <st/g4/stm32g473Xb.dtsi>
+#include <st/g4/stm32g473c(b-c-e)tx-pinctrl.dtsi>
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/ {
+	chosen {
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+		/* system timer: SysTick (default) - there is no 32.768 kHz crystal visible on the PCB */
+	};
+
+	aliases {
+		led0 = &led_stat;
+		led-status = &led_stat;
+	};
+
+	leds: leds {
+		compatible = "gpio-leds";
+
+		led_stat: led_stat {
+			gpios = <&gpioa 3 GPIO_ACTIVE_HIGH>;
+			label = "LED_STATUS";
+		};
+	};
+};
+
+&clk_hse {
+	clock-frequency = <DT_FREQ_M(8)>;
+	status = "okay";
+};
+
+&clk_hsi48 {
+	status = "okay";
+};
+
+&pll {
+	div-m = <2>;
+	mul-n = <80>;
+	div-p = <2>;
+	div-q = <4>;
+	div-r = <2>;
+	clocks = <&clk_hse>;
+	status = "okay";
+};
+
+&rcc {
+	clocks = <&pll>;
+	clock-frequency = <DT_FREQ_M(160)>;
+	ahb-prescaler = <1>;
+	apb1-prescaler = <1>;
+	apb2-prescaler = <1>;
+};

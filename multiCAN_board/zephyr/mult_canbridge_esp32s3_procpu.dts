@@ -1,0 +1,133 @@
+/*
+ * Copyright (c) 2026 Oleksii Mamontov <mamontov1@gmail.com>
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+
+#include <espressif/esp32s3/esp32s3.dtsi>
+#include <espressif/partitions_0x0_amp.dtsi>
+#include "mult_canbridge_esp32s3-pinctrl.dtsi"
+
+/ {
+	model = "MultBridge ESP32-S3 PROCPU";
+	compatible = "espressif,esp32s3";
+
+	aliases {
+		watchdog0 = &wdt0;
+		can-internal = &twai;
+		mcu3-spi = &spi2;
+    led0 = &esp_led;
+	};
+
+  leds {
+		compatible = "gpio-leds";
+		esp_led: led_0 {
+			gpios = <&gpio0 1 GPIO_ACTIVE_HIGH>;
+			label = "ESP32S3 Status LED";
+		};
+	};
+  
+	chosen {
+		zephyr,sram = &sram1;
+		zephyr,console = &usb_serial;
+		zephyr,shell-uart = &usb_serial;
+		zephyr,flash = &flash0;
+		zephyr,code-partition = &slot0_partition;
+		zephyr,canbus = &twai;
+		zephyr,bt-hci = &esp32_bt_hci;
+	};
+};
+
+/* ESP32-S3-N8R2: 8 MB flash, 2 MB quad PSRAM */
+&flash0 {
+	reg = <0x0 DT_SIZE_M(8)>;
+	ranges = <0x0 0x0 DT_SIZE_M(8)>;
+	#address-cells = <1>;
+	#size-cells = <1>;
+};
+
+&psram0 {
+	size = <DT_SIZE_M(2)>;
+};
+
+/* Type-C port: native USB-Serial/JTAG on IO19/IO20.
+ * Do not enable &usb_otg at the same time, it uses the same pins. */
+&usb_serial {
+	status = "okay";
+};
+
+/* Header RX/TX */
+&uart0 {
+	status = "okay";
+	current-speed = <115200>;
+	pinctrl-0 = <&uart0_default>;
+	pinctrl-names = "default";
+};
+
+/* Internal bus: classic CAN, 1 Mbit/s */
+&twai {
+	pinctrl-0 = <&twai_default>;
+	pinctrl-names = "default";
+	//bus-speed = <1000000>;
+	status = "okay";
+};
+
+/* SPI controller (master) to MCU3, MCU3 is the peripheral and uses DMA */
+&spi2 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	pinctrl-0 = <&spim2_default>;
+	pinctrl-names = "default";
+	cs-gpios = <&gpio0 14 GPIO_ACTIVE_LOW>;
+	status = "okay";
+};
+
+/* Same as esp32s3_devkitc: do not enable the general purpose timers by default */
+&timer0 {
+	status = "disabled";
+};
+
+&timer1 {
+	status = "disabled";
+};
+
+&timer2 {
+	status = "disabled";
+};
+
+&timer3 {
+	status = "disabled";
+};
+
+&gpio0 {
+	status = "okay";
+};
+
+&gpio1 {
+	status = "okay";
+};
+
+&esp32_bt_hci {
+	status = "okay";
+};
+
+&wifi {
+	status = "okay";
+};
+
+&wdt0 {
+	status = "okay";
+};
+
+&coretemp {
+	status = "okay";
+};
+
+&trng0 {
+	status = "okay";
+};
+
+&dma {
+	status = "okay";
+};

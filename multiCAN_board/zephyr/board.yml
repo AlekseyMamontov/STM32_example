@@ -1,0 +1,11 @@
+board:
+  name: mult_canbridge
+  full_name: MultBridge
+  vendor: canmodule
+  socs:
+    - name: stm32g473xx
+      variants:
+        - name: mcu1
+        - name: mcu2
+        - name: mcu3
+    - name: esp32s3

@@ -1,0 +1,52 @@
+/*
+ * Copyright (c) 2026 Oleksii Mamontov <mamontov1@gmail.com>
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * MCU2 and MCU3 are wired identically (no USB):
+ *   FDCAN1 PA11/PA12 -> external channel A
+ *   FDCAN3 PA8/PA15  -> external channel B
+ *   FDCAN2 PB5/PB6   -> internal bus (classic CAN, shared with ESP32-S3 TWAI)
+ */
+
+#include "mult_canbridge_g473_common.dtsi"
+
+/ {
+	chosen {
+		zephyr,canbus = &fdcan1;
+	};
+
+	aliases {
+		can-ext-a = &fdcan1;
+		can-ext-b = &fdcan3;
+		can-internal = &fdcan2;
+	};
+};
+
+&fdcan1 {
+	pinctrl-0 = <&fdcan1_rx_pa11 &fdcan1_tx_pa12>;
+	pinctrl-names = "default";
+	clocks = <&rcc STM32_CLOCK(APB1, 25)>,
+		 <&rcc STM32_SRC_PLL_Q FDCAN_SEL(1)>;
+	//bus-speed = <500000>;
+	//bus-speed-data = <2000000>;
+	status = "okay";
+};
+
+&fdcan3 {
+	pinctrl-0 = <&fdcan3_rx_pa8 &fdcan3_tx_pa15>;
+	pinctrl-names = "default";
+	clocks = <&rcc STM32_CLOCK(APB1, 25)>,
+		 <&rcc STM32_SRC_PLL_Q FDCAN_SEL(1)>;
+	//bus-speed = <500000>;
+	//bus-speed-data = <2000000>;
+	status = "okay";
+};
+
+&fdcan2 {
+	pinctrl-0 = <&fdcan2_rx_pb5 &fdcan2_tx_pb6>;
+	pinctrl-names = "default";
+	clocks = <&rcc STM32_CLOCK(APB1, 25)>,
+		 <&rcc STM32_SRC_PLL_Q FDCAN_SEL(1)>;
+	//bus-speed = <1000000>; /* classic CAN only: ESP32-S3 TWAI cannot handle FD frames */
+	status = "okay";
+};

@@ -1,0 +1,8 @@
+# Copyright (c) 2026 Oleksii Mamontov <mamontov1@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+# ESP32-S3 images are built with MCUboot through sysbuild (same as esp32s3_box3).
+# Kconfig.<board> is shared with the sysbuild Kconfig tree, so the BOARD_* symbol is usable here.
+choice BOOTLOADER
+	default BOOTLOADER_MCUBOOT if BOARD_MULT_CANBRIDGE_ESP32S3_PROCPU
+endchoice

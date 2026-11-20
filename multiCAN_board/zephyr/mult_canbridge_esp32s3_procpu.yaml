@@ -1,0 +1,16 @@
+identifier: mult_canbridge/esp32s3/procpu
+name: MultBridge ESP32-S3 PROCPU
+type: mcu
+arch: xtensa
+toolchain:
+  - zephyr
+supported:
+  - can
+  - gpio
+  - uart
+  - spi
+  - watchdog
+  - entropy
+  - dma
+  - netif:wifi
+vendor: canmodule

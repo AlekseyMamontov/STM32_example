@@ -1,0 +1,14 @@
+identifier: mult_canbridge/stm32g473xx/mcu1
+name: MultBridge MCU1
+type: mcu
+arch: arm
+toolchain:
+  - zephyr
+  - gnuarmemb
+ram: 128
+flash: 128
+supported:
+  - can
+  - gpio
+  - usb_device
+  - usbd
