@@ -1,0 +1,45 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2026 Oleksii Mamontov <mamontov1@gmail.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include "../app.overlay"
+
+/*
+ * MultBridge MCU1 as a 3-channel test adapter over USB:
+ *   channel0 = FDCAN1 (external bus 1)
+ *   channel1 = FDCAN2 (external bus 2)
+ *   channel2 = FDCAN3 (internal classic-CAN bus)
+ */
+/ {
+	cannectivity: cannectivity {
+		compatible = "cannectivity";
+		timestamp-counter = <&counters2>;
+
+		channel0 {
+			compatible = "cannectivity-channel";
+			can-controller = <&fdcan1>;
+			/* activity-leds = <&led_stat>; */
+		};
+
+		channel1 {
+			compatible = "cannectivity-channel";
+			can-controller = <&fdcan2>;
+		};
+
+		channel2 {
+			compatible = "cannectivity-channel";
+			can-controller = <&fdcan3>;
+		};
+	};
+};
+
+/* 1 MHz timestamp: TIM2 clock is 160 MHz, 160 MHz / (159 + 1) */
+&timers2 {
+	st,prescaler = <159>;
+	counters2: counter {
+		status = "okay";
+	};
+};
