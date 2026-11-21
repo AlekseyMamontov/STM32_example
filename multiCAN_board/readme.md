@@ -80,3 +80,16 @@ uart txd0, rxdo
 
 led stat  io1
 
+------------------------------------------------
+# Zephyr
+
+## stm32g4
+west build -p -b mult_canbridge/stm32g473xx/mcu1 zephyr/samples/basic/blinky
+
+west build -p -b mult_canbridge/stm32g473xx/mcu2 zephyr/samples/basic/blinky
+
+west build -p -b mult_canbridge/stm32g473xx/mcu3 zephyr/samples/basic/blinky
+
+## esp32
+
+west build -p -b mult_canbridge/esp32s3/procpu zephyr/samples/basic/blinky
