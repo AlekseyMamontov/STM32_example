@@ -134,7 +134,7 @@ void Thermostat_processing(struct Block_Thermostat* temp);
 void thermostat_init(struct Block_Thermostat* temp);
 void Rele_delay_processing(struct Rele_Delay* rele);
 void Rele_delay_init(struct Rele_Delay* rele);
-void default_load_rаm(uint8_t* ram, uint8_t* flash,uint32_t size);
+void default_load_ram(uint8_t* ram, uint8_t* flash,uint32_t size);
 
 
 

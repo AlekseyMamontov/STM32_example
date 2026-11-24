@@ -70,7 +70,7 @@
 #define color_PURPLE	0x8010
 
 
- uint16_t tft_pause_ms = 0;
+volatile uint16_t tft_pause_ms = 0;
  struct TFT_panel;
 // --------------- Struct tft_display -----------//
 
@@ -120,7 +120,7 @@ struct tft_screen{
 
 	// Widgets
 
-    struct
+    const struct
     tft_widget**   widgets;
     uint8_t    	    n_widgets;
     uint8_t*       build_widgets; // number
@@ -205,10 +205,11 @@ struct tft_stm32raw{
 
 /**************** TFT module ***************/
 
+#define TFT_BUS (*((volatile uint8_t*)&(GPIOA->ODR)))
+
 void tft_command(uint8_t command){
 
-	GPIOA->BSRR = command;
-	GPIOA->BRR = ~command;
+	TFT_BUS = command;
 	GPIOB->BRR = tft_RS|tft_WR;
 	tft_pause;
 	GPIOB->BSRR = tft_RS|tft_WR;
@@ -216,40 +217,27 @@ void tft_command(uint8_t command){
 };
 void tft_data8 (uint8_t data){
 
-	GPIOA->BSRR = data;
-    GPIOA->BRR = ~data;
+	TFT_BUS = data;
 	GPIOB->BRR =  tft_WR;
 	tft_pause;
 	GPIOB->BSRR = tft_WR;
 	tft_pause;
 };
 void tft_data16 (uint16_t data){
- /*
-	uint16_t data_clr = ~data;
-	uint16_t data_MSB =  ((data_clr&0xFF00)<<8) |((data&0xFF00)>>8);
-	uint16_t data_LSB =  ((data_clr&0xFF)<<16) | (data&0xFF);
-*/
-   uint8_t data_MSB = data >> 8;
-   uint8_t data_LSB = data&0xFF;
 
-	GPIOA->BSRR = data_MSB;
-    GPIOA->BRR = ~data_MSB;
+	TFT_BUS = data >> 8;
 	GPIOB->BRR =  tft_WR; // \_
 	GPIOB->BSRR = tft_WR; // _/
-	GPIOA->BSRR = data_LSB;
-	GPIOA->BRR = ~data_LSB;
+	TFT_BUS = data & 0xFF;
 	GPIOB->BRR =  tft_WR;
 	GPIOB->BSRR = tft_WR;
 
 };
 const uint8_t* tft_data8_block (const uint8_t* block, uint32_t size){
 
-	uint8_t data;
 	for(uint32_t i=0; i< size; i++){
 
-		data = *block++;
-		GPIOA->BSRR = data;
-		GPIOA->BRR = ~data;
+		TFT_BUS = *block++;
 		GPIOB->BRR =  tft_WR;
 		tft_pause;
 		GPIOB->BSRR = tft_WR;
@@ -259,21 +247,17 @@ const uint8_t* tft_data8_block (const uint8_t* block, uint32_t size){
 };
 void tft_data16_block (uint16_t* block, uint32_t size){
 
-	uint16_t data, data_clr, data_MSB, data_LSB;
+	uint16_t data;
 
 	for(uint32_t i=0; i< size; i++){
 
 		data = *(block + i);
-		data_clr = ~data;
-		data_MSB =  ((data_clr&0xFF00)<<8)| ((data&0xFF00)>>8);
-		data_LSB =  ((data_clr&0xFF)<<16) | (data&0xFF);
-
-		GPIOA->BSRR = data_MSB;
+		TFT_BUS = data >> 8;
 		GPIOB->BRR =  tft_WR;
 		tft_pause;
 		GPIOB->BSRR = tft_WR;
 		tft_pause;
-		GPIOA->BSRR = data_LSB;
+		TFT_BUS = data & 0xFF;
 		GPIOB->BRR =  tft_WR;
 		tft_pause;
 		GPIOB->BSRR = tft_WR;
@@ -285,16 +269,15 @@ void tft_data16_block (uint16_t* block, uint32_t size){
 
 void tft_fast_fill_window(uint16_t color, uint32_t size){
 
-	uint16_t data_clr = ~color;
-	uint32_t data_MSB =  ((data_clr&0xFF00)<<8)| ((color&0xFF00)>>8);
-	uint32_t data_LSB =  ((data_clr&0x00FF)<<16) | (color&0xFF);
+	uint8_t data_MSB = color >> 8;
+	uint8_t data_LSB = color & 0xFF;
 
 	for(uint32_t i=0; i< size; i++){
 
-			GPIOA->BSRR = data_MSB;
+			TFT_BUS = data_MSB;
 			GPIOB->BRR =  tft_WR;
 			GPIOB->BSRR = tft_WR;
-			GPIOA->BSRR = data_LSB;
+			TFT_BUS = data_LSB;
 			GPIOB->BRR =  tft_WR;
 			GPIOB->BSRR = tft_WR;
 
@@ -362,22 +345,10 @@ void init_tft_display(const uint8_t* buf){
 
 void tft_write_char (struct tft_window *window,uint8_t symvol){
 
-	uint32_t  color_msb = (~window->color_font)&0xFF00;
-			  color_msb <<= 8;
-	 	 	  color_msb |= (window->color_font&0xFF00)>>8;
-
-	uint32_t  color_lsb = (~window->color_font) & 0xFF;
-			  color_lsb <<=16;
-			  color_lsb |= window->color_font&0xFF;
-
-	uint32_t  background_msb = (~window->color_background)&0xFF00;
-			  background_msb <<= 8;
-			  background_msb |= (window->color_background&0xFF00)>>8;
-
-	uint32_t  background_lsb = (~window->color_background)&0xFF;
-			  background_lsb <<= 16;
-			  background_lsb |= window->color_background&0xFF;
-
+	uint8_t color_msb = window->color_font >> 8;
+	uint8_t color_lsb = window->color_font & 0xFF;
+	uint8_t background_msb = window->color_background >> 8;
+	uint8_t background_lsb = window->color_background & 0xFF;
 
 	uint16_t  sizeXfont = *(window->font);
 	uint16_t  colXbayt = sizeXfont/8;
@@ -398,19 +369,19 @@ void tft_write_char (struct tft_window *window,uint8_t symvol){
 
 					if (data & mask_data){
 
-						GPIOA->BSRR = color_msb;
+						TFT_BUS = color_msb;
 						GPIOB->BRR =  tft_WR;
 						GPIOB->BSRR = tft_WR;
-						GPIOA->BSRR = color_lsb;
+						TFT_BUS = color_lsb;
 						GPIOB->BRR =  tft_WR;
 						GPIOB->BSRR = tft_WR;
 
 					} else {
 
-						GPIOA->BSRR = background_msb;
+						TFT_BUS = background_msb;
 						GPIOB->BRR =  tft_WR;
 						GPIOB->BSRR = tft_WR;
-						GPIOA->BSRR = background_lsb;
+						TFT_BUS = background_lsb;
 						GPIOB->BRR =  tft_WR;
 						GPIOB->BSRR = tft_WR;
 
@@ -425,86 +396,68 @@ void tft_write_char (struct tft_window *window,uint8_t symvol){
 
 void tft_write_char_alpha (struct tft_window *window,uint8_t symvol,uint8_t asymvol){
 
+	uint8_t color_msb = window->color_font >> 8;
+	uint8_t color_lsb = window->color_font & 0xFF;
+	uint8_t background_msb = window->color_background >> 8;
+	uint8_t background_lsb = window->color_background & 0xFF;
+	uint8_t a_background_msb = window->color_a_background >> 8;
+	uint8_t a_background_lsb = window->color_a_background & 0xFF;
 
-	uint32_t  color_msb = (~window->color_font)&0xFF00;
-				  color_msb <<= 8;
-		 	 	  color_msb |= (window->color_font&0xFF00)>>8;
+	uint16_t  sizeXfont = *(window->font);
+	uint16_t  colXbayt = sizeXfont/8;
+	uint16_t  sizeYfont = window->font[1];
 
-		uint32_t  color_lsb = (~window->color_font) & 0xFF;
-				  color_lsb <<=16;
-				  color_lsb |= window->color_font&0xFF;
+	const uint8_t*  mem_znak = window->font + 2;
+	const uint8_t*  mem_aznak = mem_znak;
 
-		uint32_t  background_msb = (~window->color_background)&0xFF00;
-				  background_msb <<= 8;
-				  background_msb |= (window->color_background&0xFF00)>>8;
+			  mem_znak +=(symvol*sizeYfont*colXbayt);
+			  mem_aznak +=(asymvol*sizeYfont*colXbayt);
 
-		uint32_t  background_lsb = (~window->color_background)&0xFF;
-				  background_lsb <<= 16;
-				  background_lsb |= window->color_background&0xFF;
+    uint8_t   data, mask_data,adata;
 
-		uint32_t  a_background_msb = (~window->color_a_background)&0xFF00;
-							  background_msb <<= 8;
-							  background_msb |= (window->color_a_background&0xFF00)>>8;
+		for( uint8_t n=0; n < sizeYfont; n++){
 
-		uint32_t  a_background_lsb = (~window->color_a_background)&0xFF;
-							  background_lsb <<= 16;
-							  background_lsb |= window->color_a_background&0xFF;
+			for (uint8_t l=0; l < colXbayt; l++){
 
-		uint16_t  sizeXfont = *(window->font);
-		uint16_t  colXbayt = sizeXfont/8;
-		uint16_t  sizeYfont = window->font[1];
+				data = *mem_znak;
+				adata = *mem_aznak;
+				mask_data = 0x80;
 
-		const uint8_t*  mem_znak = window->font + 2;
-		const uint8_t*  mem_aznak = mem_znak;
+				for (uint8_t i=0; i<8 ; i++){
 
-				  mem_znak +=(symvol*sizeYfont*colXbayt);
-				  mem_aznak +=(asymvol*sizeYfont*colXbayt);
+					if(adata&mask_data){
 
-	    uint8_t   data, mask_data,adata;
-
-			for( uint8_t n=0; n < sizeYfont; n++){
-
-				for (uint8_t l=0; l < colXbayt; l++){
-
-					data = *mem_znak;
-					adata = *mem_aznak;
-					mask_data = 0x80;
-
-					for (uint8_t i=0; i<8 ; i++){
-
-						if(adata&mask_data){
-
-							if (data & mask_data){
-								GPIOA->BSRR = color_msb;
-								GPIOB->BRR =  tft_WR;
-								GPIOB->BSRR = tft_WR;
-								GPIOA->BSRR = color_lsb;
-								GPIOB->BRR =  tft_WR;
-								GPIOB->BSRR = tft_WR;
-							} else {
-								GPIOA->BSRR = background_msb;
-								GPIOB->BRR =  tft_WR;
-								GPIOB->BSRR = tft_WR;
-								GPIOA->BSRR = background_lsb;
-								GPIOB->BRR =  tft_WR;
-								GPIOB->BSRR = tft_WR;
-							};
-						}else{
-
-							GPIOA->BSRR = background_msb;
+						if (data & mask_data){
+							TFT_BUS = color_msb;
 							GPIOB->BRR =  tft_WR;
 							GPIOB->BSRR = tft_WR;
-							GPIOA->BSRR = background_lsb;
+							TFT_BUS = color_lsb;
+							GPIOB->BRR =  tft_WR;
+							GPIOB->BSRR = tft_WR;
+						} else {
+							TFT_BUS = background_msb;
+							GPIOB->BRR =  tft_WR;
+							GPIOB->BSRR = tft_WR;
+							TFT_BUS = background_lsb;
 							GPIOB->BRR =  tft_WR;
 							GPIOB->BSRR = tft_WR;
 						};
+					}else{
 
-						mask_data >>= 1;
+						TFT_BUS = a_background_msb;
+						GPIOB->BRR =  tft_WR;
+						GPIOB->BSRR = tft_WR;
+						TFT_BUS = a_background_lsb;
+						GPIOB->BRR =  tft_WR;
+						GPIOB->BSRR = tft_WR;
 					};
-				mem_znak ++;
-				mem_aznak++;
+
+					mask_data >>= 1;
 				};
-		  };
+			mem_znak ++;
+			mem_aznak++;
+			};
+	  };
 };
 
 //---------------------- print char --------------------------//
@@ -867,7 +820,7 @@ void tft_sprite_RGB565(struct tft_window *window,struct tft_sprite *sprite){
 #define fSET_ENTER FUNC,SET_ENTER
 
 #define TXT_DATA 0x1B
-#define fSET_TXT_DATA(а) FUNC,TXT_DATA,a
+#define fSET_TXT_DATA(a) FUNC,TXT_DATA,a
 
 #define IMAGE_RGB565 0x1C
 #define fIMAGE_RGB565(a) FUNC,IMAGE_RGB565,a
@@ -886,7 +839,7 @@ void tft_print_widget(struct TFT_panel* panel, uint8_t num){
 	uint8_t cursorY = 0;
 	uint8_t *txt,*text,
 			max_widgets = panel->screens->n_widgets;
-	if(num > max_widgets && !max_widgets) return;
+	if(max_widgets == 0 || num >= max_widgets) return;
 
 	struct tft_widget*  widget = *(panel->screens->widgets + num);
 	struct tft_window*  window =  widget->window;
@@ -955,15 +908,15 @@ void tft_print_widget(struct TFT_panel* panel, uint8_t num){
 					case LOAD_cursorXY:window->cursor_x = cursorX; window->cursor_y = cursorY; break;
 
 					case TXT_DATA: text++;
-								   txt = *widget->text_block + *text;
-								   while(*txt){tft_terminal_print(window,*txt++);}
+								   txt = *(widget->text_block + (*text));
+								   if(txt){ while(*txt){tft_terminal_print(window,*txt++);} }
 								   break;
 					case IMAGE_RGB565:
 						 	 	 	text++;
 						 	 	 	if(*text >= widget->n_images)break;
 									tft_sprite_RGB565(window,*(widget->image_block + (*text)));
 									break;
-					case CLEAR_TFT: text++;tft_fast_clear(window);break;
+					case CLEAR_TFT: tft_fast_clear(window);break;
 
 
 
@@ -1070,7 +1023,7 @@ void widget_txt_change(void* txt){
 	if(!txt) return;
 	struct change_txt* w_txt = (struct change_txt *)txt;
 	if(w_txt->data >= w_txt->n_txt_block)return;
-	if(w_txt->panel->screens->n_widgets < w_txt->num_widget) return;
+	if(w_txt->num_widget >= w_txt->panel->screens->n_widgets) return;
 
 	struct tft_widget* widget = *(w_txt->panel->screens->widgets + (w_txt->num_widget));
 	if(!widget || !(w_txt->txt_block) || *((w_txt->txt_block)+ w_txt->data) == NULL)return;
@@ -1093,7 +1046,7 @@ void widget_txt_simple(void* txt){
 
 	if(!txt) return;
 	struct simple_txt* w_txt = (struct simple_txt *)txt;
-	if(w_txt->panel->screens->n_widgets < w_txt->num_widget) return;
+	if(w_txt->num_widget >= w_txt->panel->screens->n_widgets) return;
 	tft_print_widget(w_txt->panel,w_txt->num_widget);
 };
 
@@ -1136,13 +1089,13 @@ void widget_menu_type1(void* m){
 	if(!m) return;
 	struct Menu_block* menu = (struct Menu_block *)m;
 
-	if(menu->panel->screens->n_widgets < menu->current_widget ||
-	   menu->panel->screens->n_widgets	< menu->new_widget) return;
+	if(menu->current_widget >= menu->panel->screens->n_widgets ||
+	   menu->new_widget >= menu->panel->screens->n_widgets) return;
 
 	struct tft_widget* curr_widget = *(menu->panel->screens->widgets + (menu->current_widget));
 	struct tft_widget* new_widget = *(menu->panel->screens->widgets + (menu->new_widget));
 
-		if(curr_widget == NULL || new_widget == NULL);
+	if(curr_widget == NULL || new_widget == NULL) return;
 
 		if(menu->current_widget != menu->new_widget){
 

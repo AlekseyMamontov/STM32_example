@@ -178,7 +178,7 @@ w_punch={
 	.func = NULL,
 };
 #define PUNCH_ON 5
-uint8_t punch_on[]={fSET_cursorXY(13,11),0x20,0x32,0x30,30,0,0};
+uint8_t punch_on[]={fSET_cursorXY(13,11),0x20,0x32,0x30,0x30,0,0};
 struct tft_widget
 w_punch_on={
 	.status = 0x001,
@@ -395,7 +395,7 @@ w_cylindr ={
 	.status = 0x01,
 	.window = &Screen1_win,
 	.image_block = cylindr_image,
-	.n_images = sizeof(cylindr_image),
+	.n_images = sizeof(cylindr_image)/sizeof(cylindr_image[0]),
 	.text_block = NULL,
 	.code_block = screen1_cylindr_code,
 	.data = (void*) &w_cylindr_animation,
@@ -427,7 +427,7 @@ struct change_txt txt_220V ={
 		.panel = &TFT_CAN_module,
 		.data = 0,
 		.txt_block = screen1_220V_animation,
-		.n_txt_block = sizeof(screen1_220V_animation),
+		.n_txt_block = sizeof(screen1_220V_animation)/sizeof(screen1_220V_animation[0]),
 		.num_widget = STATUS_220V,
 };
 
@@ -467,7 +467,7 @@ struct change_txt txt_button ={
 		.panel = &TFT_CAN_module,
 		.data = 0,
 		.txt_block = screen1_button_animation,
-		.n_txt_block = sizeof(screen1_button_animation),
+		.n_txt_block = sizeof(screen1_button_animation)/sizeof(screen1_button_animation[0]),
 		.num_widget = BUTTON,
 };
 

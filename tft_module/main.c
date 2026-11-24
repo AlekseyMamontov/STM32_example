@@ -59,8 +59,8 @@ matrix_data_frame [2]={0},
 punch_data_frame  [2]={0},
 counter_data_frame[2]={0},
 cylindr_data_frame[2]={0},
-button_data_frame [2]={0},
-relay_delay = 0;
+button_data_frame [2]={0};
+volatile uint32_t relay_delay = 0;
 
 struct Data_can_msg
 msg_matrix={
@@ -234,7 +234,7 @@ int main(void){
 	CAN_TxMailBox_TypeDef 	tx_mailbox;
 	//uint64_t temp;
 
-	default_load_rаm((void*)&Stanok,(void*)&defStanok,sizeof(Stanok));
+	default_load_ram((void*)&Stanok,(void*)&defStanok,sizeof(Stanok));
 	init_can_buffer(TFT_CAN_module.msg_can_buffer,RAM_can_frames,MAX_BUFFER_CAN);
 
 	init_controller_STM32F072();// Init RCC 48Mhz, GPIOx, bxCAN
@@ -252,7 +252,7 @@ int main(void){
 
 	 tx_mailbox.TIR = ((0x700 + can_id)<<21)| 0x01; // addr,std0,data0,TXRQ - отправка сообщения
 	 tx_mailbox.TDTR = 1;// n на_отправку
-	 tx_mailbox.TDLR = can_id;// d0-d3
+	 tx_mailbox.TDLR = 0x00;// d0-d3 (0x00 - Boot-up event по стандарту CiA 301)
 	 tx_mailbox.TDHR = 0;// d4-d7
 
 	CAN_transmit(&tx_mailbox);
@@ -585,7 +585,7 @@ void Screen_gkeys(struct TFT_panel* panel){
 		  		*matrix_thermostat.off_temp = 205;
 		  		*punch_thermostat.on_temp = 200;
 		  		*punch_thermostat.off_temp = 205;
-		  		*push_pnevmocylindr.time_100ms = 16;
+		  		*push_pnevmocylindr.time_100ms = 8;
 		  		stat |= INIT_TEMP;
 		  		break;
 
@@ -595,7 +595,7 @@ void Screen_gkeys(struct TFT_panel* panel){
 			  	*matrix_thermostat.off_temp = 205;
 			  	*punch_thermostat.on_temp = 200;
 			  	*punch_thermostat.off_temp = 205;
-			  	*push_pnevmocylindr.time_100ms = 20;
+			  	*push_pnevmocylindr.time_100ms = 7;
 			  	stat |= INIT_TEMP;
 			  break;
 
@@ -605,7 +605,7 @@ void Screen_gkeys(struct TFT_panel* panel){
 				*matrix_thermostat.off_temp = 205;
 				*punch_thermostat.on_temp = 200;
 				*punch_thermostat.off_temp = 205;
-				*push_pnevmocylindr.time_100ms = 20;
+				*push_pnevmocylindr.time_100ms = 7;
 				stat |= INIT_TEMP;
 
 		  		  break;
@@ -625,7 +625,7 @@ void Screen_gkeys(struct TFT_panel* panel){
 				  *matrix_thermostat.off_temp = 205;
 				  *punch_thermostat.on_temp = 200;
 				  *punch_thermostat.off_temp = 205;
-				  *push_pnevmocylindr.time_100ms = 10;
+				  *push_pnevmocylindr.time_100ms = 6;
 				  stat |= INIT_TEMP;
 
 		  		  break;
@@ -635,7 +635,7 @@ void Screen_gkeys(struct TFT_panel* panel){
 				  *matrix_thermostat.off_temp = 200;
 				  *punch_thermostat.on_temp = 190;
 				  *punch_thermostat.off_temp = 200;
-				  *push_pnevmocylindr.time_100ms = 8;
+				  *push_pnevmocylindr.time_100ms = 5;
 				  stat |= INIT_TEMP;
 
 				  break;
@@ -719,42 +719,51 @@ void CEC_CAN_IRQHandler(void){
 	uint32_t id,dlc;
 	uint8_t data0;
 
+	// Обработка сообщений из FIFO 0
+	if((CAN->RF0R & CAN_RF0R_FMP0) != 0){
+		// индефикатор = тип сообщения ? extd : std
+		id = CAN->sFIFOMailBox[0].RIR&0b0100?CAN->sFIFOMailBox[0].RIR >> 3:CAN->sFIFOMailBox[0].RIR >> 21;
+		dlc = CAN->sFIFOMailBox[0].RDTR &0b01111;// получение из регистра длины кадра
 
-	if((CAN->RF0R & 0b0011) == 0) goto exit; //no message
-	// индефикатор = тип сообщения ? extd : std
-	id = CAN->sFIFOMailBox[0].RIR&0b0100?CAN->sFIFOMailBox[0].RIR >> 3:CAN->sFIFOMailBox[0].RIR >> 21;
-	dlc = CAN->sFIFOMailBox[0].RDTR &0b01111;// получение из регистра длины кадра
+		if((CAN->sFIFOMailBox[0].RIR & 0b010) == 0 && dlc != 0){// тип сообщения 0 - data / 1- rtr
 
-	if((CAN->sFIFOMailBox[0].RIR & 0b010) == 0 && dlc != 0){// тип сообщения 0 - data / 1- rtr
+			data0 = CAN->sFIFOMailBox[0].RDLR&0xff;
 
-	//dlc = dlc>8? 8:dlc;
-	data0 = CAN->sFIFOMailBox[0].RDLR&0xff;
+			switch (id){
 
-	switch (id){
+				case 0:
+				if(dlc < 2) break;
+					if(data0 == 0 || data0 == can_id ){
+						NMT_command  = (CAN->sFIFOMailBox[0].RDLR&0xff00) >>8;
+							switch(NMT_command){
+							case NMT_start : NMT_status = NMT_status_Operational;break;
+							case NMT_pre_operational: NMT_status = NMT_status_Pre_Operational;break;
+							case NMT_stop: NMT_status = NMT_status_Stopped;break;
+							default:
+								break;}
+					};
+				break;
 
-		case 0:
-		if(dlc < 2) break;
-			if(data0 == 0 || data0 == can_id ){
-				NMT_command  = (CAN->sFIFOMailBox[0].RDLR&0xff00) >>8;
-					switch(NMT_command){
-					case NMT_start : NMT_status = NMT_status_Operational;break;
-					case NMT_pre_operational: NMT_status = NMT_status_Pre_Operational;break;
-					case NMT_stop: NMT_status = NMT_status_Stopped;break;
-					default:
-						break;}
-			};
-		break;
-
-		default:
-			can_f0.id = id;
-			can_f0.dlc = dlc;
-			can_f0.msg[0] = CAN->sFIFOMailBox[0].RDLR;
-			can_f0.msg[1] = CAN->sFIFOMailBox[0].RDHR;
-			write_can_buffer (TFT_CAN_module.msg_can_buffer,&can_f0);
-		break;
+				default:
+					can_f0.id = id;
+					can_f0.dlc = dlc;
+					can_f0.msg[0] = CAN->sFIFOMailBox[0].RDLR;
+					can_f0.msg[1] = CAN->sFIFOMailBox[0].RDHR;
+					write_can_buffer (TFT_CAN_module.msg_can_buffer,&can_f0);
+				break;
+			}
 		}
-	};
-	exit:	SET_BIT(CAN->RF0R, CAN_RF0R_RFOM0);//CAN->RF0R |= 0b0100000;  сообщение прочитано.
+		SET_BIT(CAN->RF0R, CAN_RF0R_RFOM0); // FIFO0 сообщение прочитано
+	}
+
+	// Заглушка для FIFO 1: считываем и сбрасываем пакет
+	if((CAN->RF1R & CAN_RF1R_FMP1) != 0){
+		(void)CAN->sFIFOMailBox[1].RIR;
+		(void)CAN->sFIFOMailBox[1].RDTR;
+		(void)CAN->sFIFOMailBox[1].RDLR;
+		(void)CAN->sFIFOMailBox[1].RDHR;
+		SET_BIT(CAN->RF1R, CAN_RF1R_RFOM1); // FIFO1 сообщение сброшено
+	}
 };
 
 
@@ -812,6 +821,7 @@ void init_controller_STM32F072(void){
 	RCC->CR |= RCC_CR_PLLON;  			//включаем PLL
 	while(!(RCC->CR & RCC_CR_PLLRDY));  // ожидание готовности PLL
 	RCC->CFGR |= RCC_CFGR_SW_PLL;  		// переводим тактирование от PLL
+	while ((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_PLL); // ожидание переключения на PLL
 
 	//MODIFY_REG(RCC->CFGR,RCC_CFGR_HPRE,RCC_CFGR_HPRE_DIV1);//AHB Prescaler /1
 	//MODIFY_REG(RCC->CFGR,RCC_CFGR_PPRE,RCC_CFGR_PPRE_DIV1);//APB1 Prescaler /1,
@@ -819,8 +829,7 @@ void init_controller_STM32F072(void){
 	RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN; // включить блок syscfg
 	RCC->APB1ENR |= RCC_APB1ENR_PWREN;	  // управление питанием
 
-	//SystemCoreClockUpdate();
-	//HAL_InitTick(TICK_INT_PRIORITY);
+
 
   /******************** GPIO ************************************
 	 *
@@ -1157,7 +1166,7 @@ void init_controller_STM32F072(void){
 	CAN->sFilterRegister[0].FR1 = (idRxPDO1<< 16 | idRxPDO2)<< 5;
 	CAN->sFilterRegister[0].FR2 = (idRxPDO3<< 16 | idRxPDO4)<< 5;
 	// NMT command
-	CAN->sFilterRegister[1].FR1 = ((*(msg_matrix.id_msg)) <<16 | ((*msg_punch.id_msg ) << 5));
+	CAN->sFilterRegister[1].FR1 = (((*(msg_matrix.id_msg)) << 16) | (*msg_punch.id_msg)) << 5;
 	CAN->sFilterRegister[1].FR2	= ((*msg_counter.id_msg) << 16 | 0) << 5; //counter_can.id_object
 
 	// rxSDO, Heartbroken
@@ -1167,7 +1176,7 @@ void init_controller_STM32F072(void){
 
 
 	CAN->FMR &=~ CAN_FMR_FINIT; /* Leave filter init */
-	CAN->IER |= CAN_IER_FMPIE0; /* Set FIFO0 message pending IT enable */
+	CAN->IER |= (CAN_IER_FMPIE0 | CAN_IER_FMPIE1); /* Set FIFO0 and FIFO1 message pending IT enable */
 
 
 	/*выйти в нормальный режим*/
@@ -1209,7 +1218,7 @@ uint8_t CAN_transmit (CAN_TxMailBox_TypeDef *tx){
 }
 
 ///////////////// Default LOAD //////////////////////
-void default_load_rаm(uint8_t* ram, uint8_t* flash,uint32_t size){
+void default_load_ram(uint8_t* ram, uint8_t* flash,uint32_t size){
 
 	while(size){
 		*ram++ = *flash++;

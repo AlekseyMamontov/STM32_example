@@ -262,7 +262,7 @@ multiplexor
 struct CAN_frame{
 
 	uint32_t id;
-	uint32_t  dlc;
+	uint32_t dlc;
 	uint32_t msg[2];
 
 };
